@@ -1,4 +1,5 @@
 <?php
+//merhaba
 require_once __DIR__ . '/../includes/helpers.php';
 include('../includes/header.php');
 
