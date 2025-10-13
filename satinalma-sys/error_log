@@ -1,0 +1,818 @@
+[17-Sep-2025 02:23:07 Europe/Istanbul] PHP Warning:  Array to string conversion in /home/u2327936/demo.ditetra.com/satinalma-sys/talep_olustur.php on line 33
+[20-Sep-2025 08:26:13 Europe/Istanbul] PHP Warning:  Array to string conversion in /home/u2327936/demo.ditetra.com/satinalma-sys/talep_olustur.php on line 33
+[22-Sep-2025 11:46:34 Europe/Istanbul] PHP Warning:  Array to string conversion in /home/u2327936/demo.ditetra.com/satinalma-sys/talep_olustur.php on line 33
+[22-Sep-2025 11:47:28 Europe/Istanbul] PHP Warning:  Array to string conversion in /home/u2327936/demo.ditetra.com/satinalma-sys/talep_olustur.php on line 33
+[23-Sep-2025 11:00:59 Europe/Istanbul] PHP Warning:  Array to string conversion in /home/u2327936/demo.ditetra.com/satinalma-sys/talep_olustur.php on line 33
+[09-Oct-2025 11:17:18 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:17:18 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:17:19 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:17:19 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:17:19 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:17:19 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:17:19 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:19:32 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:21:29 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:21:40 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:22:50 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:22:54 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:22:58 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:23:04 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:23:10 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:25:57 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:27:05 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:27:33 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:27:42 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:32:53 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:32:56 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:37:04 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 11:39:57 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:289
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 289
+[09-Oct-2025 11:39:59 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:289
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 289
+[09-Oct-2025 11:40:16 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:289
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 289
+[09-Oct-2025 11:41:14 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:289
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 289
+[09-Oct-2025 11:41:15 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:289
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 289
+[09-Oct-2025 11:41:15 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:289
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 289
+[09-Oct-2025 11:41:27 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:289
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 289
+[09-Oct-2025 11:42:44 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:289
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 289
+[09-Oct-2025 11:44:10 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:289
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 289
+[09-Oct-2025 11:44:12 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:289
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 289
+[09-Oct-2025 11:45:28 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:17 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:18 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:25 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:26 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:27 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:28 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:28 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:28 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:28 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:28 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:29 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:29 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:29 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:29 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:53:39 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:55:07 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:58:42 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:59:22 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:59:23 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:59:23 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:59:23 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:59:23 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:59:24 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:59:24 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:59:24 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 11:59:24 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:01:15 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Undefined constant "BASE_URL" in /home/u2327936/renplan.ditetra.com/includes/helpers.php:140
+Stack trace:
+#0 /home/u2327936/renplan.ditetra.com/includes/header.php(20): url()
+#1 /home/u2327936/renplan.ditetra.com/satinalma-sys/satinalma_rapor.php(14): include('/home/u2327936/...')
+#2 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/includes/helpers.php on line 140
+[09-Oct-2025 12:01:19 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Undefined constant "BASE_URL" in /home/u2327936/renplan.ditetra.com/includes/helpers.php:140
+Stack trace:
+#0 /home/u2327936/renplan.ditetra.com/includes/header.php(20): url()
+#1 /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php(7): include('/home/u2327936/...')
+#2 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/includes/helpers.php on line 140
+[09-Oct-2025 12:02:12 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:02:15 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:02:20 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:02:28 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:05:32 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:05:33 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:05:37 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:05:37 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:05:38 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:05:39 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:05:39 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:05:39 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:05:39 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:05:40 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:05:44 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:08:15 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:578
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 578
+[09-Oct-2025 12:08:38 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:08:39 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:08:39 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:08:39 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:10:26 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:11:09 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:15:03 Europe/Istanbul] Item ID: 251 - Found quotes: 0
+[09-Oct-2025 12:15:11 Europe/Istanbul] Item ID: 251 - Found quotes: 0
+[09-Oct-2025 12:15:23 Europe/Istanbul] Item ID: 251 - Found quotes: 0
+[09-Oct-2025 12:15:49 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:20:11 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:20:12 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:20:13 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:20:13 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:20:13 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:20:13 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 12:24:35 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 12:24:38 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 12:31:44 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 12:31:45 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 12:31:50 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 12:32:03 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 12:32:17 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 12:33:50 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 12:34:25 Europe/Istanbul] Item ID: 251 - Found quotes: 0
+[09-Oct-2025 12:34:38 Europe/Istanbul] Item ID: 251 - Found quotes: 0
+[09-Oct-2025 12:34:47 Europe/Istanbul] Item ID: 251 - Found quotes: 0
+[09-Oct-2025 12:35:41 Europe/Istanbul] Item ID: 251 - Found quotes: 0
+[09-Oct-2025 12:35:47 Europe/Istanbul] Item ID: 251 - Found quotes: 1
+[09-Oct-2025 12:35:52 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 12:37:43 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 12:45:47 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:586
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 586
+[09-Oct-2025 12:46:06 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 12:46:52 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 12:49:27 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 13:37:19 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:571
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 571
+[09-Oct-2025 13:37:19 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:571
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 571
+[09-Oct-2025 13:37:26 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:571
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 571
+[09-Oct-2025 13:37:43 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 13:37:56 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 13:38:01 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 13:38:30 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 13:38:44 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 13:49:21 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 14:05:34 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 14:09:12 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:576
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 576
+[09-Oct-2025 14:11:06 Europe/Istanbul] PHP Warning:  Undefined variable $pages in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 182
+[09-Oct-2025 14:11:06 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:590
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 590
+[09-Oct-2025 14:15:24 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:608
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 608
+[09-Oct-2025 14:15:26 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:608
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 608
+[09-Oct-2025 14:19:23 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:608
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 608
+[09-Oct-2025 14:21:27 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:608
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 608
+[09-Oct-2025 14:22:03 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:608
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 608
+[09-Oct-2025 14:22:04 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:608
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 608
+[09-Oct-2025 14:22:08 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:608
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 608
+[09-Oct-2025 14:23:06 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:608
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 608
+[09-Oct-2025 14:23:07 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:608
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 608
+[09-Oct-2025 14:23:10 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:608
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 608
+[09-Oct-2025 14:23:10 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:608
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 608
+[09-Oct-2025 14:23:24 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:608
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 608
+[09-Oct-2025 14:23:24 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:608
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 608
+[09-Oct-2025 14:29:39 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:630
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 630
+[09-Oct-2025 14:33:07 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:625
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 625
+[09-Oct-2025 14:39:28 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:625
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 625
+[09-Oct-2025 14:39:42 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:625
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 625
+[09-Oct-2025 14:44:26 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:624
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 624
+[09-Oct-2025 14:44:28 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:624
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 624
+[09-Oct-2025 14:44:29 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:624
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 624
+[09-Oct-2025 14:44:48 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:624
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 624
+[09-Oct-2025 14:44:49 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:624
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 624
+[09-Oct-2025 14:46:06 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:624
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 624
+[09-Oct-2025 14:56:24 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 14:57:06 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:09:19 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:09:21 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:09:24 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:09:31 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:22:31 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:29:31 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:29:31 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:29:32 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:54:17 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:54:19 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:54:19 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:57:20 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:57:36 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:57:37 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:58:41 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:58:42 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:58:42 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:58:42 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:632
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 632
+[09-Oct-2025 15:59:23 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 15:59:24 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 15:59:25 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:15:30 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:23:26 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 16:23:28 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 16:23:28 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:566
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 566
+[09-Oct-2025 16:28:54 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:572
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 572
+[09-Oct-2025 16:28:55 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:572
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 572
+[09-Oct-2025 16:28:59 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:572
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 572
+[09-Oct-2025 16:29:03 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:572
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 572
+[09-Oct-2025 16:29:32 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:572
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 572
+[09-Oct-2025 16:29:35 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:572
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 572
+[09-Oct-2025 16:29:39 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:572
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 572
+[09-Oct-2025 16:32:07 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:572
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 572
+[09-Oct-2025 16:32:08 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:572
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 572
+[09-Oct-2025 16:33:16 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 16:33:18 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 16:33:20 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 16:33:23 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 16:33:25 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 16:33:36 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 16:34:02 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 16:34:26 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 16:34:32 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:411
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 411
+[09-Oct-2025 16:35:04 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:35:04 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:35:05 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:35:05 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:35:05 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:36:58 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:37:04 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:37:22 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:37:32 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:39:00 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:39:00 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:39:00 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 16:39:02 Europe/Istanbul] PHP Fatal error:  Uncaught Error: Call to undefined function site_url() in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php:565
+Stack trace:
+#0 {main}
+  thrown in /home/u2327936/renplan.ditetra.com/satinalma-sys/talepler.php on line 565
+[09-Oct-2025 17:05:13 Europe/Istanbul] Item ID: 251 - Found quotes: 1
+[09-Oct-2025 17:05:21 Europe/Istanbul] Item ID: 251 - Found quotes: 1
+[09-Oct-2025 17:18:38 Europe/Istanbul] PHP Warning:  Array to string conversion in /home/u2327936/renplan.ditetra.com/satinalma-sys/talep_olustur.php on line 59
+[09-Oct-2025 17:19:12 Europe/Istanbul] Item ID: 252 - Found quotes: 0
+[09-Oct-2025 17:19:20 Europe/Istanbul] Item ID: 252 - Found quotes: 1
+[09-Oct-2025 17:25:15 Europe/Istanbul] PHP Warning:  Array to string conversion in /home/u2327936/renplan.ditetra.com/satinalma-sys/talep_olustur.php on line 59
+[09-Oct-2025 17:27:25 Europe/Istanbul] PHP Warning:  Array to string conversion in /home/u2327936/renplan.ditetra.com/satinalma-sys/talep_olustur.php on line 59
+[09-Oct-2025 17:29:12 Europe/Istanbul] PHP Warning:  Array to string conversion in /home/u2327936/renplan.ditetra.com/satinalma-sys/talep_olustur.php on line 59
+[09-Oct-2025 17:30:24 Europe/Istanbul] PHP Warning:  Array to string conversion in /home/u2327936/renplan.ditetra.com/satinalma-sys/talep_olustur.php on line 59
+[09-Oct-2025 17:31:14 Europe/Istanbul] Item ID: 256 - Found quotes: 0
+[09-Oct-2025 17:31:18 Europe/Istanbul] Item ID: 256 - Found quotes: 1
+[09-Oct-2025 17:41:51 Europe/Istanbul] Item ID: 256 - Found quotes: 1
