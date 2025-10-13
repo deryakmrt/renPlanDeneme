@@ -375,12 +375,17 @@ include('../includes/header.php');
       const existingQuote = currentQuotes.find(q => q && q.supplier_id == supplierId);
       if (existingQuote) {
         const quotePrice = document.getElementById('quotePrice');
+        const quoteCurrency = document.getElementById('quoteCurrency');
         const deliveryDays = document.getElementById('deliveryDays');
         const paymentTerm = document.getElementById('paymentTerm');
+        const shippingType = document.getElementById('shippingType');
         const quoteNotes = document.getElementById('quoteNotes');
+
         if (quotePrice) quotePrice.value = existingQuote.price || '';
+        if (quoteCurrency) quoteCurrency.value = existingQuote.currency || 'TRY';
         if (deliveryDays) deliveryDays.value = existingQuote.delivery_days || '';
         if (paymentTerm) paymentTerm.value = existingQuote.payment_term || '';
+        if (shippingType) shippingType.value = existingQuote.shipping_type || '';
         if (quoteNotes) quoteNotes.value = existingQuote.note || '';
       } else {
         const qForm = document.getElementById('quoteForm');
@@ -2023,8 +2028,19 @@ include('../includes/header.php');
               </select>
             </div>
             <div class="form-field">
-              <label>💰 Birim Fiyat (₺)</label>
-              <input type="number" step="0.25" name="birim_fiyat[]" class="form-control" value="<?= h($item['birim_fiyat'] ?? '') ?>" placeholder="0.00">
+              <label>💰 Birim Fiyat</label>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="number" step="0.25" name="birim_fiyat[]" class="form-control" value="<?= h($item['birim_fiyat'] ?? '') ?>" placeholder="0.00" readonly>
+                <span class="badge" style="background: #6c757d; color: white; padding: 8px 12px; font-size: 0.9rem; border-radius: 4px; min-width: 60px; text-align: center;">
+                  <?php
+                  $currency_symbol = '₺';
+                  if (isset($item['selected_currency'])) {
+                    $currency_symbol = $item['selected_currency'] === 'USD' ? '$' : ($item['selected_currency'] === 'EUR' ? '€' : '₺');
+                  }
+                  echo $currency_symbol;
+                  ?>
+                </span>
+              </div>
             </div>
             <div class="form-field">
               <label>📊 Durum</label>
@@ -2120,8 +2136,14 @@ include('../includes/header.php');
                     <div class="row">
                       <div class="col-md-6">
                         <small><strong>Firma:</strong> <?= h($selected_quote_detail['supplier_name']) ?></small><br>
-                        <small><strong>Fiyat:</strong> ₺<?= number_format((float)$selected_quote_detail['price'], 2) ?></small><br>
-                        <small><strong>Teslimat:</strong> <?= $selected_quote_detail['delivery_days'] ? $selected_quote_detail['delivery_days'] . ' gün' : 'Belirtilmemiş' ?></small>
+                        <small><strong>Fiyat:</strong>
+                          <?php
+                          $currency_symbol = $selected_quote_detail['currency'] === 'USD' ? '$' : ($selected_quote_detail['currency'] === 'EUR' ? '€' : '₺');
+                          echo $currency_symbol . number_format((float)$selected_quote_detail['price'], 2);
+                          ?>
+                        </small><br>
+                        <small><strong>Teslimat:</strong> <?= $selected_quote_detail['delivery_days'] ? $selected_quote_detail['delivery_days'] . ' gün' : 'Belirtilmemiş' ?></small><br>
+                        <small><strong>Gönderim:</strong> <?= h($selected_quote_detail['shipping_type'] ?? 'Belirtilmemiş') ?></small>
                       </div>
                       <div class="col-md-6">
                         <small><strong>Ödeme:</strong> <?= h($selected_quote_detail['payment_term'] ?? 'Belirtilmemiş') ?></small><br>
@@ -2282,17 +2304,25 @@ include('../includes/header.php');
       <form id="quoteForm">
         <input type="hidden" id="quoteItemId" name="item_id">
         <input type="hidden" id="quoteSupplierId" name="supplier_id">
-        <input type="hidden" id="quoteCurrency" name="currency" value="TRY">
+        <!--<input type="hidden" id="quoteCurrency" name="currency" value="TRY"> -->
         <input type="hidden" id="quoteDate" name="quote_date">
 
         <div class="form-grid grid-2">
           <div class="form-field">
-            <label>💰 Birim Fiyat (₺) *</label>
+            <label>💰 Birim Fiyat *</label>
             <input type="number" id="quotePrice" name="price" step="0.25" class="form-control" required>
           </div>
           <div class="form-field">
-            <label>📅 Teslimat Süresi (Gün)</label>
-            <input type="number" id="deliveryDays" name="delivery_days" class="form-control" min="1" placeholder="15">
+            <label>💱 Para Birimi</label>
+            <select id="quoteCurrency" name="currency" class="form-control">
+              <option value="TRY">₺ TL</option>
+              <option value="USD">$ USD</option>
+              <option value="EUR">€ EUR</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label>📅 Teslimat Süresi (Gün) *</label>
+            <input type="number" id="deliveryDays" name="delivery_days" class="form-control" min="1" placeholder="15" required>
           </div>
         </div>
 
@@ -2308,6 +2338,15 @@ include('../includes/header.php');
             <option value="Çek - 60 Gün">Çek - 60 Gün</option>
             <option value="Çek - 90 Gün">Çek - 90 Gün</option>
             <option value="Çek - 120 Gün">Çek - 120 Gün</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label>🚚 Gönderim Türü *</label>
+          <select id="shippingType" name="shipping_type" class="form-control" required>
+            <option value="">Seçiniz</option>
+            <option value="Ambar">Ambar</option>
+            <option value="Kargo">Kargo</option>
           </select>
         </div>
 
