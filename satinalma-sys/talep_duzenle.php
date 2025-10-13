@@ -2031,7 +2031,7 @@ include('../includes/header.php');
               <label>💰 Birim Fiyat</label>
               <div style="display: flex; gap: 8px; align-items: center;">
                 <input type="number" step="0.25" name="birim_fiyat[]" class="form-control" value="<?= h($item['birim_fiyat'] ?? '') ?>" placeholder="0.00" readonly>
-                <span class="badge" style="background: #6c757d; color: white; padding: 8px 12px; font-size: 0.9rem; border-radius: 4px; min-width: 60px; text-align: center;">
+                <span class="badge" style="background: #7ba05b; color: white; padding: 8px 12px; font-size: 0.9rem; border-radius: 4px; min-width: 30px; text-align: center;">
                   <?php
                   $currency_symbol = '₺';
                   if (isset($item['selected_currency'])) {
