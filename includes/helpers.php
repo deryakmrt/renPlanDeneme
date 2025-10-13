@@ -1,0 +1,181 @@
+<?php
+// includes/helpers.php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Config dosyasını include et
+$config_path = __DIR__ . '/../config.php';
+if (file_exists($config_path)) {
+    require_once $config_path;
+} else {
+    die('Config dosyası bulunamadı: ' . $config_path);
+}
+
+// PDO DB fonksiyonu
+if (!function_exists('pdo')) {
+    function pdo() {
+        static $pdo;
+        if ($pdo) return $pdo;
+
+        try {
+            $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
+            $pdo = new PDO($dsn, DB_USER, DB_PASS, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            ]);
+            return $pdo;
+        } catch (PDOException $e) {
+            die('Veritabanı bağlantı hatası: ' . $e->getMessage());
+        }
+    }
+}
+
+// Yardımcı fonksiyonlar
+function h($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+function redirect($to){ header('Location: '.$to); exit; }
+function method($m){ return $_SERVER['REQUEST_METHOD'] === strtoupper($m); }
+
+// CSRF
+if (session_status() !== PHP_SESSION_ACTIVE) { @session_start(); }
+if (empty($_SESSION['csrf'])) { $_SESSION['csrf'] = bin2hex(random_bytes(16)); }
+function csrf_input(){ echo '<input type="hidden" name="csrf" value="'.h($_SESSION['csrf']).'">'; }
+function csrf_check(){ if(($_POST['csrf']??'') !== ($_SESSION['csrf']??'')) die('CSRF doğrulaması başarısız'); }
+
+// --- ROLLER ---
+function valid_roles(){ return ['admin','sistem_yoneticisi','musteri','plasiyer', 'uretim']; }
+function role_label($role){
+    $map = [
+        'admin'             => 'Yönetici (Tam Yetki)',
+        'sistem_yoneticisi' => 'Sistem Yöneticisi',
+        'musteri'           => 'Müşteri',
+        'plasiyer'          => 'Plasiyer',
+        'uretim'            => 'Üretim',
+    ];
+    return $map[$role] ?? $role;
+}
+
+// Auth
+function current_user(){
+    if(!empty($_SESSION['uid'])) {
+        return ['id'=>$_SESSION['uid'], 'username'=>$_SESSION['uname'] ?? '', 'role'=>($_SESSION['urole'] ?? 'musteri')];
+    }
+    return null;
+}
+function current_role(){ return $_SESSION['urole'] ?? 'musteri'; }
+function has_role($role){ return current_role() === $role; }
+function require_login(){ if(!current_user()) redirect('login.php'); }
+function require_role($roles){
+    if (!is_array($roles)) { $roles = [$roles]; }
+    if (!in_array(current_role(), $roles, true)) { http_response_code(403); die('Yetkisiz erişim'); }
+}
+
+// ---- OTOMATİK ROL EŞİTLEME ----
+if (!empty($_SESSION['uid'])) {
+    try {
+        $st = pdo()->prepare('SELECT role FROM users WHERE id=?');
+        $st->execute([ (int)$_SESSION['uid'] ]);
+        $dbRole = $st->fetchColumn();
+        if ($dbRole) { $_SESSION['urole'] = $dbRole; }
+    } catch (Throwable $e) { /* sessiz geç */ }
+}
+
+// --- Basit Yetki Matrisi ---
+function role_caps(){
+    return [
+        'admin' => ['*' => true],
+        'sistem_yoneticisi' => [
+            'users.manage' => true,
+            'orders.view'  => true,
+            'orders.edit'  => true,
+            'products.view'=> true,
+            'products.edit'=> true,
+            'customers.view'=> true,
+            'customers.edit'=> true,
+            'reports.view' => true,
+        ],
+        'musteri' => [
+            'orders.view'   => true,
+            'products.view' => true,
+        ],
+        'plasiyer' => [
+            'orders.view'   => true,
+            'orders.edit'   => true,
+            'customers.view'=> true,
+            'customers.edit'=> true,
+            'products.view' => true,
+        ],
+        'uretim' => [
+            'orders.view'   => true,
+            'products.view' => true,
+        ],
+    ];
+}
+function can($cap){
+    $role = current_role();
+    $caps = role_caps()[$role] ?? [];
+    if (!empty($caps['*'])) return true;
+    return !empty($caps[$cap]);
+}
+function require_cap($cap){ if (!can($cap)) { http_response_code(403); die('Bu işlem için yetkiniz yok'); } }
+
+// --- Sipariş yardımcıları ---
+function next_order_code(){
+    $db = pdo();
+    $max = (int)$db->query("SELECT COALESCE(MAX(CAST(order_code AS UNSIGNED)), 0) FROM orders")->fetchColumn();
+    $next = max($max, (int)ORDER_CODE_START) + 1;
+    return (string)$next;
+}
+function order_total($order_id){
+    $db = pdo();
+    $stmt = $db->prepare("SELECT SUM(qty*price) FROM order_items WHERE order_id=?");
+    $stmt->execute([$order_id]);
+    return (float)$stmt->fetchColumn();
+}
+
+// Diğer yardımcı fonksiyonlar
+function todayYmd(){ return (new DateTime('now', new DateTimeZone('Europe/Istanbul')))->format('Ymd'); }
+
+// URL ve asset fonksiyonları
+function url($path=''){
+    $base = rtrim(BASE_URL, '/');
+    $p = ltrim($path, '/');
+    return $base . '/' . $p;
+}
+function asset_url($path=''){ return url($path); }
+
+//-------------
+// site_url fonksiyonu
+if (!function_exists('site_url')) {
+    function site_url($path = '') {
+        // BASE_URL varsa onu kullan, yoksa root'tan başla
+        $base = defined('BASE_URL') ? rtrim(BASE_URL, '/') : '';
+        return $base . '/' . ltrim($path, '/');
+    }
+}
+
+//-------------
+
+// REN üretimi
+function generate_next_ren(PDO $pdo){
+    $prefix = "REN".todayYmd();
+    $st = $pdo->prepare("SELECT order_code FROM satinalma_orders WHERE order_code LIKE :pfx ORDER BY order_code DESC LIMIT 1");
+    $st->execute([':pfx'=>$prefix.'%']);
+    $row = $st->fetch();
+    $next = 1;
+    if ($row && !empty($row['order_code'])) {
+        $next = (int)substr($row['order_code'], -4) + 1;
+    }
+    return $prefix . str_pad((string)$next, 4, '0', STR_PAD_LEFT);
+}
+
+function parse_post_date($key){
+    if (empty($_POST[$key])) return null;
+    $in = trim($_POST[$key]);
+    $in = str_replace(['.', '/', ' '], ['-','-','-'], $in);
+    $parts = explode('-', $in);
+    $fmt = (strlen($parts[0])===4) ? 'Y-m-d' : 'd-m-Y';
+    $dt = DateTime::createFromFormat($fmt, $in);
+    if (!$dt) return null;
+    return $dt->format('Y-m-d');
+}
+?>
