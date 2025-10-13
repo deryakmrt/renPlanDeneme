@@ -151,7 +151,7 @@ try {
                 'selected_quote' => $selected_quote
             ], JSON_UNESCAPED_UNICODE);
             break;
-            
+
         case 'toggle_approval':
             $item_id = (int)($_POST['item_id'] ?? 0);
             $approved = (int)($_POST['approved'] ?? 0);
@@ -178,11 +178,18 @@ try {
             $quote_date = $_POST['quote_date'] ?? date('Y-m-d');
             $delivery_days = (int)($_POST['delivery_days'] ?? 0);
             $payment_term = $_POST['payment_term'] ?? '';
+            $shipping_type = $_POST['shipping_type'] ?? ''; // YENİ
             $notes = $_POST['notes'] ?? '';
-            $product_name = trim($_POST['product_name'] ?? ''); // YENİ
+            $product_name = trim($_POST['product_name'] ?? '');
 
             if ($supplier_id <= 0 || $price <= 0) {
                 throw new Exception('Geçersiz parametreler');
+            }
+            if ($delivery_days <= 0) {
+                throw new Exception('Teslimat süresi zorunludur');
+            }
+            if (empty($shipping_type)) {
+                throw new Exception('Gönderim türü zorunludur');
             }
 
             $talep_id = 0;
@@ -222,17 +229,17 @@ try {
             if ($existing_quote) {
                 $stmt = $pdo->prepare("
             UPDATE satinalma_quotes 
-            SET price = ?, currency = ?, quote_date = ?, delivery_days = ?, payment_term = ?, note = ?, updated_at = NOW()
+            SET price = ?, currency = ?, quote_date = ?, delivery_days = ?, payment_term = ?, shipping_type = ?, note = ?, updated_at = NOW()
             WHERE id = ?
         ");
-                $stmt->execute([$price, $currency, $quote_date, $delivery_days, $payment_term, $notes, $existing_quote['id']]);
+                $stmt->execute([$price, $currency, $quote_date, $delivery_days, $payment_term, $shipping_type, $notes, $existing_quote['id']]);
                 $quote_id = $existing_quote['id'];
             } else {
                 $stmt = $pdo->prepare("
-            INSERT INTO satinalma_quotes (order_item_id, talep_id, supplier_id, price, currency, quote_date, delivery_days, payment_term, note)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO satinalma_quotes (order_item_id, talep_id, supplier_id, price, currency, quote_date, delivery_days, payment_term, shipping_type, note)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-                $stmt->execute([$item_id, $talep_id, $supplier_id, $price, $currency, $quote_date, $delivery_days, $payment_term, $notes]);
+                $stmt->execute([$item_id, $talep_id, $supplier_id, $price, $currency, $quote_date, $delivery_days, $payment_term, $shipping_type, $notes]);
                 $quote_id = $pdo->lastInsertId();
             }
 
