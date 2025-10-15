@@ -51,6 +51,7 @@ $sqlTotal = "
     COALESCE(SUM(COALESCE(oi.miktar,0)),0) AS toplam_adet,
     COALESCE(SUM(COALESCE(oi.miktar,0) * COALESCE(oi.birim_fiyat,0)),0) AS toplam_tutar
   FROM satinalma_order_items oi
+  INNER JOIN satinalma_orders so ON so.id = oi.talep_id
   $whereSql
 ";
 $st = $pdo->prepare($sqlTotal);
@@ -76,6 +77,7 @@ $sqlRows = "
     sq.currency,
     sq.shipping_type
   FROM satinalma_order_items oi
+  INNER JOIN satinalma_orders so ON so.id = oi.talep_id
   LEFT JOIN suppliers s ON s.id = oi.selected_supplier_id
   LEFT JOIN satinalma_quotes sq ON sq.id = oi.selected_quote_id
   $whereSql
