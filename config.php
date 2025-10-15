@@ -12,6 +12,7 @@ define('DB_CHARSET', 'utf8mb4');
 // İlk admin bilgileri (ilk girişten sonra değiştir)
 define('DEFAULT_ADMIN_USER', 'admin');
 define('DEFAULT_ADMIN_PASS', 'admin');
+define('BASE_URL', 'https://renplan.ditetra.com');  // veya kendi URL'niz
 
 // Sipariş kodu başlangıç
 define('ORDER_CODE_START', 10000);
