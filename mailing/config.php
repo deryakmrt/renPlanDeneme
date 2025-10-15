@@ -20,7 +20,7 @@ return [
   'notify' => [
     'on_create'  => true,
     // Sabit alıcı listesi (virgüllü). Burayı kendine göre düzenleyebilirsin.
-    'recipients' => 'burak@serista.com.tr, burakcengiz@msn.com',
+    'recipients' => 'burak@serista.com.tr, derkimirti@gmail.com',
     'cc'         => '',
     'bcc'        => '',
     // DB override: settings.key = 'notify_create_recipients' varsa onu kullanır
