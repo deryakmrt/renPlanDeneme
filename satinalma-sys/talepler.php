@@ -646,9 +646,9 @@ try {
                 <td><?php echo sa_h($r['talep_tarihi'] ? date('d-m-Y', strtotime($r['talep_tarihi'])) : '-'); ?></td>
                 <td><?php echo getStatusBadge($r['durum']); ?></td>
                 <td>
-                  <a class="btn-sm btn-primary" href="<?php echo site_url('satinalma-sys/talep_duzenle.php?id=' . (int)$r['id']); ?>">Düzenle</a>
-                  <button class="btn-sm btn-info" onclick="sendMail(<?php echo (int)$r['id']; ?>, '<?php echo sa_h($r['order_code']); ?>')">📧 Mail</button>
+                  <a class="btn-sm btn-primary" href="<?php echo site_url('satinalma-sys/talep_duzenle.php?id=' . (int)$r['id']); ?>">Düzenle</a>  
                   <a class="btn-sm btn-danger" href="<?php echo site_url('satinalma-sys/talep_sil.php?id=' . (int)$r['id']); ?>" onclick="return confirm('Bu talebi silmek istediğinize emin misiniz?');">Sil</a>
+                  <button class="btn-sm btn-info" onclick="sendMail(<?php echo (int)$r['id']; ?>, '<?php echo sa_h($r['order_code']); ?>')">📧</button>
                 </td>
               </tr>
             <?php endforeach; ?>
