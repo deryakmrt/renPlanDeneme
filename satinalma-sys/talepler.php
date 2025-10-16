@@ -412,37 +412,52 @@ try {
     transition: all 0.2s ease;
     border: 1px solid transparent;
   }
+
   .btn-sm.btn-primary {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
-}
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+  }
 
-.btn-sm.btn-primary:hover {
-  background: #2563eb;
-  border-color: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
-}
+  .btn-sm.btn-primary:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+  }
 
-.btn-sm.btn-danger {
-  background: white;
-  color: #ef4444;
-  border: 1px solid #e5e7eb;
-}
+  .btn-sm.btn-danger {
+    background: white;
+    color: #ef4444;
+    border: 1px solid #e5e7eb;
+  }
 
-.btn-sm.btn-danger:hover {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #dc2626;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.1);
-}
+  .btn-sm.btn-danger:hover {
+    background: #fef2f2;
+    border-color: #d79f9fff;
+    color: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.1);
+  }
 
-/* Buton grubu için */
-.table td:last-child {
-  white-space: nowrap;
-}
+  .btn-sm.btn-info {
+    background: white;
+    color: #0ea5e9;
+    border: 1px solid #e5e7eb;
+  }
+
+  .btn-sm.btn-info:hover {
+    background: #f0f9ff;
+    border-color: #bae6fd;
+    color: #0284c7;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(14, 165, 233, 0.1);
+  }
+
+  /* Buton grubu için */
+  .table td:last-child {
+    white-space: nowrap;
+  }
 
   .btn-primary {
     background: #ffffffff;
@@ -632,6 +647,7 @@ try {
                 <td><?php echo getStatusBadge($r['durum']); ?></td>
                 <td>
                   <a class="btn-sm btn-primary" href="<?php echo site_url('satinalma-sys/talep_duzenle.php?id=' . (int)$r['id']); ?>">Düzenle</a>
+                  <button class="btn-sm btn-info" onclick="sendMail(<?php echo (int)$r['id']; ?>, '<?php echo sa_h($r['order_code']); ?>')">📧 Mail</button>
                   <a class="btn-sm btn-danger" href="<?php echo site_url('satinalma-sys/talep_sil.php?id=' . (int)$r['id']); ?>" onclick="return confirm('Bu talebi silmek istediğinize emin misiniz?');">Sil</a>
                 </td>
               </tr>
@@ -715,6 +731,41 @@ try {
     console.log('Sayfa yüklendi, tablo elementi:', document.querySelector('.table'));
     console.log('Satır sayısı:', document.querySelectorAll('.table tbody tr').length);
   });
+
+  function sendMail(talepId, orderCode) {
+    if (!confirm('📧 ' + orderCode + ' kodlu talep için mail göndermek istediğinize emin misiniz?')) {
+      return;
+    }
+
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Gönderiliyor...';
+
+    fetch('/satinalma-sys/talep_send_mail.php?ajax=1&id=' + talepId, {
+        method: 'GET'
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('✅ Mail başarıyla gönderildi!\n\nAlıcılar: ' + (data.recipients || 'Belirtilmedi'));
+          btn.innerHTML = '✅ Gönderildi';
+          setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+          }, 2000);
+        } else {
+          alert('❌ Mail gönderilemedi!\n\nHata: ' + (data.error || 'Bilinmeyen hata'));
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }
+      })
+      .catch(error => {
+        alert('❌ Bir hata oluştu: ' + error.message);
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      });
+  }
 </script>
 
 <?php include('../includes/footer.php'); ?>
