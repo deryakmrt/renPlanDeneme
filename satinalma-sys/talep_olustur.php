@@ -117,74 +117,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   ]);
 
   if ($ok) {
-    // --- MAIL TETİKLEYİCİSİ (INSERT BAŞARILI) ---
+    $talep_id = (int)$db->lastInsertId();
+
+    // --- Kalemleri çocuk tabloda sakla (satinalma_order_items) ---
     try {
-      require_once __DIR__ . '/../mailing/notify.php';
-      $talep_id = (int)$db->lastInsertId();
-
-
-      // --- Kalemleri çocuk tabloda sakla (satinalma_order_items) ---
-      try {
-        $db->exec("CREATE TABLE IF NOT EXISTS `satinalma_order_items` (
-          `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-          `talep_id` INT UNSIGNED NOT NULL,
-          `urun` VARCHAR(255) NOT NULL,
-          `miktar` DECIMAL(18,4) NULL,
-          `birim` VARCHAR(50) NULL,
-          `birim_fiyat` DECIMAL(18,2) NULL,
-          `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY (`id`),
-          KEY `idx_talep_id` (`talep_id`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-      } catch (Throwable $e) {
-        error_log('Create satinalma_order_items failed: ' . $e->getMessage());
-      }
-
-      try {
-        $ins = $db->prepare("INSERT INTO `satinalma_order_items` (talep_id, urun, miktar, birim, birim_fiyat)
+      $ins = $db->prepare("INSERT INTO `satinalma_order_items` (talep_id, urun, miktar, birim, birim_fiyat)
                               VALUES (:talep_id,:urun,:miktar,:birim,:birim_fiyat)");
-        foreach ($kalemler as $row) {
-          $ins->execute([
-            ':talep_id'    => $talep_id,
-            ':urun'        => $row['urun'],
-            ':miktar'      => $row['miktar'],
-            ':birim'       => $row['birim'],
-            ':birim_fiyat' => $row['birim_fiyat'],
-          ]);
-        }
-      } catch (Throwable $e) {
-        error_log('Insert satinalma_order_items failed: ' . $e->getMessage());
+      foreach ($kalemler as $row) {
+        $ins->execute([
+          ':talep_id'    => $talep_id,
+          ':urun'        => $row['urun'],
+          ':miktar'      => $row['miktar'],
+          ':birim'       => $row['birim'],
+          ':birim_fiyat' => $row['birim_fiyat'],
+        ]);
       }
-      // --- /Kalemler ---
-      // E-posta payload (formdaki alanlara göre haritalama)
-      $talep_tarihi = f('talep_tarihi') ?: date('Y-m-d');
-      $miktarStr = f('miktar', '');
-      $fiyatStr  = f('birim_fiyat', '');
-      $toplamVal = ($miktarStr !== '' && $fiyatStr !== '') ? ((float)$miktarStr * (float)$fiyatStr) : null;
-
-      $payload = [
-        'ren_kodu'     => $order_code,
-        'proje_adi'    => f('proje_ismi', ''),
-        'talep_eden'   => f('veren_kisi', ''),
-        'talep_tarihi' => $talep_tarihi,
-        'notlar'       => '',
-        'kalemler'     => array_map(function ($row) {
-          $mStr = ($row['miktar'] === null || $row['miktar'] === '') ? '' : rtrim(rtrim(number_format((float)$row['miktar'], 2, '.', ''), '0'), '.');
-          $fStr = ($row['birim_fiyat'] === null || $row['birim_fiyat'] === '') ? '' : number_format((float)$row['birim_fiyat'], 2, '.', '');
-          $toplam = ($row['miktar'] !== null && $row['birim_fiyat'] !== null) ? (float)$row['miktar'] * (float)$row['birim_fiyat'] : null;
-          return ['urun' => $row['urun'], 'miktar' => $mStr, 'birim' => $row['birim'], 'birim_fiyat' => $fStr, 'toplam' => $toplam];
-        }, $kalemler),
-        // reply_to: oturumdaki kullanıcının e-postası varsa ekle
-        'reply_to'     => isset($_SESSION['user_email']) ? (string)$_SESSION['user_email'] : null,
-      ];
-
-      // İdempotent gönderim (aynı talep için iki kez atmaz)
-      rp_notify_purchase_created($talep_id, $payload);
     } catch (Throwable $e) {
-      // Mail hatası oluşsa bile süreci bloklamayalım; loglayıp devam edelim
-      error_log('notify_purchase_created error: ' . $e->getMessage());
+      error_log('Insert satinalma_order_items failed: ' . $e->getMessage());
     }
-    // --- /MAIL TETİKLEYİCİSİ ---
+    // --- /Kalemler ---
+
+    // --- MAİL ARTIK OTOMATİK GÖNDERİLMİYOR ---
+    // Mail göndermek için talepler.php sayfasındaki "📧 Mail" butonunu kullanın
 
     $url = '/satinalma-sys/talepler.php?ok=1';
     header('Location: ' . $url, true, 302);
@@ -192,6 +146,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ob_end_flush();
     exit;
   }
+  http_response_code(500);
+  echo "<b>Kayıt başarısız.</b>";
+  ob_end_flush();
+  exit;
   http_response_code(500);
   echo "<b>Kayıt başarısız.</b>";
   ob_end_flush();
