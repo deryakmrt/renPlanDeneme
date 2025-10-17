@@ -660,6 +660,9 @@ include('../includes/header.php');
 
         const quote = quotes.find(q => q && q.supplier_id == s.id);
         const hasQuote = !!quote;
+        // Para birimi bilgisini quote'tan al
+        const currency = quote && quote.currency ? quote.currency : 'TRY';
+        const currencySymbol = currency === 'USD' ? '$' : (currency === 'EUR' ? '€' : '₺');
         const isSelected = selectedQuote && selectedQuote.supplier_id == s.id;
 
         // Geçmiş bilgileri al
@@ -687,7 +690,7 @@ include('../includes/header.php');
           const priceStyle = isBestPrice ? 'color:#28a745;font-weight:700;font-size:1.3rem;' : '';
           html += '<div class="supplier-price" style="' + priceStyle + '">';
           if (isBestPrice) html += '✓ ';
-          html += '₺' + currentPrice.toFixed(2);
+          html += currencySymbol + currentPrice.toFixed(2);
           html += '</div>';
         } else if (hasHistory && avgPrice) {
           const priceStyle = isBestPrice ? 'color:#28a745;font-weight:700;' : '';
