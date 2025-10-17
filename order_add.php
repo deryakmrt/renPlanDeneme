@@ -68,7 +68,7 @@ if (method('POST')) {
         $order[$f] = $_POST[$f] ?? $order[$f];
     }
     $order['customer_id'] = (int)$order['customer_id'];
-    
+
     //Çözüm 2: Retry Mechanism
     $attempt = 0;
     $order_id = null;
@@ -153,7 +153,7 @@ if (method('POST')) {
             rp_sql_ensure();
         }
 
-        // SAFE Reply-To
+        // Reply-To hazırla
         $___reply_to = null;
         $___cu_email = null;
         if (function_exists('current_user')) {
@@ -167,56 +167,118 @@ if (method('POST')) {
         }
         if ($___cu_email && filter_var($___cu_email, FILTER_VALIDATE_EMAIL)) {
             $___reply_to = $___cu_email;
-        } else {
-            $___reply_to = null;
         }
 
-        // Proje adı boşsa müşteri adını kullan
-        $proje_adi2 = trim((string)($proje_adi ?? ''));
-        if ($proje_adi2 === '' && !empty($customer_id)) {
+        // DOĞRU PAYLOAD: order_send_mail.php ile AYNI YAPIDA
+        // Önce customer bilgilerini çek
+        $customer_name = '';
+        $customer_email = '';
+        $customer_phone = '';
+        $billing_address = '';
+        $shipping_address = '';
+
+        if ($order['customer_id'] > 0) {
             try {
-                $cst = $db->prepare("SELECT name FROM customers WHERE id=? LIMIT 1");
-                $cst->execute([$customer_id]);
-                $proje_adi2 = (string)($cst->fetchColumn() ?: '');
+                $cst = $db->prepare("SELECT name, email, phone, billing_address, shipping_address FROM customers WHERE id=? LIMIT 1");
+                $cst->execute([$order['customer_id']]);
+                if ($c = $cst->fetch(PDO::FETCH_ASSOC)) {
+                    $customer_name = $c['name'] ?? '';
+                    $customer_email = $c['email'] ?? '';
+                    $customer_phone = $c['phone'] ?? '';
+                    $billing_address = $c['billing_address'] ?? '';
+                    $shipping_address = $c['shipping_address'] ?? '';
+                }
             } catch (Throwable $e) {
             }
         }
 
-        // Kalemleri POST'tan toparla
-        $kalemler_mail = [];
-        $names  = $_POST['name'] ?? [];
-        $units  = $_POST['unit'] ?? [];
-        $qtys   = $_POST['qty'] ?? $_POST['quantity'] ?? [];
-        $prices = $_POST['price'] ?? [];
-        $cnt = max(count($names), count($qtys), count($units), count($prices));
-        for ($i = 0; $i < $cnt; $i++) {
-            $n = trim((string)($names[$i] ?? ''));
-            if ($n === '') continue;
-            $kalemler_mail[] = [
-                'urun'  => $n,
-                'miktar' => (float)($qtys[$i] ?? 0),
-                'birim' => (string)($units[$i] ?? ''),
-                'fiyat' => (float)($prices[$i] ?? 0),
+        // Kalemleri çek (방금 eklendi)
+        $items_mail = [];
+        try {
+            $it = $db->prepare("SELECT oi.*, p.sku, p.image FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=? ORDER BY oi.id ASC");
+            $it->execute([$order_id]);
+            $items_mail = $it->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+        }
+
+        // Base URL (görsel için)
+        $scheme = (!empty($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http'));
+        $host = $_SERVER['HTTP_HOST'];
+        $base_url = $scheme . '://' . $host;
+
+        // Görsel URL düzeltme fonksiyonu
+        $fix_image_url = function ($img) use ($base_url) {
+            $img = trim($img);
+            if (empty($img)) return '';
+            if (preg_match('#^https?://#i', $img)) return $img;
+            if ($img[0] === '/') return $base_url . $img;
+            if (preg_match('#^uploads/#', $img)) return $base_url . '/' . $img;
+            if (substr($img, 0, 2) === './') return $base_url . substr($img, 1);
+            return $base_url . '/uploads/' . $img;
+        };
+
+        // Tarih formatlama (YYYY-MM-DD -> DD-MM-YYYY)
+        $fmt_date = function ($val) {
+            if (!isset($val)) return '';
+            $val = trim((string)$val);
+            if ($val === '' || $val === '0000-00-00' || $val === '0000-00-00 00:00:00' || $val === '1970-01-01') return '';
+            if (preg_match('/^(\d{4})-(\d{2})-(\d{2})(?:\s+\d{2}:\d{2}:\d{2})?$/', $val, $m)) {
+                return $m[3] . '-' . $m[2] . '-' . $m[1];
+            }
+            $ts = @strtotime($val);
+            if (!$ts || $ts <= 0) return '';
+            $year = (int)date('Y', $ts);
+            if ($year < 1900 || $year > 2100) return '';
+            return date('d-m-Y', $ts);
+        };
+
+        // PAYLOAD - order_send_mail.php ile AYNI FORMATTA
+        $payload_order = [
+            'order_code'          => (string)$order['order_code'],
+            'revizyon_no'         => (string)$order['revizyon_no'],
+            'customer_name'       => $customer_name,
+            'customer_id'         => (string)$order['customer_id'],
+            'email'               => $customer_email,
+            'phone'               => $customer_phone,
+            'billing_address'     => $billing_address,
+            'shipping_address'    => $shipping_address,
+            'siparis_veren'       => (string)$order['siparis_veren'],
+            'siparisi_alan'       => (string)$order['siparisi_alan'],
+            'siparisi_giren'      => (string)$order['siparisi_giren'],
+            'siparis_tarihi'      => $fmt_date($order['siparis_tarihi']),
+            'fatura_para_birimi'  => (string)($order['fatura_para_birimi'] ?: $order['currency']),
+            'odeme_para_birimi'   => (string)$order['odeme_para_birimi'],
+            'odeme_kosulu'        => (string)$order['odeme_kosulu'],
+            'proje_adi'           => (string)$order['proje_adi'],
+            'nakliye_turu'        => (string)$order['nakliye_turu'],
+            'termin_tarihi'       => $fmt_date($order['termin_tarihi']),
+            'baslangic_tarihi'    => $fmt_date($order['baslangic_tarihi']),
+            'bitis_tarihi'        => $fmt_date($order['bitis_tarihi']),
+            'teslim_tarihi'       => $fmt_date($order['teslim_tarihi']),
+            'notes'               => (string)$order['notes'],
+            'items'               => [] // items, kalemler değil!
+        ];
+
+        // Kalemleri ekle
+        foreach ($items_mail as $r) {
+            $payload_order['items'][] = [
+                'gorsel'          => $fix_image_url($r['image'] ?? ''),
+                'urun_kod'        => (string)($r['sku'] ?? ''),
+                'urun_adi'        => (string)($r['name'] ?? ''),
+                'urun_aciklama'   => (string)($r['urun_ozeti'] ?? ''),
+                'kullanim_alani'  => (string)($r['kullanim_alani'] ?? ''),
+                'miktar'          => (float)($r['qty'] ?? 0),
+                'birim'           => (string)($r['unit'] ?? ''),
+                'termin_tarihi'   => $fmt_date($r['termin_tarihi'] ?? $order['termin_tarihi'] ?? ''),
+                'fiyat'           => (float)($r['price'] ?? 0),
             ];
         }
 
-        $siparis_eden2   = $_SESSION['user_email'] ?? (function_exists('current_user') ? (current_user()['email'] ?? '') : '');
-        $siparis_tarihi2 = $siparis_tarihi ?? date('Y-m-d');
-        $payload2 = [
-            'ren_kodu'       => (string)($order_code ?? ''),
-            'proje_adi'      => $proje_adi2,
-            'talep_eden'     => (string)$siparis_eden2,
-            'siparis_tarihi' => $siparis_tarihi2,
-            'notlar'         => (string)($notes ?? ''),
-            'kalemler'       => $kalemler_mail,
-            'reply_to'       => $___reply_to,
-        ];
-
-        // Önce notify katmanı
+        // Şimdi mail gönder
         $___ok = false;
         $___err = '';
         if (function_exists('rp_notify_order_created')) {
-            list($___ok, $___err) = rp_notify_order_created($order_id, $payload2);
+            list($___ok, $___err) = rp_notify_order_created($order_id, $payload_order);
         }
 
         // FAIL ise doğrudan gönder
@@ -225,7 +287,6 @@ if (method('POST')) {
             require_once __DIR__ . '/mailing/mailer.php';
             require_once __DIR__ . '/mailing/templates.php';
 
-            // Alıcılar
             $toList = $ccList = $bccList = [];
             if (function_exists('rp_get_recipients')) {
                 list($toList, $ccList, $bccList) = rp_get_recipients();
@@ -238,17 +299,16 @@ if (method('POST')) {
                 }
             }
 
-            // Ek garanti için BCC: oturum kullanıcısı (geçerli e-posta ise)
             if ($___reply_to) {
                 $bccList[] = $___reply_to;
             }
 
-            $viewUrl = function_exists('rp_build_view_url') ? rp_build_view_url('order', $order_id) : ('order_view.php?id=' . $order_id);
-            $subject2 = rp_subject('order', $payload2);
-            $html2    = rp_email_html('order', $payload2, $viewUrl);
-            $text2    = rp_email_text('order', $payload2, $viewUrl);
+            $viewUrl = function_exists('rp_build_view_url') ? rp_build_view_url('order', $order_id) : ($base_url . '/order_view.php?id=' . $order_id);
+            $subject2 = rp_subject('order', $payload_order);
+            $html2    = rp_email_html('order', $payload_order, $viewUrl);
+            $text2    = rp_email_text('order', $payload_order, $viewUrl);
 
-            list($ok2, $err2) = rp_send_mail($subject2, $html2, $text2, $toList, $ccList, $bccList);
+            list($ok2, $err2) = rp_send_mail($subject2, $html2, $text2, $toList, $ccList, $bccList, $___reply_to);
             if (!$ok2) {
                 error_log('direct_send FAILED: ' . $err2);
             }
