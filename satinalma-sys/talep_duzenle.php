@@ -125,6 +125,7 @@ try {
                 soi.*,
                 COUNT(DISTINCT sq.id) as quote_count,
                 MIN(sq.price) as best_price,
+                MIN(sq.currency) as best_price_currency,
                 s.name as selected_supplier,
                 sq_sel.price as selected_price,
                 sq_sel.id as selected_quote_id,
@@ -534,6 +535,7 @@ include('../includes/header.php');
 
             supplierData = data.suppliers || [];
             currentQuotes = data.quotes || [];
+            console.log('Loaded quotes:', currentQuotes); // DEBUG - para birimlerini kontrol et
 
             // YENI MANTIK: Eğer quotes varsa ama 3'ten azsa, geçmiş bilgileri de göster
             if (currentQuotes.length > 0 && currentQuotes.length < 3) {
@@ -633,7 +635,8 @@ include('../includes/header.php');
       if (selectedQuote) {
         html += '<div class="alert alert-success mb-3">';
         html += '<strong>Seçili:</strong> ' + (selectedQuote.supplier_name || '');
-        html += '<br><small>Fiyat: ₺' + parseFloat(selectedQuote.price || 0).toFixed(2) + '</small>';
+        const selSymbol = selectedQuote.currency === 'USD' ? '$' : (selectedQuote.currency === 'EUR' ? '€' : '₺');
+        html += '<br><small>Fiyat: ' + selSymbol + parseFloat(selectedQuote.price || 0).toFixed(2) + '</small>';
         html += '</div>';
       }
 
@@ -642,7 +645,15 @@ include('../includes/header.php');
         html += '<strong>📊 Bu ürün için ' + historicalCount + ' tedarikçiden geçmiş teklif var</strong><br>';
         html += '<small>Geçmişi olan firmalar ⭐ ile işaretlidir';
         if (lowestPrice) {
-          html += ' | <span style="color:#28a745;font-weight:600;">En düşük: ₺' + lowestPrice.toFixed(2) + '</span>';
+          // En düşük fiyatın para birimini bul
+          let lowestCurrency = 'TRY';
+          quotes.forEach(q => {
+            if (q && parseFloat(q.price || 0) === lowestPrice) {
+              lowestCurrency = q.currency || 'TRY';
+            }
+          });
+          const lowestSymbol = lowestCurrency === 'USD' ? '$' : (lowestCurrency === 'EUR' ? '€' : '₺');
+          html += ' | <span style="color:#28a745;font-weight:600;">En düşük: ' + lowestSymbol + lowestPrice.toFixed(2) + '</span>';
         }
         html += '</small></div>';
       }
@@ -712,7 +723,10 @@ include('../includes/header.php');
           html += '<div style="margin-top:8px;padding:10px;border-radius:4px;' + boxStyle + '">';
           html += '<small style="font-weight:600;color:' + (isBestPrice && !hasQuote ? '#155724' : '#856404') + ';">';
           html += '📋 Geçmiş: </small>';
-          if (avgPrice) html += '<small>Ort: ₺' + avgPrice.toFixed(2) + '</small> ';
+          // Para birimi bilgisini kullan
+          const histSymbol = quote && quote.currency ?
+            (quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '₺')) : '₺';
+          if (avgPrice) html += '<small>Ort: ' + histSymbol + avgPrice.toFixed(2) + '</small> ';
           if (historical.quote_count) html += '<small>(' + historical.quote_count + ' teklif)</small>';
           html += '</div>';
         }
@@ -796,7 +810,8 @@ include('../includes/header.php');
       if (selectedQuote) {
         html += '<div class="alert alert-success mb-3">';
         html += '<strong>Seçili:</strong> ' + (selectedQuote.supplier_name || '');
-        html += '<br><small>Fiyat: ₺' + parseFloat(selectedQuote.price || 0).toFixed(2) + '</small>';
+        const selSymbol = selectedQuote.currency === 'USD' ? '$' : (selectedQuote.currency === 'EUR' ? '€' : '₺');
+        html += '<br><small>Fiyat: ' + selSymbol + parseFloat(selectedQuote.price || 0).toFixed(2) + '</small>';
         html += '</div>';
       }
 
@@ -813,7 +828,8 @@ include('../includes/header.php');
         if (isSelected) html += ' <span style="color: #28a745;">✓</span>';
         html += '</div>';
         if (hasQuote) {
-          html += '<div class="supplier-price">₺' + parseFloat(quote.price || 0).toFixed(2) + '</div>';
+          const qSymbol = quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '₺');
+          html += '<div class="supplier-price">' + qSymbol + parseFloat(quote.price || 0).toFixed(2) + '</div>';
         }
         html += '</div>';
         html += '<div class="supplier-details">';
@@ -871,7 +887,7 @@ include('../includes/header.php');
         html += '<strong>📊 Bu ürün için ' + historicalCount + ' tedarikçiden geçmiş teklif bulundu</strong><br>';
         html += '<small>Geçmişi olan firmalar ⭐ ile işaretlidir | ';
         if (lowestPrice) {
-          html += '<span style="color:#28a745;font-weight:600;">En düşük: ₺' + lowestPrice.toFixed(2) + '</span>';
+          html += '<span style="color:#28a745;font-weight:600;">En düşük: ₺' + lowestPrice.toFixed(2) + '</span>'; // Geçmiş veriler TRY
         }
         html += '</small>';
         html += '</div>';
@@ -2092,7 +2108,11 @@ include('../includes/header.php');
               <div class="d-flex justify-content-between align-items-center mb-2">
                 <strong>Tedarikçi Bilgileri</strong>
                 <?php if ($best_price): ?>
-                  <span class="text-success font-weight-bold">En İyi Fiyat: ₺<?= number_format((float)$best_price, 2) ?></span>
+                  <?php
+                  $best_currency = $item['best_price_currency'] ?? 'TRY';
+                  $best_symbol = $best_currency === 'USD' ? '$' : ($best_currency === 'EUR' ? '€' : '₺');
+                  ?>
+                  <span class="text-success font-weight-bold">En İyi Fiyat: <?= $best_symbol ?><?= number_format((float)$best_price, 2) ?></span>
                 <?php endif; ?>
               </div>
               <div class="supplier-summary">
@@ -2101,7 +2121,11 @@ include('../includes/header.php');
                   <?php if ($selected_supplier): ?>
                     <span class="text-success">✓ <?= h($selected_supplier) ?></span>
                     <?php if ($selected_price): ?>
-                      <span class="text-muted">(₺<?= number_format((float)$selected_price, 2) ?>)</span>
+                      <?php
+                      $sel_currency = $item['selected_currency'] ?? 'TRY';
+                      $sel_symbol = $sel_currency === 'USD' ? '$' : ($sel_currency === 'EUR' ? '€' : '₺');
+                      ?>
+                      <span class="text-muted">(<?= $sel_symbol ?><?= number_format((float)$selected_price, 2) ?>)</span>
                     <?php endif; ?>
                   <?php else: ?>
                     <span class="text-muted">Henüz seçilmedi</span>
