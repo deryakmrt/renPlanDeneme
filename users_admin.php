@@ -130,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && $action==='create') {
     if ($pass1!==$pass2) throw new Exception('Şifreler uyuşmuyor.');
 
     $hash = password_hash($pass1, PASSWORD_BCRYPT);
-    $st = $db->prepare("INSERT INTO users (username, email, role, password) VALUES (?,?,?,?)");
+    $st = $db->prepare("INSERT INTO users (username, email, role, password_hash) VALUES (?,?,?,?)");
     $st->execute([$username, ($email!==''?$email:null), $role, $hash]);
 
     $_SESSION['flash_success'] = 'Kullanıcı oluşturuldu.';
@@ -171,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && $action==='edit' && $id>0) {
     if ($pass1!=='' || $pass2!=='') {
       if ($pass1!==$pass2) throw new Exception('Şifreler uyuşmuyor.');
       $hash = password_hash($pass1, PASSWORD_BCRYPT);
-      $st = $db->prepare("UPDATE users SET username=?, email=?, role=?, password=? WHERE id=?");
+      $st = $db->prepare("UPDATE users SET username=?, email=?, role=?, password_hash=? WHERE id=?");
       $st->execute([$username, ($email!==''?$email:null), $role, $hash, $id]);
     } else {
       $st = $db->prepare("UPDATE users SET username=?, email=?, role=? WHERE id=?");
