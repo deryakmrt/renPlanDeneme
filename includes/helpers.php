@@ -178,4 +178,28 @@ function parse_post_date($key){
     if (!$dt) return null;
     return $dt->format('Y-m-d');
 }
+// Admin yetkisi kontrolü
+function require_admin() {
+    require_login();
+    if (current_role() !== 'admin') {
+        http_response_code(403);
+        die('Bu sayfaya erişim için admin yetkisi gereklidir');
+    }
+}
+
+// Flash mesajları
+function flash() {
+    if (!empty($_SESSION['flash_success'])) {
+        echo '<div class="alert alert-success mb-3" style="background:#052e16;border:1px solid #166534;color:#bbf7d0;padding:12px;border-radius:8px;">';
+        echo h($_SESSION['flash_success']);
+        echo '</div>';
+        unset($_SESSION['flash_success']);
+    }
+    if (!empty($_SESSION['flash_error'])) {
+        echo '<div class="alert alert-danger mb-3" style="background:#450a0a;border:1px solid #991b1b;color:#fecaca;padding:12px;border-radius:8px;">';
+        echo h($_SESSION['flash_error']);
+        echo '</div>';
+        unset($_SESSION['flash_error']);
+    }
+}
 ?>
