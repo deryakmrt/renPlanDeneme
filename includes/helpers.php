@@ -38,8 +38,46 @@ function method($m){ return $_SERVER['REQUEST_METHOD'] === strtoupper($m); }
 // CSRF
 if (session_status() !== PHP_SESSION_ACTIVE) { @session_start(); }
 if (empty($_SESSION['csrf'])) { $_SESSION['csrf'] = bin2hex(random_bytes(16)); }
-function csrf_input(){ echo '<input type="hidden" name="csrf" value="'.h($_SESSION['csrf']).'">'; }
-function csrf_check(){ if(($_POST['csrf']??'') !== ($_SESSION['csrf']??'')) die('CSRF doğrulaması başarısız'); }
+
+// CSRF - Her iki kullanım şeklini de destekleyen versiyon
+if (session_status() !== PHP_SESSION_ACTIVE) { @session_start(); }
+if (empty($_SESSION['csrf'])) { $_SESSION['csrf'] = bin2hex(random_bytes(16)); }
+
+// Basit kullanım için (login.php gibi)
+function csrf_input() {
+    echo '<input type="hidden" name="csrf" value="' . h($_SESSION['csrf']) . '">';
+}
+
+// Action-based kullanım için (taxonomies.php gibi)
+function csrf_field($action = 'global') {
+    echo '<input type="hidden" name="csrf" value="' . h($_SESSION['csrf']) . '">';
+    echo '<input type="hidden" name="csrf_action" value="' . h($action) . '">';
+}
+
+// Basit kontrol (login.php gibi)
+function csrf_check($action = null, $onFailRedirect = null) {
+    $tokenMatch = (($_POST['csrf'] ?? '') === ($_SESSION['csrf'] ?? ''));
+    
+    // Eğer action belirtilmişse, onu da kontrol et
+    if ($action !== null) {
+        $actionMatch = (($_POST['csrf_action'] ?? '') === $action);
+        if (!$tokenMatch || !$actionMatch) {
+            if ($onFailRedirect) {
+                $_SESSION['flash_error'] = 'CSRF doğrulaması başarısız';
+                redirect($onFailRedirect);
+            } else {
+                die('CSRF doğrulaması başarısız');
+            }
+        }
+    } else {
+        // Action yoksa sadece token'ı kontrol et
+        if (!$tokenMatch) {
+            die('CSRF doğrulaması başarısız');
+        }
+    }
+    
+    return true;
+}
 
 // --- ROLLER ---
 function valid_roles(){ return ['admin','sistem_yoneticisi','musteri','plasiyer', 'uretim']; }
