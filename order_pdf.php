@@ -105,16 +105,17 @@ ob_start();
 
     /* Ürün tablosu */
     table.items { width:100%;
-    /* Column widths (reordered): S.No, Görsel, Ürün, Kullanım Alanı, Miktar, Birim, Termin, Fiyat, Toplam */
-    table.items col:nth-child(1) { width: 8mm; }   /* S.No */
-    table.items col:nth-child(2) { width: 18mm; }  /* Görsel */
-    table.items col:nth-child(3) { width: 70mm; }  /* Ürün Açıklama */
-    table.items col:nth-child(4) { width: 22mm; }  /* Kullanım Alanı */
-    table.items col:nth-child(5) { width: 16mm; }  /* Miktar */
-    table.items col:nth-child(6) { width: 16mm; }  /* Birim */
-    table.items col:nth-child(7) { width: 16mm; }  /* Termin Tarihi */
-    table.items col:nth-child(8) { width: 14mm; }  /* Fiyat */
-    table.items col:nth-child(9) { width: 14mm; }  /* Toplam */
+    /* Column widths (reordered): S.No, Görsel, Ürün KOD, Ürün Açıklama, Kullanım Alanı, Miktar, Birim, Termin, Fiyat, Toplam */
+    table.items col:nth-child(1) { width: 8mm; }  /* S.No */
+    table.items col:nth-child(2) { width: 18mm; } /* Görsel */
+    table.items col:nth-child(3) { width: 50mm; } /* Ürün Kod */
+    table.items col:nth-child(4) { width: 45mm; } /* Ürün Açıklama */
+    table.items col:nth-child(5) { width: 16mm; } /* Kullanım Alanı */
+    table.items col:nth-child(6) { width: 13mm; } /* Miktar */
+    table.items col:nth-child(7) { width: 13mm; } /* Birim */
+    table.items col:nth-child(8) { width: 16mm; } /* Termin */
+    table.items col:nth-child(9) { width: 13mm; } /* Fiyat */
+    table.items col:nth-child(10) { width: 13mm; }  /* Toplam */
 
     /* Column widths (9 cols, total ≈ 190mm) */
     /* S.No */
@@ -128,6 +129,13 @@ ob_start();
     /* Toplam */
  margin-top: 4mm; }
     table.items th, table.items td { border: 0.3mm solid #000; padding: 1mm; vertical-align: top; word-wrap: break-word; overflow: hidden; }
+    table.items td:nth-child(3) { white-space: nowrap; font-size: 9px; padding: 1mm 0.5mm; } /* Ürün Kod */
+    table.items td:nth-child(5), table.items th:nth-child(5) { font-size: 9px; } /* Kullanım Alanı */
+    table.items td:nth-child(6), table.items th:nth-child(6) { font-size: 9px; } /* Miktar */
+    table.items td:nth-child(7), table.items th:nth-child(7) { font-size: 9px; } /* Birim */
+    table.items td:nth-child(8), table.items th:nth-child(8) { font-size: 9px; } /* Termin */
+    table.items td:nth-child(9), table.items th:nth-child(9) { font-size: 9px; } /* Fiyat */
+    table.items td:nth-child(10), table.items th:nth-child(10) { font-size: 9px; } /* Toplam */
     table.items th { text-align: center; font-weight: 700; background: #f2f4f7; }
     td.num { white-space: nowrap; text-align: right; }
     td.center { text-align: center; }
@@ -217,17 +225,17 @@ ob_start();
 <!-- Ürün Tablosu -->
 <table class="items">
   <colgroup>
-    <col style="width:8.0mm">
-    <col style="width:18.0mm">
-    <col style="width:56.7mm">
-    <col style="width:37.7mm">
-    <col style="width:22.0mm">
-    <col style="width:16.0mm">
-    <col style="width:16.0mm">
-    <col style="width:16.0mm">
-    <col style="width:14.0mm">
-    <col style="width:14.0mm">
-  </colgroup>
+    <col style="width:8.0mm">     <!-- S.No -->
+    <col style="width:18.0mm">    <!-- Görsel -->
+    <col style="width:50.0mm">    <!-- Ürün Kod -->
+    <col style="width:45.0mm">    <!-- Ürün Açıklama -->
+    <col style="width:16.0mm">    <!-- Kullanım Alanı -->
+    <col style="width:13.0mm">    <!-- Miktar -->
+    <col style="width:13.0mm">    <!-- Birim -->
+    <col style="width:16.0mm">    <!-- Termin -->
+    <col style="width:13.0mm">    <!-- Fiyat -->
+    <col style="width:13.0mm">    <!-- Toplam -->
+</colgroup>
   <thead>
     <tr>
       <th>S.No</th>
