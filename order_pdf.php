@@ -238,7 +238,7 @@ ob_start();
 </colgroup>
   <thead>
     <tr>
-      <th>S.No</th>
+      <th>S.<br>No</th>
       <th>Görsel</th>
       <th>Ürün Kod</th>
       <th>Ürün Açıklama</th>
