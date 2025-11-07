@@ -971,8 +971,7 @@ function fmt_date_dmy($s){
     return date('d-m-Y', $t);
 }
 ?>
-
-
+<!--================================================ -->
 <?php
 function bitis_badge_html($bitis = null, $termin = null){
     // Wrapper style: 2-row grid (badge + date), fixed height so dates align across columns
@@ -1014,13 +1013,85 @@ function bitis_badge_html($bitis = null, $termin = null){
     return '<div class="bitis-badge" style="'.$wrapStyle.'">'.$badge.$dateHtml.'</div>';
 }
 ?>
-
-
-
+<!--================================================ -->
 <?php
-
-function termin_badge_html($termin, $teslim=null){
+// Bitiş + 14 gün kuralını hesaplayan YENİ fonksiyon
+function teslim_badge_html($teslim, $bitis){
     // Wrapper style: 2-row grid (badge + date), fixed height so dates align across columns
+    $wrapStyle = 'display:grid;grid-template-rows:1fr auto;row-gap:4px;height:48px;align-items:end;justify-items:center';
+    $badgeBase = 'font-size:10px !important;line-height:1.2;padding:3px 8px;display:inline-block;max-width:120px;text-align:center;white-space:normal';
+
+    // --- Bitiş tarihi anahtarımız. O yoksa, hesap yapamayız. ---
+    if(!$bitis || $bitis==='0000-00-00'){
+        // Bitiş yok, ama Teslim var. Sadece Teslim tarihini göster.
+        if($teslim && $teslim!=='0000-00-00'){
+            $dateHtml = '<div class="teslim-date" style="font-size:.78rem;opacity:.75;white-space:nowrap">'.fmt_date_dmy($teslim).'</div>';
+            return '<div class="teslim-badge" style="'.$wrapStyle.'">'.$dateHtml.'</div>';
+        }
+        // Ne Bitiş ne Teslim var. Boş göster.
+        return '<div class="teslim-badge" style="'.$wrapStyle.'"><span class="badge gray" style="'.$badgeBase.'">—</span><div class="teslim-date" style="font-size:.78rem;opacity:.75;white-space:nowrap"></div></div>';
+    }
+
+    // Bitiş tarihi var, objeye çevirelim
+    try{
+        $dBitis = new DateTime($bitis);
+    }catch(Exception $e){
+        // Bitiş tarihi geçersiz, Teslim varsa onu göster, yoksa boş.
+        if($teslim && $teslim!=='0000-00-00'){
+            $dateHtml = '<div class="teslim-date" style="font-size:.78rem;opacity:.75;white-space:nowrap">'.fmt_date_dmy($teslim).'</div>';
+            return '<div class="teslim-badge" style="'.$wrapStyle.'">'.$dateHtml.'</div>';
+        }
+        return '<div class="teslim-badge" style="'.$wrapStyle.'"><span class="badge gray" style="'.$badgeBase.'">—</span><div class="teslim-date" style="font-size:.78rem;opacity:.75;white-space:nowrap"></div></div>';
+    }
+
+
+    // --- DURUM 1: SİPARİŞ TESLİM EDİLDİ (Teslim Tarihi var) ---
+    if($teslim && $teslim!=='0000-00-00'){
+        $dateHtml = '<div class="teslim-date" style="font-size:.78rem;opacity:.75;white-space:nowrap">'.fmt_date_dmy($teslim).'</div>';
+        try {
+            $dTeslim = new DateTime($teslim);
+        } catch(Exception $e) {
+            return '<div class="teslim-badge" style="'.$wrapStyle.'">'.$dateHtml.'</div>'; // Geçersiz teslim, sadece tarihi göster
+        }
+
+        // Gecikme = Teslim Günü - Bitiş Günü
+        $gecikmeGun = (int)$dBitis->diff($dTeslim)->format('%r%a'); // + ise Teslim > Bitiş
+
+        // 14 günden az geciktiyse (fark < 14) sadece tarihi göster
+        if($gecikmeGun < 14){ 
+            return '<div class="teslim-badge" style="'.$wrapStyle.'">'.$dateHtml.'</div>';
+        } else {
+            // 14+ gün gecikme var (Örn: 6'sında bitti, 20'sinde (14. gün) alındı)
+            $gecikme = $gecikmeGun;
+            $badge = '<span class="badge red" style="'.$badgeBase.'" title="Bitiş: '.fmt_date_dmy($bitis).' • Teslim: '.fmt_date_dmy($teslim).'">'.$gecikme.' gün gecikmeli teslim</span>';
+            return '<div class="teslim-badge" style="'.$wrapStyle.'">'.$badge.$dateHtml.'</div>';
+        }
+    }
+    // --- DURUM 2: SİPARİŞ TESLİM EDİLMEDİ (Teslim Tarihi yok) ---
+    else {
+        $dateHtml = '<div class="teslim-date" style="font-size:.78rem;opacity:.75;white-space:nowrap"></div>'; // Teslim tarihi yok
+        $today = new DateTime('today');
+
+        // Gecikme = Bugün - Bitiş Günü
+        $gecikmeGun = (int)$dBitis->diff($today)->format('%r%a'); // + ise Bugün > Bitiş
+
+        // Henüz 14 gün geçmemişse (fark < 14) boş göster
+        if($gecikmeGun < 14){
+            return '<div class="teslim-badge" style="'.$wrapStyle.'"><span class="badge gray" style="'.$badgeBase.'">—</span>'.$dateHtml.'</div>';
+        } else {
+            // 14+ gün gecikme var
+            $gecikme = $gecikmeGun;
+            $badge = '<span class="badge red" style="'.$badgeBase.'" title="Bitiş: '.fmt_date_dmy($bitis).' • Henüz Teslim Edilmedi'.'">'.$gecikme.' gün gecikti</span>';
+            return '<div class="teslim-badge" style="'.$wrapStyle.'">'.$badge.$dateHtml.'</div>';
+        }
+    }
+}
+?>
+<!--================================================ -->
+<?php
+// Bitiş'e göre gecikmeyi kontrol eden GÜNCELLENMİŞ fonksiyon
+function termin_badge_html($termin, $teslim=null, $bitis=null){ // <-- 3. parametre $bitis eklendi
+    // Wrapper style
     $wrapStyle = 'display:grid;grid-template-rows:1fr auto;row-gap:4px;height:48px;align-items:end;justify-items:center';
     $badgeBase = 'font-size:10px !important;line-height:1.2;padding:3px 8px;display:inline-block;max-width:120px;text-align:center;white-space:normal';
 
@@ -1028,42 +1099,89 @@ function termin_badge_html($termin, $teslim=null){
         return '<div class="termin-badge" style="'.$wrapStyle.'"><span class="badge gray" style="'.$badgeBase.'">—</span><div class="termin-date" style="font-size:.78rem;opacity:.75;white-space:nowrap"></div></div>';
     }
 
+    $dateHtml = '<div class="termin-date" style="font-size:.78rem;opacity:.75;white-space:nowrap">'.fmt_date_dmy($termin).'</div>';
+    
+    // --- ÇAKIŞMA KONTROLÜ (YENİ) ---
+    // teslim_badge_html'nin kırmızı badge gösterip göstermeyeceğini önceden hesapla
+    $teslimGecikmesiVar = false;
+    if ($bitis && $bitis !== '0000-00-00') {
+        try {
+            $dBitis = new DateTime($bitis);
+            $dCompare = null; // $teslim veya $today
+
+            if ($teslim && $teslim !== '0000-00-00') {
+                $dCompare = new DateTime($teslim);
+            } else {
+                // Sadece teslim edilmemişse $today'e bak
+                $dCompare = new DateTime('today');
+            }
+
+            // Gecikme = Teslim/Bugün - Bitiş
+            $gecikmeGun = (int)$dBitis->diff($dCompare)->format('%r%a');
+            if ($gecikmeGun >= 14) {
+                $teslimGecikmesiVar = true; // Bitiş'e göre 14+ gün teslim gecikmesi var.
+            }
+        } catch (Exception $e) { /* Hata varsa normal devam et */ }
+    }
+    // --- KONTROL BİTTİ ---
+
+
     $today   = new DateTime('today');
     $dTermin = new DateTime($termin);
-    $dateHtml = '<div class="termin-date" style="font-size:.78rem;opacity:.75;white-space:nowrap">'.fmt_date_dmy($termin).'</div>';
-
+    
+    // 1. SİPARİŞ TESLİM EDİLDİ Mİ?
     if($teslim && $teslim!=='0000-00-00'){
-        $dTeslim = new DateTime($teslim);
-        $diff = (int)$dTeslim->diff($dTermin)->format('%r%a'); // teslim - termin
-        if($dTeslim < $dTermin){
-            return '<div class="termin-badge" style="'.$wrapStyle.'"><span class="badge green" style="'.$badgeBase.'">'.abs($diff).' gün önce teslim</span>'.$dateHtml.'</div>';
-        } elseif($dTeslim == $dTermin){
-            return '<div class="termin-badge" style="'.$wrapStyle.'"><span class="badge green" style="'.$badgeBase.'">Tam gününde teslim</span>'.$dateHtml.'</div>';
-        } else {
-            return '<div class="termin-badge" style="'.$wrapStyle.'"><span class="badge red" style="'.$badgeBase.'">'.abs($diff).' gün gecikmeli teslim</span>'.$dateHtml.'</div>';
+        try {
+            $dTeslim = new DateTime($teslim);
+            $diff = (int)$dTeslim->diff($dTermin)->format('%r%a'); // teslim - termin
+            
+            if($dTeslim < $dTermin){
+                 return '<div class="termin-badge" style="'.$wrapStyle.'"><span class="badge green" style="'.$badgeBase.'">'.abs($diff).' gün önce teslim</span>'.$dateHtml.'</div>';
+            } elseif($dTeslim == $dTermin){
+                 return '<div class="termin-badge" style="'.$wrapStyle.'"><span class="badge green" style="'.$badgeBase.'">Tam gününde teslim</span>'.$dateHtml.'</div>';
+            } else {
+                // Teslim, Terminden geç olsa BİLE, "gecikmeli teslim" badge'i GÖSTERMİYORUZ.
+                // Çünkü o işi 'teslim_badge_html' yapıyor.
+                return '<div class="termin-badge" style="'.$wrapStyle.'">'.$dateHtml.'</div>';
+            }
+        } catch (Exception $e) {
+             return '<div class="termin-badge" style="'.$wrapStyle.'">'.$dateHtml.'</div>'; // Hata olursa sadece tarihi göster
         }
     }
 
+    // 2. SİPARİŞ HENÜZ TESLİM EDİLMEDİ
+    
+    // YENİ KURAL: Eğer 'teslim_badge_html' zaten kırmızı "gecikti" (Bitiş'e göre) gösterecekse,
+    // bu fonksiyon (Termin) "gecikti" (Termin'e göre) GÖSTERMESİN.
+    if ($teslimGecikmesiVar) {
+        return '<div class="termin-badge" style="'.$wrapStyle.'">'.$dateHtml.'</div>'; // Sadece tarihi göster, badge gösterme.
+    }
+    
+    // Teslimat yapılmadı VE Bitiş'e göre 14+ gün gecikme (henüz) YOK.
+    // O zaman Termin'e göre normal durumu göster (kaldı / gecikti).
     $diff = (int)$today->diff($dTermin)->format('%r%a'); // termin - bugün
     if($diff > 0){
         return '<div class="termin-badge" style="'.$wrapStyle.'"><span class="badge orange" style="'.$badgeBase.'">'.$diff.' gün kaldı</span>'.$dateHtml.'</div>';
     } elseif($diff == 0){
         return '<div class="termin-badge" style="'.$wrapStyle.'"><span class="badge orange" style="'.$badgeBase.'">Bugün</span>'.$dateHtml.'</div>';
     } else {
+        // (Senaryo 2: Termin 18/10, Bitiş 28/10. Bitiş'e göre 10 gün var (gecikme değil), 
+        // ama Termin'e göre 20 gün gecikti. Bu badge görünür.)
         return '<div class="termin-badge" style="'.$wrapStyle.'"><span class="badge red" style="'.$badgeBase.'">'.abs($diff).' gün gecikti</span>'.$dateHtml.'</div>';
     }
 }
 ?>
+<!--================================================ -->
 <?php while($o = $stmt->fetch()): ?>
     <tr class="order-row" data-order-id="<?= (int)$o['id'] ?>"><td><input type='checkbox' class='orderCheck' name='order_ids[]' value='<?= (int)$o['id'] ?>'></td><td><div class="twolines"><?= h($o['customer_name']) ?></div></td>
       <td><div class="twolines"><?= h($o['proje_adi']) ?></div></td>
       <td><?= h($o['order_code']) ?></td>
       <td><?= render_status_pill($o['status']); ?></td>
       <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= fmt_date_dmy($o['siparis_tarihi'] ?? null) ?></div></td>
-      <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= termin_badge_html($o['termin_tarihi'] ?? null, $o['teslim_tarihi'] ?? null) ?></div></td>
+      <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= termin_badge_html($o['termin_tarihi'] ?? null, $o['teslim_tarihi'] ?? null, $o['bitis_tarihi'] ?? null) ?></div></td>
       <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= fmt_date_dmy($o['baslangic_tarihi'] ?? null) ?></div></td>
       <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= bitis_badge_html($o['bitis_tarihi'] ?? null, $o['termin_tarihi'] ?? null) ?></div></td>
-      <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= fmt_date_dmy($o['teslim_tarihi'] ?? null) ?></div></td>
+      <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= teslim_badge_html($o['teslim_tarihi'] ?? null, $o['bitis_tarihi'] ?? null) ?></div></td>
       <td class="right">
         <a class="btn" href="order_edit.php?id=<?= (int)$o['id'] ?>" title="Düzenle" aria-label="Düzenle"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l8.06-8.06.92.92L5.92 19.58zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></a>
         <a class="btn" href="order_view.php?id=<?= (int)$o['id'] ?>" title="Görüntüle" aria-label="Görüntüle"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 5c-7.633 0-11 7-11 7s3.367 7 11 7 11-7 11-7-3.367-7-11-7zm0 12a5 5 0 1 1 .001-10.001A5 5 0 0 1 12 17z"/><circle cx="12" cy="12" r="3"/></svg></a>
