@@ -20,7 +20,7 @@ return [
   'notify' => [
     'on_create'  => true,
     // Sabit alıcı listesi (virgüllü). Burayı kendine göre düzenleyebilirsin.
-    'recipients' => 'burak@serista.com.tr, derkimirti@gmail.com',
+    'recipients' => 'burak@serista.com.tr, fatih@ditetra.com, satinalma@ditetra.com, uretim@ditetra.com, derkimirti@gmail.com',
     //'recipients' => 'derkimirti@gmail.com',
     'cc'         => '',
     'bcc'        => '',
