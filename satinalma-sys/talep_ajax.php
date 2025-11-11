@@ -340,6 +340,49 @@ try {
                 'quote' => $selected_quote
             ], JSON_UNESCAPED_UNICODE);
             break;
+        case 'get_talep_details':
+            $talep_id = isset($_GET['talep_id']) ? (int)$_GET['talep_id'] : 0;
+
+            if ($talep_id <= 0) {
+                echo json_encode(['success' => false, 'error' => 'Geçersiz talep ID']);
+                exit;
+            }
+
+            try {
+                $stmt = $pdo->prepare("
+            SELECT 
+                soi.*,
+                COUNT(DISTINCT sq.id) as quote_count,
+                MIN(sq.price) as best_price,
+                MIN(sq.currency) as best_price_currency,
+                s.name as selected_supplier,
+                sq_sel.price as selected_price,
+                sq_sel.id as selected_quote_id,
+                sq_sel.currency as selected_currency,
+                sq_sel.payment_term as selected_payment_term,
+                sq_sel.delivery_days as selected_delivery_days,
+                sq_sel.shipping_type as selected_shipping_type,
+                sq_sel.note as selected_note,
+                sq_sel.quote_date as selected_quote_date,
+                GROUP_CONCAT(DISTINCT s2.name SEPARATOR ', ') as quoted_suppliers
+            FROM satinalma_order_items soi
+            LEFT JOIN satinalma_quotes sq ON soi.id = sq.order_item_id
+            LEFT JOIN satinalma_quotes sq_sel ON soi.id = sq_sel.order_item_id AND sq_sel.selected = 1
+            LEFT JOIN suppliers s ON sq_sel.supplier_id = s.id
+            LEFT JOIN satinalma_quotes sq2 ON soi.id = sq2.order_item_id
+            LEFT JOIN suppliers s2 ON sq2.supplier_id = s2.id
+            WHERE soi.talep_id = ? 
+            GROUP BY soi.id
+            ORDER BY soi.id ASC
+        ");
+                $stmt->execute([$talep_id]);
+                $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                echo json_encode(['success' => true, 'items' => $items]);
+            } catch (Exception $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            }
+            exit;
 
         case 'add_supplier':
             $supplier_name = trim($_POST['supplier_name'] ?? '');
