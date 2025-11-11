@@ -105,35 +105,23 @@ ob_start();
 
     /* Ürün tablosu */
     table.items { width:100%;
-    /* Column widths (reordered): S.No, Görsel, Ürün KOD, Ürün Açıklama, Kullanım Alanı, Miktar, Birim, Termin, Fiyat, Toplam */
+    /* Column widths (reordered): S.No, Görsel, Ürün Açıklama, Kullanım Alanı, Miktar, Birim, Termin */
     table.items col:nth-child(1) { width: 8mm; }  /* S.No */
     table.items col:nth-child(2) { width: 18mm; } /* Görsel */
-    table.items col:nth-child(3) { width: 50mm; } /* Ürün Kod */
-    table.items col:nth-child(4) { width: 45mm; } /* Ürün Açıklama */
-    table.items col:nth-child(5) { width: 16mm; } /* Kullanım Alanı */
-    table.items col:nth-child(6) { width: 13mm; } /* Miktar */
-    table.items col:nth-child(7) { width: 13mm; } /* Birim */
-    table.items col:nth-child(8) { width: 16mm; } /* Termin */
-    table.items col:nth-child(9) { width: 13mm; } /* Fiyat */
-    table.items col:nth-child(10) { width: 13mm; }  /* Toplam */
+    table.items col:nth-child(3) { width: 95mm; } /* Ürün Açıklama (kod dahil) */
+    table.items col:nth-child(4) { width: 16mm; } /* Kullanım Alanı */
+    table.items col:nth-child(5) { width: 13mm; } /* Miktar */
+    table.items col:nth-child(6) { width: 13mm; } /* Birim */
+    table.items col:nth-child(7) { width: 20mm; } /* Termin */
  margin-top: 4mm; }
     table.items th, table.items td { border: 0.3mm solid #000; padding: 1mm; vertical-align: top; word-wrap: break-word; overflow: hidden; }
-    table.items td:nth-child(3) { white-space: nowrap; font-size: 9px; padding: 1mm 0.5mm; } /* Ürün Kod */
-    table.items td:nth-child(5), table.items th:nth-child(5) { font-size: 9px; } /* Kullanım Alanı */
-    table.items td:nth-child(6), table.items th:nth-child(6) { font-size: 9px; } /* Miktar */
-    table.items td:nth-child(7), table.items th:nth-child(7) { font-size: 9px; } /* Birim */
-    table.items td:nth-child(8), table.items th:nth-child(8) { font-size: 9px; } /* Termin */
-    table.items td:nth-child(9), table.items th:nth-child(9) { font-size: 9px; } /* Fiyat */
-    table.items td:nth-child(10), table.items th:nth-child(10) { font-size: 9px; } /* Toplam */
+    table.items td:nth-child(3) { font-size: 9px; } /* Ürün Açıklama */
+    table.items td:nth-child(4), table.items th:nth-child(4) { font-size: 10px; } /* Kullanım Alanı */
+    table.items td:nth-child(5), table.items th:nth-child(5) { font-size: 10px; } /* Miktar */
+    table.items td:nth-child(6), table.items th:nth-child(6) { font-size: 10px; } /* Birim */
+    table.items td:nth-child(7), table.items th:nth-child(7) { font-size: 10px; white-space: nowrap; } /* Termin */
     table.items th { text-align: center; font-weight: 700; background: #f2f4f7; }
     /* 7-column widths after removing price & total (balanced) */
-    /* S.No */
-    /* Görsel */
-    /* Ürün Açıklama */
-    /* Miktar */
-    /* Birim */
-    /* Kullanım Alanı */
-    /* Termin Tarihi */  /* Termin Tarihi */
     td.num { white-space: nowrap; text-align: right; }
     td.center { text-align: center; }
     table.items td:first-child, table.items th:first-child { padding-left: 1mm; padding-right: 1mm; }
@@ -225,20 +213,17 @@ ob_start();
   <colgroup>
     <col style="width:8.0mm">     <!-- S.No -->
     <col style="width:18.0mm">    <!-- Görsel -->
-    <col style="width:50.0mm">    <!-- Ürün Kod -->
-    <col style="width:45.0mm">    <!-- Ürün Açıklama -->
+    <col style="width:95.0mm">    <!-- Ürün Açıklama (kod dahil) -->
     <col style="width:16.0mm">    <!-- Kullanım Alanı -->
     <col style="width:13.0mm">    <!-- Miktar -->
     <col style="width:13.0mm">    <!-- Birim -->
-    <col style="width:16.0mm">    <!-- Termin -->
-    <col style="width:13.0mm">    <!-- Fiyat -->
-    <col style="width:13.0mm">    <!-- Toplam -->
+    <col style="width:20.0mm">    <!-- Termin -->
+    
 </colgroup>
   <thead>
     <tr>
       <th>S.No</th>
       <th>Görsel</th>
-      <th>Ürün Kod</th>
       <th>Ürün Açıklama</th>
       <th>Kullanım Alanı</th>
       <th>Miktar</th>
@@ -251,19 +236,24 @@ ob_start();
     <tr>
       <td class="center" style="width:8mm; min-width:8mm; max-width:8mm; padding-left:0.6mm; padding-right:0.6mm;"><?= $i++ ?></td>
       <td>
-        <?php if (!empty($it['image'])): ?>
+        <?php if (!empty($it['image'])): ?> <!--ürün görseli -->
           <img src="<?= h($it['image']) ?>" style="max-width:18mm;max-height:18mm;display:block">
         <?php endif; ?>
       </td>
-      <td><?= h($it['sku'] ?? '') ?></td>
       <td>
-        <div><strong><?= h($it['name'] ?? '') ?></strong></div>
-        <?php if (!empty($it['urun_ozeti'])): ?>
-          <div class="small"><?= nl2br(h($it['urun_ozeti'])) ?></div>
+        <div style="font-size:10px;"><strong><?= h($it['name'] ?? '') ?></strong></div> <!--ürün adı -->
+        <?php if (!empty($it['sku'])): ?>
+          <div class="small" style="margin-top:1mm;"><strong><?= h($it['sku']) ?></strong></div>
+        <?php endif; ?>
+        <?php if (!empty($it['urun_ozeti'])): ?> <!--ürün özeti -->
+          <div class="small" style="margin-top:1mm;"><?= nl2br(h($it['urun_ozeti'])) ?></div>
         <?php endif; ?>
       </td>
-      <td><?= h($it['kullanim_alani'] ?? '') ?></td><td class="num"><?= isset($it['qty']) ? number_format((float)$it['qty'],2,',','.') : '' ?></td><td class="center"><?= h($it['unit'] ?? '') ?></td><td class="center"><?= fmt_date($it['termin_tarihi'] ?? ($o['termin_tarihi'] ?? '')) ?></td>
-    </tr>
+      <td><?= h($it['kullanim_alani'] ?? '') ?></td>
+      <td class="num"><?= isset($it['qty']) ? number_format((float)$it['qty'],2,',','.') : '' ?></td>
+      <td class="center"><?= h($it['unit'] ?? '') ?></td>
+      <td class="center"><?= fmt_date($it['termin_tarihi'] ?? ($o['termin_tarihi'] ?? '')) ?></td>
+</tr>
   <?php endforeach; ?>
 
   </tbody>
