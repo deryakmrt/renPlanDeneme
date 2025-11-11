@@ -1,6 +1,21 @@
 <?php
 // mailing/templates.php – ÜSTF (order_pdf_uretim.php) ile birebir alanlar + TARİH FİX
 
+// CID / URL için ortak logo kaynağı
+if (!function_exists('rp_logo_src')) {
+  function rp_logo_src(array $p): string {
+    // $p['_logo_cid'] sağlanırsa cid: kullan
+    if (!empty($p['_logo_cid'])) {
+      $cid = (string)$p['_logo_cid'];
+      // 'cid:' öneki yoksa ekle
+      if (stripos($cid, 'cid:') !== 0) $cid = 'cid:' . $cid;
+      return $cid;
+    }
+    // Aksi halde güvenli tam URL
+    return 'https://renplan.ditetra.com/images/dit-logo.jpg';
+  }
+}
+
 if (!function_exists('rp_subject')) {
   function rp_subject(string $type, array $p): string
   {
@@ -183,8 +198,15 @@ if (!function_exists('rp_email_html')) {
 
           <?php if ($view_url): ?>
             <tr>
-              <td style="padding:0 20px 20px 20px">
-                <a href="<?= $e($view_url) ?>" style="display:inline-block; background:#EC7323;color:#fff; text-decoration:none; padding:10px 16px; border-radius:8px; font:600 14px/1 -apple-system,Segoe UI,Roboto,Arial">Siparişi Görüntüle</a>
+              <td style="padding:16px 20px; background:#f9fafb; border-top:1px solid #e5e7eb; text-align:center; font-size:12px; color:#6b7280">
+                <a href="<?= $e($view_url) ?>" style="display:inline-block; background:#EC7323;color:#fff; text-decoration:none; padding:10px 16px; border-radius:8px; font:600 14px/1 -apple-system,Segoe UI,Roboto,Arial">Siparişi Görüntüle</a><br><br><p style="font:13px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial; white-space:nowrap; margin:0;">
+                Renled bir
+                <img src="<?= htmlspecialchars(rp_logo_src($p), ENT_QUOTES, 'UTF-8'); ?>"
+                     alt="Ditetra" width="50" height="20"
+                     style="vertical-align:middle; margin:0 4px; border:0; outline:none; text-decoration:none; display:inline-block; -ms-interpolation-mode:bicubic;">&nbsp;
+
+                markasıdır.
+              </p>
               </td>
             </tr>
           <?php endif; ?>
@@ -414,7 +436,14 @@ if (!function_exists('rp_email_html_purchase')) {
           <!-- Footer -->
           <tr>
             <td style="padding:16px 20px; background:#f9fafb; border-top:1px solid #e5e7eb; text-align:center; font-size:12px; color:#6b7280">
-              Bu talep otomatik olarak oluşturulmuştur. Detaylar için yukarıdaki butona tıklayın.
+              <p style="font:13px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial; white-space:nowrap; margin:0;">
+                Renled bir
+                <img src="<?= htmlspecialchars(rp_logo_src($p), ENT_QUOTES, 'UTF-8'); ?>"
+                     alt="Ditetra" width="50" height="20"
+                     style="vertical-align:middle; margin:0 4px; border:0; outline:none; text-decoration:none; display:inline-block; -ms-interpolation-mode:bicubic;">&nbsp;
+
+                markasıdır.
+              </p>
             </td>
           </tr>
 
