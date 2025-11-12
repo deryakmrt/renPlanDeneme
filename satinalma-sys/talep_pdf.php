@@ -87,113 +87,101 @@ ob_start();
   <meta charset="UTF-8">
   <style>
     * { box-sizing: border-box; }
-    body { 
-      font-family: 'DejaVu Sans', Arial, sans-serif; 
-      font-size: 11px; 
-      line-height: 1.4; 
-      color: #000; 
-      margin: 0; 
-    }
-    @page { margin: 12mm 10mm; }
-    
-    table { border-collapse: collapse; border-spacing: 0; }
-    
-    /* Üst başlık */
-    table.head { width: 100%; margin-bottom: 4mm; }
-    table.head td { vertical-align: middle; }
-    .logo img { max-height: 18mm; display: block; }
-    .titles .t1 { font-size: 16pt; font-weight: 700; margin: 0; }
-    .titles .t2 { font-size: 12pt; font-weight: 700; margin: 2px 0 0 0; }
-    
-    .order-code { 
-      text-align: center; 
-      font-weight: 700; 
-      margin: 2mm 0 3mm 0; 
-      font-size: 14px;
-    }
-    
-    /* Bilgi kutusu */
-    .info-box {
-      border: 0.3mm solid #000;
-      padding: 3mm;
-      margin-bottom: 4mm;
-    }
-    
-    table.info { width: 100%; }
-    table.info td {
-      border: 0.3mm solid #000;
-      padding: 1.5mm 2mm;
-      vertical-align: top;
-    }
-    table.info td.label {
-      width: 35mm;
-      font-weight: 700;
-      background: #f2f4f7;
-    }
-    
-    /* Ürün tablosu */
-    table.items {
-      width: 100%;
-      margin-top: 4mm;
-    }
-    
-    table.items th,
-    table.items td {
-      border: 0.3mm solid #000;
-      padding: 2mm;
-      vertical-align: top;
-    }
-    
-    table.items th {
-      background: #f2f4f7;
-      font-weight: 700;
-      text-align: center;
-      font-size: 10px;
-    }
-    
-    table.items td.center { text-align: center; }
-    table.items td.num { text-align: right; white-space: nowrap; }
-    
-    .supplier-box {
-      background: #e8f5e9;
-      padding: 2mm;
-      margin-top: 1mm;
-      border-left: 2mm solid #4caf50;
-      font-size: 9px;
-    }
-    
-    .supplier-box strong {
-      color: #2e7d32;
-    }
-    
-    .no-supplier {
-      color: #999;
-      font-style: italic;
-      font-size: 9px;
-    }
-    
-    /* Toplam kutusu */
-    table.totals {
-      margin-top: 4mm;
-      width: 70mm;
-      margin-left: auto;
-    }
-    
-    table.totals td {
-      border: 0.3mm solid #000;
-      padding: 1.5mm 2mm;
-    }
-    
-    table.totals .label {
-      font-weight: 700;
-      text-align: right;
-      background: #f2f4f7;
-    }
-    
-    table.totals .value {
-      text-align: right;
-      font-weight: 700;
-    }
+        body { 
+        font-family: 'DejaVu Sans', Arial, sans-serif; 
+        font-size: 11px; 
+        line-height: 1.4; 
+        color: #000; 
+        margin: 0; 
+        }
+        @page { margin: 12mm 10mm; }
+        
+        table { border-collapse: collapse; border-spacing: 0; }
+        
+        /* Üst başlık */
+        table.head { width: 100%; margin-bottom: 4mm; }
+        table.head td { vertical-align: middle; }
+        .logo img { max-height: 18mm; display: block; }
+        .titles .t1 { font-size: 16pt; font-weight: 700; margin: 0; }
+        .titles .t2 { font-size: 12pt; font-weight: 700; margin: 2px 0 0 0; }
+        
+        .order-code { 
+        text-align: center; 
+        font-weight: 700; 
+        margin: 2mm 0 3mm 0; 
+        font-size: 14px;
+        }
+        
+        /* Bilgi kutusu */
+        .info-box {
+        border: 0.3mm solid #000;
+        padding: 3mm;
+        margin-bottom: 4mm;
+        }
+        
+        table.info { width: 100%; }
+        table.info td {
+        border: 0.3mm solid #000;
+        padding: 1.5mm 2mm;
+        vertical-align: top;
+        }
+        table.info td.label {
+        width: 35mm;
+        font-weight: 700;
+        background: #f2f4f7;
+        }
+        
+        /* Ürün tablosu */
+        table.items {
+        width: 100%;
+        margin-top: 4mm;
+        }
+        
+        table.items th,
+        table.items td {
+        border: 0.3mm solid #000;
+        padding: 2mm;
+        vertical-align: top;
+        }
+        
+        table.items th {
+        background: #f2f4f7;
+        font-weight: 700;
+        text-align: center;
+        font-size: 10px;
+        }
+        
+        table.items td.center { text-align: center; }
+        table.items td.num { text-align: right; white-space: nowrap; }
+            
+        .no-supplier {
+        color: #999;
+        font-style: italic;
+        font-size: 9px;
+        }
+        
+        /* Toplam kutusu */
+        table.totals {
+        margin-top: 4mm;
+        width: 70mm;
+        margin-left: auto;
+        }
+        
+        table.totals td {
+        border: 0.3mm solid #000;
+        padding: 1.5mm 2mm;
+        }
+        
+        table.totals .label {
+        font-weight: 700;
+        text-align: right;
+        background: #f2f4f7;
+        }
+        
+        table.totals .value {
+        text-align: right;
+        font-weight: 700;
+        }
   </style>
 </head>
 <body>
@@ -240,13 +228,13 @@ ob_start();
 <table class="items">
   <thead>
     <tr>
-      <th style="width: 8mm;">S.No</th>
-      <th style="width: 60mm;">Ürün Adı</th>
-      <th style="width: 18mm;">Miktar</th>
-      <th style="width: 15mm;">Birim</th>
-      <th style="width: 50mm;">Seçilen Tedarikçi</th>
-      <th style="width: 20mm;">Fiyat</th>
-      <th style="width: 20mm;">Toplam</th>
+      <th style="width: 5mm;">S.No</th>
+      <th style="width: 47mm;">Ürün Adı</th>
+      <th style="width: 15mm;">Miktar</th>
+      <th style="width: 7mm;">Birim</th>
+      <th style="width: 55mm;">Seçilen Tedarikçi</th>
+      <th style="width: 10mm;">Fiyat</th>
+      <th style="width: 15mm;">Toplam</th>
     </tr>
   </thead>
   <tbody>
@@ -266,9 +254,13 @@ ob_start();
       <td class="center"><?= $sira++ ?></td>
       <td>
         <strong><?= htmlspecialchars($item['urun'] ?? '') ?></strong>
+      </td>
+      <td class="num"><?= $fmt($miktar) ?></td>
+      <td class="center"><?= htmlspecialchars($item['birim'] ?? '-') ?></td>
+      <td>
         <?php if (!empty($item['selected_supplier'])): ?>
-          <div class="supplier-box">
-            <strong>✓ <?= htmlspecialchars($item['selected_supplier']) ?></strong><br>
+          <strong><?= htmlspecialchars($item['selected_supplier']) ?></strong>
+          <div style="font-size: 9px; margin-top: 1mm; line-height: 1.3;">
             <?php if (!empty($item['selected_payment_term'])): ?>
               Ödeme: <?= htmlspecialchars($item['selected_payment_term']) ?><br>
             <?php endif; ?>
@@ -280,12 +272,9 @@ ob_start();
             <?php endif; ?>
           </div>
         <?php else: ?>
-          <div class="no-supplier">Henüz tedarikçi seçilmedi</div>
+          <span class="no-supplier">Henüz seçilmedi</span>
         <?php endif; ?>
       </td>
-      <td class="num"><?= $fmt($miktar) ?></td>
-      <td class="center"><?= htmlspecialchars($item['birim'] ?? '-') ?></td>
-      <td><?= htmlspecialchars($item['selected_supplier'] ?? '-') ?></td>
       <td class="num">
         <?php if ($fiyat > 0): ?>
           <?= $currencySymbol ?> <?= $fmt($fiyat) ?>
@@ -315,8 +304,19 @@ ob_start();
 </table>
 <?php endif; ?>
 
-<div style="margin-top: 8mm; font-size: 9px; color: #666; text-align: center;">
-  Oluşturulma Tarihi: <?= date('d-m-Y H:i:s') ?>
+<?php
+// Ditetra logosu için yol
+$ditetra_logo = file_exists(__DIR__ . '/../assets/ditetra-logo.png') 
+    ? (__DIR__ . '/../assets/ditetra-logo.png') 
+    : 'https://renplan.ditetra.com/images/dit-logo.jpg';
+?>
+
+<div style="position: absolute; bottom: 5mm; right: 10mm; font-size: 9px; color: #999; text-align: right;">
+  Renled bir 
+  <img src="<?= htmlspecialchars($ditetra_logo) ?>" 
+       alt="Ditetra" 
+       style="width: 12mm; height: auto; vertical-align: middle; margin: 0 1mm; border: 0;">
+  markasıdır.
 </div>
 
 </body>
