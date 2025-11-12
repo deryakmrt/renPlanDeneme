@@ -32,10 +32,14 @@ if (!$bootstrapped) {
     exit;
 }
 
-// RBAC: Only admin can use this
-if (!function_exists('has_role') || !has_role('admin')) {
+// RBAC: Admin veya 3 dk içinde sistem_yoneticisi
+$current_role = function_exists('current_role') ? current_role() : null;
+$is_admin = (function_exists('has_role') && has_role('admin'));
+$is_sistem_yoneticisi = ($current_role === 'sistem_yoneticisi');
+
+if (!$is_admin && !$is_sistem_yoneticisi) {
     http_response_code(403);
-    echo "Bu işlem sadece admin içindir.";
+    echo "Bu işlem sadece yetkili kullanıcılar içindir.";
     exit;
 }
 
@@ -62,12 +66,35 @@ if ($id <= 0 || $confirm !== 'EVET') {
 }
 
 // Order exists?
-$exists = $db->prepare("SELECT id FROM orders WHERE id=? LIMIT 1");
+$exists = $db->prepare("SELECT id, created_at FROM orders WHERE id=? LIMIT 1");
 $exists->execute([$id]);
-if (!$exists->fetchColumn()) {
+$order = $exists->fetch();
+if (!$order) {
     http_response_code(404);
     echo "Sipariş bulunamadı (#$id).";
     exit;
+}
+
+// Sistem yöneticisi için 3 dakika kontrolü
+if ($is_sistem_yoneticisi && !$is_admin) {
+    $created_at = $order['created_at'];
+    if ($created_at && $created_at !== '0000-00-00 00:00:00') {
+        try {
+            $created_time = new DateTime($created_at);
+            $now = new DateTime();
+            $diff_minutes = ($now->getTimestamp() - $created_time->getTimestamp()) / 60;
+            
+            if ($diff_minutes > 3) {
+                http_response_code(403);
+                echo "Sistem yöneticisi olarak sadece sipariş girişinden sonraki 3 dakika içinde silme yetkisine sahipsiniz. Bu sipariş " . round($diff_minutes, 1) . " dakika önce oluşturuldu.";
+                exit;
+            }
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo "Tarih kontrolü sırasında hata oluştu.";
+            exit;
+        }
+    }
 }
 
 // === HARD DELETE (transaction) ===
