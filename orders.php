@@ -200,6 +200,45 @@ td .wpstat-wrap{margin:auto}
   text-align:center;
 }
 .wpstat-track .wpstat-bar{position:relative; z-index:1}
+/* === Zamanlı Silme Butonu === (sistem_yoneticisi icin) */
+.btn-delete-timer {
+  position: relative;
+  overflow: hidden;
+  color: #fff !important;
+  font-weight: 600;
+  z-index: 1;
+  transition: none;
+}
+
+.btn-delete-timer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--timer-pct, 100%);
+  background: linear-gradient(90deg, #22c55e 0%, #eab308 50%, #ef4444 100%);
+  background-size: 300% 100%;
+  background-position: left center;
+  z-index: -1;
+  transition: width 1s linear, background-position 1s linear;
+}
+
+.btn-delete-timer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--timer-pct, 100%);
+  background: #6b7280;
+  z-index: -1;
+}
+
+/* Kalan süreye göre renk pozisyonu */
+.btn-delete-timer[data-remaining] {
+  /* JS ile güncellenecek */
+}
 </style>
 
 <?php
@@ -859,9 +898,9 @@ $stmt->execute($params);
 <table class="orders-table">
     <tr>
       <th><input type='checkbox' id='checkAll' onclick="document.querySelectorAll('.orderCheck').forEach(cb=>cb.checked=this.checked)"></th>
-      <th>Müşteri</th>
-      <th>Proje Adı</th>
-      <th>Sipariş Kodu</th>
+      <th>👤Müşteri</th>
+      <th>📂Proje Adı</th>
+      <th>🔖Sipariş Kodu</th>
       <th>Üretim Durumu</th>
       <th style="color:#000; font-size:14px; text-align:center">Sipariş Tarihi</th>
       <th style="color:#000; font-size:14px; text-align:center">Termin Tarihi</th>
@@ -1190,9 +1229,55 @@ function termin_badge_html($termin, $teslim=null, $bitis=null){ // <-- 3. parame
         
         <?php endif; ?><a class="btn btn-ustf" href="order_pdf_uretim.php?id=<?= (int)$o['id'] ?>" title="ÜSTF PDF" aria-label="ÜSTF PDF">ÜSTF</a>
       
-<?php if ((function_exists('has_role') && has_role('admin')) || ((function_exists('current_user') ? (current_user()['role'] ?? '') : '') === 'admin')): ?>
-  <a class="btn btn-danger" href="/order_delete.php?id=<?= (int)$o['id'] ?>&confirm=EVET" onclick="return confirm('Bu siparişi kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');">Sil</a>
-<?php endif; ?>
+<?php 
+$___role = current_user()['role'] ?? ''; 
+$___is_admin = ($___role === 'admin');
+$___is_sys_mgr = ($___role === 'sistem_yoneticisi');
+$___show_delete = $___is_admin;
+$___remaining_pct = 0;
+$___remaining_sec = 0;
+
+// Sistem yöneticisi için 3 dakika kontrolü
+if ($___is_sys_mgr && !$___is_admin && !empty($o['created_at']) && $o['created_at'] !== '0000-00-00 00:00:00') {
+    try {
+        $___created = new DateTime($o['created_at']);
+        $___now = new DateTime();
+        $___elapsed_sec = $___now->getTimestamp() - $___created->getTimestamp();
+        $___total_sec = 3 * 60; // 3 dakika = 180 saniye
+        $___remaining_sec = max(0, $___total_sec - $___elapsed_sec);
+        
+        if ($___remaining_sec > 0) {
+            $___show_delete = true;
+            $___remaining_pct = ($___remaining_sec / $___total_sec) * 100;
+        }
+    } catch (Exception $e) { /* sessiz geç */ }
+}
+
+if ($___show_delete): 
+    if ($___is_admin) {
+        // Admin için normal kırmızı buton
+        ?>
+        <a class="btn btn-danger" href="/order_delete.php?id=<?= (int)$o['id'] ?>&confirm=EVET" onclick="return confirm('Bu siparişi kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');">Sil</a>
+        <?php
+    } else {
+        // Sistem yöneticisi için zamanlı buton
+        $___min = floor($___remaining_sec / 60);
+        $___sec = $___remaining_sec % 60;
+        $___time_text = sprintf('%d:%02d', $___min, $___sec);
+        ?>
+        <a class="btn btn-delete-timer" 
+           href="/order_delete.php?id=<?= (int)$o['id'] ?>&confirm=EVET" 
+           data-remaining="<?= (int)$___remaining_sec ?>"
+           data-order-id="<?= (int)$o['id'] ?>"
+           style="--timer-pct: <?= number_format($___remaining_pct, 2) ?>%"
+           onclick="return confirm('Bu siparişi kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');">
+           Sil (<?= $___time_text ?>)
+        </a>
+        <?php
+    }
+endif; 
+?>
+
 </td>
     </tr>
 <?php endwhile; ?>
@@ -1381,6 +1466,66 @@ document.addEventListener('DOMContentLoaded', function () {
   // In case of dynamic reloads/pagination
   setTimeout(injectList, 500);
   setTimeout(injectList, 1500);
+})();
+</script>
+<script>
+// Zamanlı silme butonları için countdown
+(function(){
+  function updateTimerButtons(){
+    var buttons = document.querySelectorAll('.btn-delete-timer[data-remaining]');
+    if(buttons.length === 0) return;
+    
+    buttons.forEach(function(btn){
+      var remaining = parseInt(btn.getAttribute('data-remaining'));
+      if(isNaN(remaining) || remaining <= 0) {
+        // Süre doldu, butonu gizle ve sayfayı yenile
+        btn.style.display = 'none';
+        setTimeout(function(){ location.reload(); }, 500);
+        return;
+      }
+      
+      // Her saniye remaining'i azalt
+      remaining--;
+      btn.setAttribute('data-remaining', remaining);
+      
+      // Yüzde hesapla (180 saniye = %100)
+      var totalSec = 180;
+      var pct = Math.max(0, (remaining / totalSec) * 100);
+      
+      // CSS değişkenini güncelle
+      btn.style.setProperty('--timer-pct', pct.toFixed(2) + '%');
+      
+      // Gradient pozisyonunu güncelle (yeşilden kırmızıya)
+      var gradientPos = 100 - pct; // %0 = sol (yeşil), %100 = sağ (kırmızı)
+      btn.style.backgroundPosition = gradientPos + '% center';
+      
+      // Metni güncelle
+      var min = Math.floor(remaining / 60);
+      var sec = remaining % 60;
+      var timeText = min + ':' + (sec < 10 ? '0' : '') + sec;
+      btn.textContent = 'Sil (' + timeText + ')';
+      
+      // Süre dolduğunda butonu kırmızı yap ve gizle
+      if(remaining <= 0){
+        btn.style.opacity = '0.5';
+        btn.style.pointerEvents = 'none';
+        setTimeout(function(){ 
+          btn.style.display = 'none';
+          location.reload();
+        }, 1000);
+      }
+    });
+  }
+  
+  // Her saniye güncelle
+  setInterval(updateTimerButtons, 1000);
+  
+  // Sayfa yüklendiğinde başlat
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', updateTimerButtons);
+  } else {
+    updateTimerButtons();
+  }
 })();
 </script>
 
