@@ -1,5 +1,4 @@
 <?php
-//merhaba
 require_once __DIR__ . '/../includes/helpers.php';
 include('../includes/header.php');
 
@@ -137,12 +136,16 @@ try {
   $total = (int)$ct->fetchColumn();
 
   // dynamic select fields
-  $fields = "t.id,t.order_code,CONCAT(COALESCE(o.order_code, t.order_code), ' - ', COALESCE(o.proje_adi, t.proje_ismi)) AS proje_ismi,t.talep_tarihi,t.miktar,t.birim,t.durum";
+  $fields = "t.id,t.order_code,CONCAT(COALESCE(o.order_code, t.order_code), ' - ', COALESCE(o.proje_adi, t.proje_ismi)) AS proje_ismi,t.talep_tarihi,t.termin_tarihi,t.miktar,t.birim,t.durum";
   if ($HAS_URUN) {
-    $fields = "t.id,t.order_code,CONCAT(COALESCE(o.order_code, t.order_code), ' - ', COALESCE(o.proje_adi, t.proje_ismi)) AS proje_ismi,t.talep_tarihi,t.urun,t.miktar,t.birim,t.durum";
+    $fields = "t.id,t.order_code,CONCAT(COALESCE(o.order_code, t.order_code), ' - ', COALESCE(o.proje_adi, t.proje_ismi)) AS proje_ismi,t.talep_tarihi,t.termin_tarihi,t.urun,t.miktar,t.birim,t.durum";
   }
 
-  $sql = "SELECT $fields 
+  $sql = "SELECT $fields,
+          (SELECT COUNT(DISTINCT soi.id) FROM satinalma_order_items soi WHERE soi.talep_id = t.id) as item_count,
+          (SELECT COUNT(DISTINCT sq.id) FROM satinalma_order_items soi 
+           LEFT JOIN satinalma_quotes sq ON soi.id = sq.order_item_id 
+           WHERE soi.talep_id = t.id) as total_quotes
           FROM `$TABLE` t 
           LEFT JOIN (
               SELECT o.proje_adi, o.order_code 
@@ -454,6 +457,129 @@ try {
     box-shadow: 0 4px 8px rgba(14, 165, 233, 0.1);
   }
 
+  /* Detay Popup Stilleri */
+  .detail-popup {
+    position: fixed; /* 'absolute' yerine 'fixed' */
+    background: white;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    padding: 15px;
+    min-width: 400px;
+    max-width: 500px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 1050; /* z-index'i yükseltelim */
+    /* top, right, margin-top buradan kaldırıldı, JS ile eklenecek */
+    animation: popupSlideIn 0.2s ease;
+  }
+
+  @keyframes popupSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Dinamik Ok (Arrow) Stili */
+  .detail-popup::before {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    z-index: 1051; /* Popup'ın kendisinden (1050) önde olmalı */
+    
+    /* Varsayılan pozisyon (JS ile ezilecek) */
+    /* 10px = okun yarım genişliği */
+    left: calc(var(--arrow-pos, 30px) - 10px); 
+    
+    /* Varsayılan yön: Ok YUKARI bakar (popup altta açılırken) */
+    top: -10px; /* 10px'lik okun yüksekliği */
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 10px solid #007bff; /* Popup kenar rengi */
+  }
+
+  /* Yön: Ok AŞAĞI bakarsa (popup üste açılırken) */
+  .detail-popup.arrow-top::before {
+    top: auto;
+    bottom: -10px; /* Popup'ın altından 10px taşar */
+    border-top: 10px solid #007bff;
+    border-bottom: none;
+  }
+
+  .detail-popup h4 {
+    margin: 0 0 12px 0;
+    font-size: 1rem;
+    color: #343a40;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 8px;
+  }
+
+  .detail-popup .info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+  }
+
+  .detail-popup .info-row strong {
+    color: #495057;
+  }
+
+  .detail-popup .selected-supplier-box {
+    background: #d4edda;
+    border-left: 4px solid #28a745;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 12px;
+  }
+
+  .detail-popup .selected-supplier-box h5 {
+    margin: 0 0 8px 0;
+    font-size: 0.95rem;
+    color: #155724;
+  }
+
+  .detail-popup .supplier-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    font-size: 0.85rem;
+  }
+
+  .detail-popup .supplier-detail-grid small {
+    display: block;
+  }
+
+  .detail-popup .note-section {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #c3e6cb;
+  }
+
+  .detail-popup-loading {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+  }
+
+  .detail-popup-error {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 4px solid #dc3545;
+  }
+
+  .detail-popup-empty {
+    text-align: center;
+    color: #6c757d;
+    padding: 20px;
+  }
+
   /* Buton grubu için */
   .table td:last-child {
     white-space: nowrap;
@@ -626,14 +752,16 @@ try {
             <th>🔖 Kod</th>
             <th>🗂️ Proje İsmi</th>
             <th>📅 Talep Tarihi</th>
+            <th>⏰ Termin Tarihi</th>
             <th>📊 Durum</th>
+            <th>🔎 Detay</th>
             <th>🔧 İşlem</th>
           </tr>
         </thead>
         <tbody>
           <?php if (!$rows || count($rows) === 0): ?>
             <tr>
-              <td colspan="6" class="ta-center">Kayıt yok.</td>
+              <td colspan="8" class="ta-center">Kayıt yok.</td>
             </tr>
           <?php else: ?>
             <?php foreach ($rows as $r): ?>
@@ -644,11 +772,20 @@ try {
                 <td><?php echo sa_h($r['order_code']); ?></td>
                 <td><?php echo sa_h($r['proje_ismi']); ?></td>
                 <td><?php echo sa_h($r['talep_tarihi'] ? date('d-m-Y', strtotime($r['talep_tarihi'])) : '-'); ?></td>
+                <td><?php echo sa_h($r['termin_tarihi'] ? date('d-m-Y', strtotime($r['termin_tarihi'])) : '-'); ?></td>
                 <td><?php echo getStatusBadge($r['durum']); ?></td>
+                <td>
+                  <button class="btn-sm btn-info detay-btn" 
+                          data-talep-id="<?php echo (int)$r['id']; ?>"
+                          onclick="toggleDetailPopup(this, <?php echo (int)$r['id']; ?>)">
+                    📋 Detay
+                  </button>
+                </td>
                 <td>
                   <a class="btn-sm btn-primary" href="<?php echo site_url('satinalma-sys/talep_duzenle.php?id=' . (int)$r['id']); ?>">Düzenle</a>  
                   <a class="btn-sm btn-danger" href="<?php echo site_url('satinalma-sys/talep_sil.php?id=' . (int)$r['id']); ?>" onclick="return confirm('Bu talebi silmek istediğinize emin misiniz?');">Sil</a>
                   <button class="btn-sm btn-info" onclick="sendMail(<?php echo (int)$r['id']; ?>, '<?php echo sa_h($r['order_code']); ?>')">📧</button>
+                  <a class="btn-sm btn-info" href="<?php echo site_url('satinalma-sys/talep_pdf.php?id=' . (int)$r['id']); ?>" target="_blank" title="PDF İndir">📄 PDF</a>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -667,7 +804,8 @@ try {
       </div>
     <?php endif; ?>
   </div>
-</div>
+</div> <div class="detail-popup" id="shared-detail-popup" style="display: none;">
+  </div>
 
 <script>
   // Aktif filtre kaldırma
@@ -731,6 +869,182 @@ try {
     console.log('Sayfa yüklendi, tablo elementi:', document.querySelector('.table'));
     console.log('Satır sayısı:', document.querySelectorAll('.table tbody tr').length);
   });
+// YENİ toggleDetailPopup FONKSİYONU (Ok eklenmiş)
+function toggleDetailPopup(btn, talepId) {
+  const popup = document.getElementById('shared-detail-popup');
+
+  // 1. Durum: Zaten bu butona ait popup açıksa, kapat
+  if (popup.style.display === 'block' && popup.dataset.currentTalepId == talepId) {
+    popup.style.display = 'none';
+    popup.dataset.currentTalepId = '';
+    return;
+  }
+
+  // 2. Durum: Popup açılacak veya buton değişecek
+  popup.style.display = 'block';
+  popup.dataset.currentTalepId = talepId;
+  
+  // Önceki ok yönü sınıfını temizle ve varsayılanı ayarla
+  popup.className = 'detail-popup arrow-bottom'; // Varsayılan: Ok yukarı bakar (popup altta)
+  
+  // Veriyi yükle
+  loadDetailData(talepId, popup);
+
+  // 3. Konumlandırma
+  const rect = btn.getBoundingClientRect(); // Butonun ekrandaki pozisyonu
+  const btnCenter = rect.left + (rect.width / 2); // Butonun yatay merkezi
+
+  // Varsayılan konum: Butonun alt-solu
+  let popupTop = rect.bottom + 8; // 8px boşluk
+  let popupLeft = rect.left;
+  
+  popup.style.top = popupTop + 'px';
+  popup.style.left = popupLeft + 'px';
+  
+  // 4. Ekran kenarı ve ok pozisyonu kontrolü (Gecikmeli)
+  setTimeout(() => {
+    const popupRect = popup.getBoundingClientRect();
+    
+    // --- DİKEY KONTROL ---
+    // Alta taşıyorsa: Popup'ı butonun üstüne al
+    if (popupRect.bottom > window.innerHeight && (rect.top - popupRect.height - 8) > 0) {
+        popupTop = rect.top - popupRect.height - 8; // 8px boşluk
+        popup.style.top = popupTop + 'px';
+        popup.className = 'detail-popup arrow-top'; // Sınıfı değiştir: Ok aşağı bakar
+    }
+    
+    // --- YATAY KONTROL ---
+    let finalPopupLeft = popupLeft;
+    // Sağa taşıyorsa: Popup'ı butonun sağına hizala (sola aç)
+    if (popupRect.right > window.innerWidth) {
+        finalPopupLeft = rect.right - popupRect.width;
+        if (finalPopupLeft < 10) finalPopupLeft = 10; // Ekrandan taşmasın
+        popup.style.left = finalPopupLeft + 'px';
+    }
+    
+    // Sola taşıyorsa (çok nadir):
+    if (popupRect.left < 0) {
+        finalPopupLeft = 10; // Ekranın solundan 10px boşluk bırak
+        popup.style.left = finalPopupLeft + 'px';
+    }
+    
+    // --- OK POZİSYONUNU HESAPLA ---
+    // Okun konumu = Butonun merkezi - Popup'ın sol konumu
+    let arrowPos = btnCenter - finalPopupLeft;
+    
+    // Okun popup sınırları içinde kaldığından emin ol (min 15px, maks genişlik - 15px)
+    if (arrowPos < 15) arrowPos = 15;
+    if (arrowPos > popupRect.width - 15) arrowPos = popupRect.width - 15;
+    
+    // CSS değişkenini ayarla
+    popup.style.setProperty('--arrow-pos', arrowPos + 'px');
+
+  }, 100); // 100ms (içeriğin yüklenip boyutun netleşmesi için)
+}
+
+function loadDetailData(talepId, popup) {
+  popup.innerHTML = '<div class="detail-popup-loading">⏳ Yükleniyor...</div>';
+  
+  fetch('/satinalma-sys/talep_ajax.php?action=get_talep_details&talep_id=' + talepId)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && data.items && data.items.length > 0) {
+        popup.innerHTML = renderDetailContent(data);
+        popup.dataset.loaded = 'true';
+      } else {
+        popup.innerHTML = '<div class="detail-popup-empty">📋 Henüz ürün kalemi eklenmemiş</div>';
+      }
+    })
+    .catch(error => {
+      console.error('Detay yükleme hatası:', error);
+      popup.innerHTML = '<div class="detail-popup-error">❌ Veri yüklenirken hata oluştu</div>';
+    });
+}
+
+function renderDetailContent(data) {
+  let html = '<h4>📋 Tedarikçi Bilgileri</h4>';
+  
+  data.items.forEach(item => {
+    html += '<div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #dee2e6;">';
+    html += '<div style="font-weight: 600; margin-bottom: 8px;">🔹 ' + (item.urun || 'Ürün') + '</div>';
+    
+    if (item.best_price) {
+      const symbol = item.best_price_currency === 'USD' ? '$' : (item.best_price_currency === 'EUR' ? '€' : '₺');
+      html += '<div class="info-row"><span>En İyi Fiyat:</span><strong style="color: #28a745;">' + symbol + parseFloat(item.best_price).toFixed(2) + '</strong></div>';
+    }
+    
+    if (item.selected_supplier) {
+      const selSymbol = item.selected_currency === 'USD' ? '$' : (item.selected_currency === 'EUR' ? '€' : '₺');
+      html += '<div class="info-row">';
+      html += '<span><strong>Seçilen Tedarikçi:</strong></span>';
+      html += '<span style="color: #28a745;">✓ ' + item.selected_supplier;
+      if (item.selected_price) {
+        html += ' (' + selSymbol + parseFloat(item.selected_price).toFixed(2) + ')';
+      }
+      html += '</span></div>';
+    }
+    
+    html += '<div class="info-row"><span>Toplam Teklif:</span><strong>' + (item.quote_count || 0) + '</strong></div>';
+    
+    if (item.quoted_suppliers) {
+      const supplierCount = item.quoted_suppliers.split(',').filter(s => s.trim()).length;
+      html += '<div class="info-row"><span>Teklif Veren Firmalar:</span><strong>' + supplierCount + ' adet</strong></div>';
+    }
+    
+    // Seçili tedarikçi detayları
+    if (item.selected_quote_id) {
+      html += '<div class="selected-supplier-box">';
+      html += '<h5>✅ Seçili Tedarikçi Detayları:</h5>';
+      html += '<div class="supplier-detail-grid">';
+      
+      if (item.selected_supplier) {
+        html += '<div><small><strong>Firma:</strong> ' + item.selected_supplier + '</small></div>';
+      }
+      if (item.selected_price) {
+        const selSymbol = item.selected_currency === 'USD' ? '$' : (item.selected_currency === 'EUR' ? '€' : '₺');
+        html += '<div><small><strong>Fiyat:</strong> ' + selSymbol + parseFloat(item.selected_price).toFixed(2) + '</small></div>';
+      }
+      if (item.selected_delivery_days) {
+        html += '<div><small><strong>Teslimat:</strong> ' + item.selected_delivery_days + ' gün</small></div>';
+      }
+      if (item.selected_payment_term) {
+        html += '<div><small><strong>Ödeme:</strong> ' + item.selected_payment_term + '</small></div>';
+      }
+      if (item.selected_shipping_type) {
+        html += '<div><small><strong>Gönderim:</strong> ' + item.selected_shipping_type + '</small></div>';
+      }
+      if (item.selected_quote_date) {
+        const date = new Date(item.selected_quote_date);
+        html += '<div><small><strong>Teklif Tarihi:</strong> ' + date.toLocaleDateString('tr-TR') + '</small></div>';
+      }
+      
+      html += '</div>'; // supplier-detail-grid
+      
+      if (item.selected_note) {
+        html += '<div class="note-section"><small><strong>Not:</strong> ' + item.selected_note + '</small></div>';
+      }
+      
+      html += '</div>'; // selected-supplier-box
+    }
+    
+    html += '</div>';
+  });
+  
+  return html;
+}
+
+// Sayfa dışına tıklandığında popupları kapat
+document.addEventListener('click', function(e) {
+  const popup = document.getElementById('shared-detail-popup');
+  // Tıklanan yer buton DEĞİLSE ve popup'ın kendisi DEĞİLSE kapat
+  if (!e.target.closest('.detay-btn') && !e.target.closest('.detail-popup')) {
+    if (popup) {
+      popup.style.display = 'none';
+      popup.dataset.currentTalepId = '';
+    }
+  }
+});
+
 
   function sendMail(talepId, orderCode) {
     if (!confirm('📧 ' + orderCode + ' kodlu talep için mail göndermek istediğinize emin misiniz?')) {
@@ -766,6 +1080,7 @@ try {
         btn.disabled = false;
       });
   }
+  
 </script>
 
 <?php include('../includes/footer.php'); ?>
