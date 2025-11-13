@@ -117,6 +117,7 @@
       </div>
       <table id="itemsTable">
         <tr>
+          <th style="width:40px">⋮⋮</th>
           <th style="width:12%">Stok Kodu</th>
           <th style="width:10%">Ürün Görseli</th>
           <th style="width:22%">Ürün</th>
@@ -130,7 +131,9 @@
         </tr>
         <?php if (!$items) { $items = [[]]; } ?>
         <?php foreach ($items as $it): ?>
-        <tr><td><input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu"></td>
+        <tr>
+          <td class="drag-handle" style="cursor:move;text-align:center;color:#9ca3af;font-size:18px;user-select:none">⋮⋮</td>
+          <td><input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu"></td>
           <td class="urun-gorsel" style="text-align:center"><img class="urun-gorsel-img" style="max-width:64px;max-height:64px;display:none;margin:0 auto" alt=""></td>
           <td>
             <select name="product_id[]" onchange="onPickProduct(this)">
@@ -505,6 +508,7 @@
 function addRow(){
   const tr = document.createElement('tr');
   tr.innerHTML = `
+    <td class="drag-handle" style="cursor:move;text-align:center;color:#9ca3af;font-size:18px;user-select:none">⋮⋮</td>
     <td><input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu"></td>
     <td class="urun-gorsel" style="text-align:center"><img class="urun-gorsel-img" style="max-width:64px;max-height:64px;display:none;margin:0 auto" alt=""></td>
     <td>
@@ -603,6 +607,19 @@ function onPickProduct(sel){
 document.addEventListener('DOMContentLoaded', function(){
   var f = document.querySelector('form');
   if(!f) return;
+  
+  // Sortable.js - Drag & Drop
+  var tbody = document.querySelector('#itemsTable tbody');
+  if (!tbody) tbody = document.querySelector('#itemsTable');
+  if (tbody && typeof Sortable !== 'undefined') {
+    new Sortable(tbody, {
+      handle: '.drag-handle',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      dragClass: 'sortable-drag'
+    });
+  }
+  
   // stok kodu inputlarına dinleyici bağla
   try { bindSkuInputs(); } catch(_e){}
   // mevcut seçili ürünler için görselleri doldur (özellikle order_edit)
@@ -620,7 +637,8 @@ document.addEventListener('DOMContentLoaded', function(){
   });
 });
 </script>
-
+<!-- Sortable.js for drag-drop -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 
 <style>
@@ -749,6 +767,19 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <style></style>
 
-<style></style>
+<style>
+/* Drag & Drop görsel feedback */
+.sortable-ghost {
+  opacity: 0.4;
+  background: #f3f4f6;
+}
+.sortable-drag {
+  opacity: 0.8;
+  cursor: move !important;
+}
+.drag-handle:hover {
+  color: #4b5563;
+}
+</style>
 
 <style>.popover-editor{transform:scale(0.8);transform-origin:top left;}</style>
