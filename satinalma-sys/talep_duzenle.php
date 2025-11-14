@@ -822,7 +822,8 @@ include('../includes/header.php');
         const hasQuote = !!quote;
         const isSelected = selectedQuote && selectedQuote.supplier_id == s.id;
 
-        html += '<div class="supplier-item ' + (hasQuote ? 'has-quote' : '') + ' ' + (isSelected ? 'selected' : '') + '">';
+        const dataAttr = hasQuote ? 'data-has-quote="1"' : 'data-has-quote="0"';
+        html += '<div class="supplier-item ' + (hasQuote ? 'has-quote' : '') + ' ' + (isSelected ? 'selected' : '') + '" ' + dataAttr + '>';
         html += '<div class="supplier-item-header">';
         html += '<div class="supplier-name">' + (s.name || 'İsimsiz');
         if (isSelected) html += ' <span style="color: #28a745;">✓</span>';
@@ -1268,7 +1269,16 @@ include('../includes/header.php');
             });
         }
       });
-
+      // Teklif filtresi
+    document.addEventListener('change', function(e) {
+      if (e.target && e.target.id === 'filterQuotedOnly') {
+        const showOnlyQuoted = e.target.checked;
+        document.querySelectorAll('#supplierList .supplier-item').forEach(item => {
+          const hasQuote = item.getAttribute('data-has-quote') === '1';
+          item.style.display = (showOnlyQuoted && !hasQuote) ? 'none' : 'block';
+        });
+      }
+    });
       document.addEventListener('input', function(e) {
         if (e.target && e.target.id === 'supplierSearch') {
           const searchTerm = e.target.value.toLowerCase();
@@ -2272,6 +2282,13 @@ include('../includes/header.php');
         <div class="form-field mb-3">
           <input type="text" id="supplierSearch" class="form-control" placeholder="🔍 Tedarikçi ara...">
         </div>
+        <!-- FİLTRELEME BUTONLARI -->
+        <div class="mb-3 d-flex gap-2">
+          <label class="filter-checkbox">
+            <input type="checkbox" id="filterQuotedOnly">
+            <span>💰 Sadece teklif girilenleri göster</span>
+          </label>
+        </div>
 
         <div class="supplier-list" id="supplierList">
           <!-- AJAX ile yüklenecek -->
@@ -2337,7 +2354,7 @@ include('../includes/header.php');
         <div class="form-grid grid-2">
           <div class="form-field">
             <label>💰 Birim Fiyat *</label>
-            <input type="number" id="quotePrice" name="price" step="0.25" class="form-control" required>
+            <input type="number" id="quotePrice" name="price" step="0.01" class="form-control" required>
           </div>
           <div class="form-field">
             <label>💱 Para Birimi</label>
