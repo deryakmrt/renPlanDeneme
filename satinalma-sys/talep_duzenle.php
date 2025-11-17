@@ -42,11 +42,14 @@ if (!$pdo) {
   die("PDO bulunamadı");
 }
 
+
 // Tabloları oluştur
+// Durum sütununu güncelle
 try {
-  createRequiredTables($pdo);
+    $pdo->exec("ALTER TABLE satinalma_orders MODIFY COLUMN durum VARCHAR(50) DEFAULT 'Beklemede'");
+    error_log('satinalma_orders.durum sütunu güncellendi');
 } catch (Exception $e) {
-  error_log('Table creation error: ' . $e->getMessage());
+    error_log('Durum sütunu güncelleme hatası: ' . $e->getMessage());
 }
 
 function createRequiredTables($pdo)
@@ -158,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $miktarlar = isset($_POST['miktar']) ? (array)$_POST['miktar'] : [];
   $birimler = isset($_POST['birim']) ? (array)$_POST['birim'] : [];
   $birim_fiyatlar = isset($_POST['birim_fiyat']) ? (array)$_POST['birim_fiyat'] : [];
-  $durumlar = isset($_POST['item_durum']) ? (array)$_POST['item_durum'] : [];
+  // item_durum artık kullanılmıyor, genel durum kullanılıyor
 
   $kalemler = [];
   $N = max(count($urunler), count($miktarlar), count($birimler), count($birim_fiyatlar));
@@ -168,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $m = isset($miktarlar[$i]) && $miktarlar[$i] !== '' ? (float)$miktarlar[$i] : null;
     $b = isset($birimler[$i]) ? trim((string)$birimler[$i]) : '';
     $f = isset($birim_fiyatlar[$i]) && $birim_fiyatlar[$i] !== '' ? (float)$birim_fiyatlar[$i] : null;
-    $d = isset($durumlar[$i]) ? trim((string)$durumlar[$i]) : 'Beklemede';
+    $d = 'Beklemede'; // Varsayılan durum, genel durum alanından yönetiliyor
 
     if ($u === '' && $m === null && $b === '' && $f === null) continue;
     $kalemler[] = ['urun' => $u, 'miktar' => $m, 'birim' => $b, 'birim_fiyat' => $f, 'durum' => $d];
@@ -222,15 +225,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $insert = $pdo->prepare("INSERT INTO satinalma_order_items (talep_id, urun, miktar, birim, birim_fiyat, durum) VALUES (?,?,?,?,?,?)");
 
       foreach ($kalemler as $index => $rowi) {
-        if (isset($existingIds[$index])) {
-          $update->execute([
-            $rowi['urun'],
-            $rowi['miktar'],
-            $rowi['birim'],
-            $rowi['birim_fiyat'],
-            $rowi['durum'],
-            $existingIds[$index]
-          ]);
+  if (isset($existingIds[$index])) {
+    $update->execute([
+      $rowi['urun'],
+      $rowi['miktar'],
+      $rowi['birim'],
+      $rowi['birim_fiyat'],
+      'Beklemede', // Sabit durum
+      $existingIds[$index]
+    ]);
         } else {
           $insert->execute([
             $id,
@@ -1400,10 +1403,10 @@ include('../includes/header.php');
   }
 
   .product-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto auto;
-    gap: 15px;
-    align-items: end;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto auto auto auto;
+  gap: 15px;
+  align-items: end;
     padding: 20px;
     background: #f8f9fa;
     border-radius: 8px;
@@ -2071,16 +2074,7 @@ include('../includes/header.php');
                 </span>
               </div>
             </div>
-            <div class="form-field">
-              <label>📊 Durum</label>
-              <select name="item_durum[]" class="form-control">
-                <option value="Beklemede" <?= $durum === 'Beklemede' ? 'selected' : '' ?>>Beklemede</option>
-                <option value="Teklif Bekleniyor" <?= $durum === 'Teklif Bekleniyor' ? 'selected' : '' ?>>Teklif Bekleniyor</option>
-                <option value="Teklif Alındı" <?= $durum === 'Teklif Alındı' ? 'selected' : '' ?>>Teklif Alındı</option>
-                <option value="Sipariş Verildi" <?= $durum === 'Sipariş Verildi' ? 'selected' : '' ?>>Sipariş Verildi</option>
-                <option value="Teslim Edildi" <?= $durum === 'Teslim Edildi' ? 'selected' : '' ?>>Teslim Edildi</option>
-              </select>
-            </div>
+            <!-- Durum alanı kaldırıldı - Genel Durum kullanılıyor -->
 
             <button type="button" class="btn btn-primary btn-sm tedarikci-sec-btn"
               onclick="openSupplierModalFromRow(this)">
@@ -2213,9 +2207,9 @@ include('../includes/header.php');
           <label>📊 Genel Durum</label>
           <select name="durum" class="form-control">
             <?php
-            $durumlar = ['Beklemede', 'Onaylandı', 'Sipariş edildi', 'Tamamlandı'];
-            $current_durum = $row['durum'] ?? 'Beklemede';
-            ?>
+$durumlar = ['Beklemede', 'Teklif Bekleniyor', 'Teklif Alındı', 'Onaylandı', 'Sipariş Verildi', 'Teslim Edildi', 'Tamamlandı'];
+$current_durum = $row['durum'] ?? 'Beklemede';
+?>
             <?php foreach ($durumlar as $durum): ?>
               <option value="<?= h($durum) ?>" <?= ($current_durum === $durum) ? 'selected' : '' ?>>
                 <?= h($durum) ?>
@@ -2434,16 +2428,7 @@ include('../includes/header.php');
       <label>💰 Birim Fiyat (₺)</label>
       <input type="number" step="0.25" name="birim_fiyat[]" class="form-control" placeholder="0.00">
     </div>
-    <div class="form-field">
-      <label>📊 Durum</label>
-      <select name="item_durum[]" class="form-control">
-        <option value="Beklemede" selected>Beklemede</option>
-        <option value="Teklif Bekleniyor">Teklif Bekleniyor</option>
-        <option value="Teklif Alındı">Teklif Alındı</option>
-        <option value="Sipariş Verildi">Sipariş Verildi</option>
-        <option value="Teslim Edildi">Teslim Edildi</option>
-      </select>
-    </div>
+    <!-- Durum alanı kaldırıldı -->
     <div class="form-field">
       <label>✅ Son Onay</label>
       <button type="button"
