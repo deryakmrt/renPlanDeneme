@@ -240,15 +240,23 @@ ob_start();
   <tbody>
     <?php 
     $sira = 1;
-    $genel_toplam = 0;
+    $totals_by_currency = []; // Genel toplamı para birimine göre tutacak dizi
     foreach ($items as $item): 
       $miktar = (float)($item['miktar'] ?? 0);
       $fiyat = (float)($item['selected_price'] ?? 0);
       $toplam = $miktar * $fiyat;
-      $genel_toplam += $toplam;
       
       $currency = $item['selected_currency'] ?? 'TRY';
+      if (empty($currency)) $currency = 'TRY'; // Boş gelirse TRY varsay
       $currencySymbol = $currency === 'USD' ? '$' : ($currency === 'EUR' ? '€' : '₺');
+
+      // Sadece tutarı olanları ve birimi olanları toplama ekle
+      if ($toplam > 0) {
+          if (!isset($totals_by_currency[$currency])) {
+              $totals_by_currency[$currency] = 0;
+          }
+          $totals_by_currency[$currency] += $toplam;
+      }
     ?>
     <tr>
       <td class="center"><?= $sira++ ?></td>
@@ -295,12 +303,18 @@ ob_start();
 </table>
 
 <!-- Genel Toplam -->
-<?php if ($genel_toplam > 0): ?>
+<?php if (!empty($totals_by_currency)): ?>
 <table class="totals">
-  <tr>
-    <td class="label">Genel Toplam</td>
-    <td class="value"><?= $fmt($genel_toplam) ?> ₺</td>
-  </tr>
+  <?php foreach ($totals_by_currency as $currency_code => $total_amount): ?>
+    <?php 
+    // Para birimi sembolünü burada tekrar belirliyoruz
+    $symbol = $currency_code === 'USD' ? '$' : ($currency_code === 'EUR' ? '€' : '₺'); 
+    ?>
+    <tr>
+      <td class="label">Genel Toplam (<?= htmlspecialchars($currency_code) ?>)</td>
+      <td class="value"><?= $fmt($total_amount) ?> <?= $symbol ?></td>
+    </tr>
+  <?php endforeach; ?>
 </table>
 <?php endif; ?>
 
