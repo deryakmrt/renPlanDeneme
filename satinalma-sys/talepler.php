@@ -41,8 +41,11 @@ function getStatusBadge($durum)
 
   $renkler = [
     'Beklemede' => 'warning',
+    'Teklif Bekleniyor' => 'info',
+    'Teklif Alındı' => 'primary',
     'Onaylandı' => 'success',
-    'Sipariş Edildi' => 'info',
+    'Sipariş Verildi' => 'info',
+    'Teslim Edildi' => 'success',
     'Tamamlandı' => 'primary',
     'Reddedildi' => 'danger',
     'İptal' => 'secondary'
@@ -57,8 +60,11 @@ function getTalepIstatistikleri($pdo, $TABLE)
   $stats = [
     'toplam' => 0,
     'beklemede' => 0,
+    'teklif_bekleniyor' => 0,
+    'teklif_alindi' => 0,
     'onaylandi' => 0,
-    'siparis_edildi' => 0,
+    'siparis_verildi' => 0,
+    'teslim_edildi' => 0,
     'tamamlandi' => 0
   ];
 
@@ -70,22 +76,31 @@ function getTalepIstatistikleri($pdo, $TABLE)
     $durumlar = $q->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($durumlar as $d) {
-      $durumName = trim($d['durum']);
-      switch (mb_strtolower($durumName)) {
-        case 'beklemede':
-          $stats['beklemede'] = (int)$d['sayi'];
-          break;
-        case 'onaylandı':
-          $stats['onaylandi'] = (int)$d['sayi'];
-          break;
-        case 'sipariş edildi':
-          $stats['siparis_edildi'] = (int)$d['sayi'];
-          break;
-        case 'tamamlandı':
-          $stats['tamamlandi'] = (int)$d['sayi'];
-          break;
-      }
-    }
+  $durumName = trim($d['durum']);
+  switch (mb_strtolower($durumName)) {
+    case 'beklemede':
+      $stats['beklemede'] = (int)$d['sayi'];
+      break;
+    case 'teklif bekleniyor':
+      $stats['teklif_bekleniyor'] = (int)$d['sayi'];
+      break;
+    case 'teklif alındı':
+      $stats['teklif_alindi'] = (int)$d['sayi'];
+      break;
+    case 'onaylandı':
+      $stats['onaylandi'] = (int)$d['sayi'];
+      break;
+    case 'sipariş verildi':
+      $stats['siparis_verildi'] = (int)$d['sayi'];
+      break;
+    case 'teslim edildi':
+      $stats['teslim_edildi'] = (int)$d['sayi'];
+      break;
+    case 'tamamlandı':
+      $stats['tamamlandi'] = (int)$d['sayi'];
+      break;
+  }
+}
   } catch (Exception $e) {
     echo "<!-- İstatistik hatası: " . $e->getMessage() . " -->";
   }
@@ -631,27 +646,39 @@ try {
 
     <!-- Özet Kartları -->
     <div class="summary-cards">
-      <div class="summary-card">
-        <h3><?php echo $istatistikler['toplam']; ?></h3>
-        <p>Toplam Talep</p>
-      </div>
-      <div class="summary-card warning">
-        <h3><?php echo $istatistikler['beklemede']; ?></h3>
-        <p>Beklemede</p>
-      </div>
-      <div class="summary-card success">
-        <h3><?php echo $istatistikler['onaylandi']; ?></h3>
-        <p>Onaylandı</p>
-      </div>
-      <div class="summary-card info">
-        <h3><?php echo $istatistikler['siparis_edildi']; ?></h3>
-        <p>Sipariş Edildi</p>
-      </div>
-      <div class="summary-card primary">
-        <h3><?php echo $istatistikler['tamamlandi']; ?></h3>
-        <p>Tamamlandı</p>
-      </div>
-    </div>
+  <div class="summary-card">
+    <h3><?php echo $istatistikler['toplam']; ?></h3>
+    <p>Toplam Talep</p>
+  </div>
+  <div class="summary-card warning">
+    <h3><?php echo $istatistikler['beklemede']; ?></h3>
+    <p>Beklemede</p>
+  </div>
+  <div class="summary-card info">
+    <h3><?php echo $istatistikler['teklif_bekleniyor']; ?></h3>
+    <p>Teklif Bekleniyor</p>
+  </div>
+  <div class="summary-card primary">
+    <h3><?php echo $istatistikler['teklif_alindi']; ?></h3>
+    <p>Teklif Alındı</p>
+  </div>
+  <div class="summary-card success">
+    <h3><?php echo $istatistikler['onaylandi']; ?></h3>
+    <p>Onaylandı</p>
+  </div>
+  <div class="summary-card info">
+    <h3><?php echo $istatistikler['siparis_verildi']; ?></h3>
+    <p>Sipariş Verildi</p>
+  </div>
+  <div class="summary-card success">
+    <h3><?php echo $istatistikler['teslim_edildi']; ?></h3>
+    <p>Teslim Edildi</p>
+  </div>
+  <div class="summary-card primary">
+    <h3><?php echo $istatistikler['tamamlandi']; ?></h3>
+    <p>Tamamlandı</p>
+  </div>
+</div>
 
     <!-- Aktif Filtreler -->
     <div class="active-filters" id="activeFilters">
@@ -719,7 +746,7 @@ try {
       <div class="form-group">
         <label for="durum-select">Durum</label>
         <select name="durum" id="durum-select">
-          <?php foreach (['hepsi' => 'Hepsi', 'Beklemede' => 'Beklemede', 'Onaylandı' => 'Onaylandı', 'Sipariş Edildi' => 'Sipariş Edildi', 'Tamamlandı' => 'Tamamlandı'] as $v => $lbl): ?>
+          <?php foreach (['hepsi' => 'Hepsi', 'Beklemede' => 'Beklemede', 'Teklif Bekleniyor' => 'Teklif Bekleniyor', 'Teklif Alındı' => 'Teklif Alındı', 'Onaylandı' => 'Onaylandı', 'Sipariş Verildi' => 'Sipariş Verildi', 'Teslim Edildi' => 'Teslim Edildi', 'Tamamlandı' => 'Tamamlandı'] as $v => $lbl): ?>
             <option value="<?php echo sa_h($v); ?>" <?php echo ($durum === $v ? 'selected' : ''); ?>><?php echo sa_h($lbl); ?></option>
           <?php endforeach; ?>
         </select>
