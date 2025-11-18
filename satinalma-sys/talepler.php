@@ -37,15 +37,16 @@ $HAS_DURUM   = col_exists($pdo, $TABLE, 'durum');
 // ---- Durum renkleri fonksiyonu
 function getStatusBadge($durum)
 {
-  if (!$durum) $durum = 'Beklemede';
+  // Varsayılan durum artık Teklif Bekleniyor
+  if (!$durum || $durum == 'Beklemede') $durum = 'Teklif Bekleniyor';
 
   $renkler = [
-    'Beklemede' => 'warning',
-    'Teklif Bekleniyor' => 'info',
+    // 'Beklemede' => 'warning', // KALDIRILDI
+    'Teklif Bekleniyor' => 'warning', // Rengi dikkat çekmesi için warning (sarı) yapabiliriz veya info kalsın isterseniz değiştirmeyin.
     'Teklif Alındı' => 'primary',
     'Onaylandı' => 'success',
     'Sipariş Verildi' => 'info',
-    'Teslim Edildi' => 'success',
+    // 'Teslim Edildi' => 'success', // KALDIRILDI
     'Tamamlandı' => 'primary',
     'Reddedildi' => 'danger',
     'İptal' => 'secondary'
@@ -59,12 +60,12 @@ function getTalepIstatistikleri($pdo, $TABLE)
 {
   $stats = [
     'toplam' => 0,
-    'beklemede' => 0,
+    //'beklemede' => 0,
     'teklif_bekleniyor' => 0,
     'teklif_alindi' => 0,
     'onaylandi' => 0,
     'siparis_verildi' => 0,
-    'teslim_edildi' => 0,
+    //'teslim_edildi' => 0,
     'tamamlandi' => 0
   ];
 
@@ -76,33 +77,33 @@ function getTalepIstatistikleri($pdo, $TABLE)
     $durumlar = $q->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($durumlar as $d) {
-  $durumName = trim($d['durum']);
-  switch (mb_strtolower($durumName)) {
-    case 'beklemede':
-      $stats['beklemede'] = (int)$d['sayi'];
-      break;
-    case 'teklif bekleniyor':
-      $stats['teklif_bekleniyor'] = (int)$d['sayi'];
-      break;
-    case 'teklif alındı':
-      $stats['teklif_alindi'] = (int)$d['sayi'];
-      break;
-    case 'onaylandı':
-      $stats['onaylandi'] = (int)$d['sayi'];
-      break;
-    case 'sipariş verildi':
-      $stats['siparis_verildi'] = (int)$d['sayi'];
-      break;
-    case 'teslim edildi':
-      $stats['teslim_edildi'] = (int)$d['sayi'];
-      break;
-    case 'tamamlandı':
-      $stats['tamamlandi'] = (int)$d['sayi'];
-      break;
-  }
-}
+      $durumName = trim($d['durum']);
+      // Veritabanında eski kayıtlarda 'Beklemede' varsa onu da 'Teklif Bekleniyor'a sayalım mı?
+      // Yoksa tamamen görmezden mi gelelim? Aşağıda görmezden geliyoruz, isterseniz case ekleyip toplayabilirsiniz.
+      switch (mb_strtolower($durumName)) {
+        // case 'beklemede' KALDIRILDI (veya teklif_bekleniyor'a eklenebilir)
+        case 'teklif bekleniyor':
+        case 'beklemede': // Eski kayıtlar istatistikte buraya dahil olsun
+          $stats['teklif_bekleniyor'] += (int)$d['sayi'];
+          break;
+        case 'teklif alındı':
+          $stats['teklif_alindi'] = (int)$d['sayi'];
+          break;
+        case 'onaylandı':
+          $stats['onaylandi'] = (int)$d['sayi'];
+          break;
+        case 'sipariş verildi':
+          $stats['siparis_verildi'] = (int)$d['sayi'];
+          break;
+        // case 'teslim edildi': KALDIRILDI
+        case 'tamamlandı':
+        case 'teslim edildi': // Eski kayıtlar istatistikte tamamlandıya dahil olsun
+          $stats['tamamlandi'] += (int)$d['sayi'];
+          break;
+      }
+    }
   } catch (Exception $e) {
-    echo "<!-- İstatistik hatası: " . $e->getMessage() . " -->";
+    echo "";
   }
 
   return $stats;
@@ -474,7 +475,8 @@ try {
 
   /* Detay Popup Stilleri */
   .detail-popup {
-    position: fixed; /* 'absolute' yerine 'fixed' */
+    position: fixed;
+    /* 'absolute' yerine 'fixed' */
     background: white;
     border: 2px solid #007bff;
     border-radius: 8px;
@@ -482,7 +484,8 @@ try {
     min-width: 400px;
     max-width: 500px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-    z-index: 1050; /* z-index'i yükseltelim */
+    z-index: 1050;
+    /* z-index'i yükseltelim */
     /* top, right, margin-top buradan kaldırıldı, JS ile eklenecek */
     animation: popupSlideIn 0.2s ease;
   }
@@ -492,6 +495,7 @@ try {
       opacity: 0;
       transform: translateY(-10px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -504,23 +508,27 @@ try {
     position: absolute;
     width: 0;
     height: 0;
-    z-index: 1051; /* Popup'ın kendisinden (1050) önde olmalı */
-    
+    z-index: 1051;
+    /* Popup'ın kendisinden (1050) önde olmalı */
+
     /* Varsayılan pozisyon (JS ile ezilecek) */
     /* 10px = okun yarım genişliği */
-    left: calc(var(--arrow-pos, 30px) - 10px); 
-    
+    left: calc(var(--arrow-pos, 30px) - 10px);
+
     /* Varsayılan yön: Ok YUKARI bakar (popup altta açılırken) */
-    top: -10px; /* 10px'lik okun yüksekliği */
+    top: -10px;
+    /* 10px'lik okun yüksekliği */
     border-left: 10px solid transparent;
     border-right: 10px solid transparent;
-    border-bottom: 10px solid #007bff; /* Popup kenar rengi */
+    border-bottom: 10px solid #007bff;
+    /* Popup kenar rengi */
   }
 
   /* Yön: Ok AŞAĞI bakarsa (popup üste açılırken) */
   .detail-popup.arrow-top::before {
     top: auto;
-    bottom: -10px; /* Popup'ın altından 10px taşar */
+    bottom: -10px;
+    /* Popup'ın altından 10px taşar */
     border-top: 10px solid #007bff;
     border-bottom: none;
   }
@@ -646,39 +654,31 @@ try {
 
     <!-- Özet Kartları -->
     <div class="summary-cards">
-  <div class="summary-card">
-    <h3><?php echo $istatistikler['toplam']; ?></h3>
-    <p>Toplam Talep</p>
-  </div>
-  <div class="summary-card warning">
-    <h3><?php echo $istatistikler['beklemede']; ?></h3>
-    <p>Beklemede</p>
-  </div>
-  <div class="summary-card info">
-    <h3><?php echo $istatistikler['teklif_bekleniyor']; ?></h3>
-    <p>Teklif Bekleniyor</p>
-  </div>
-  <div class="summary-card primary">
-    <h3><?php echo $istatistikler['teklif_alindi']; ?></h3>
-    <p>Teklif Alındı</p>
-  </div>
-  <div class="summary-card success">
-    <h3><?php echo $istatistikler['onaylandi']; ?></h3>
-    <p>Onaylandı</p>
-  </div>
-  <div class="summary-card info">
-    <h3><?php echo $istatistikler['siparis_verildi']; ?></h3>
-    <p>Sipariş Verildi</p>
-  </div>
-  <div class="summary-card success">
-    <h3><?php echo $istatistikler['teslim_edildi']; ?></h3>
-    <p>Teslim Edildi</p>
-  </div>
-  <div class="summary-card primary">
-    <h3><?php echo $istatistikler['tamamlandi']; ?></h3>
-    <p>Tamamlandı</p>
-  </div>
-</div>
+      <div class="summary-card">
+        <h3><?php echo $istatistikler['toplam']; ?></h3>
+        <p>Toplam Talep</p>
+      </div>
+      <div class="summary-card info">
+        <h3><?php echo $istatistikler['teklif_bekleniyor']; ?></h3>
+        <p>Teklif Bekleniyor</p>
+      </div>
+      <div class="summary-card primary">
+        <h3><?php echo $istatistikler['teklif_alindi']; ?></h3>
+        <p>Teklif Alındı</p>
+      </div>
+      <div class="summary-card success">
+        <h3><?php echo $istatistikler['onaylandi']; ?></h3>
+        <p>Onaylandı</p>
+      </div>
+      <div class="summary-card info">
+        <h3><?php echo $istatistikler['siparis_verildi']; ?></h3>
+        <p>Sipariş Verildi</p>
+      </div>
+      <div class="summary-card primary">
+        <h3><?php echo $istatistikler['tamamlandi']; ?></h3>
+        <p>Tamamlandı</p>
+      </div>
+    </div>
 
     <!-- Aktif Filtreler -->
     <div class="active-filters" id="activeFilters">
@@ -719,7 +719,7 @@ try {
         <div style="margin-left: 1rem;">
           <select id="bulkStatus" style="padding: 6px 12px; border-radius: 6px;">
             <option value="">Durum seçin</option>
-            <option value="Beklemede">Beklemede</option>
+            <option value="Teklif Bekleniyor">Teklif Bekleniyor</option>
             <option value="Onaylandı">Onaylandı</option>
             <option value="Sipariş Edildi">Sipariş Edildi</option>
             <option value="Tamamlandı">Tamamlandı</option>
@@ -746,7 +746,17 @@ try {
       <div class="form-group">
         <label for="durum-select">Durum</label>
         <select name="durum" id="durum-select">
-          <?php foreach (['hepsi' => 'Hepsi', 'Beklemede' => 'Beklemede', 'Teklif Bekleniyor' => 'Teklif Bekleniyor', 'Teklif Alındı' => 'Teklif Alındı', 'Onaylandı' => 'Onaylandı', 'Sipariş Verildi' => 'Sipariş Verildi', 'Teslim Edildi' => 'Teslim Edildi', 'Tamamlandı' => 'Tamamlandı'] as $v => $lbl): ?>
+          <?php
+          // 'Beklemede' ve 'Teslim Edildi' listeden çıkarıldı
+          $durumListesi = [
+            'hepsi' => 'Hepsi',
+            'Teklif Bekleniyor' => 'Teklif Bekleniyor',
+            'Teklif Alındı' => 'Teklif Alındı',
+            'Onaylandı' => 'Onaylandı',
+            'Sipariş Verildi' => 'Sipariş Verildi',
+            'Tamamlandı' => 'Tamamlandı'
+          ];
+          foreach ($durumListesi as $v => $lbl): ?>
             <option value="<?php echo sa_h($v); ?>" <?php echo ($durum === $v ? 'selected' : ''); ?>><?php echo sa_h($lbl); ?></option>
           <?php endforeach; ?>
         </select>
@@ -802,14 +812,14 @@ try {
                 <td><?php echo sa_h($r['termin_tarihi'] ? date('d-m-Y', strtotime($r['termin_tarihi'])) : '-'); ?></td>
                 <td><?php echo getStatusBadge($r['durum']); ?></td>
                 <td>
-                  <button class="btn-sm btn-info detay-btn" 
-                          data-talep-id="<?php echo (int)$r['id']; ?>"
-                          onclick="toggleDetailPopup(this, <?php echo (int)$r['id']; ?>)">
+                  <button class="btn-sm btn-info detay-btn"
+                    data-talep-id="<?php echo (int)$r['id']; ?>"
+                    onclick="toggleDetailPopup(this, <?php echo (int)$r['id']; ?>)">
                     📋 Detay
                   </button>
                 </td>
                 <td>
-                  <a class="btn-sm btn-primary" href="<?php echo site_url('satinalma-sys/talep_duzenle.php?id=' . (int)$r['id']); ?>">Düzenle</a>  
+                  <a class="btn-sm btn-primary" href="<?php echo site_url('satinalma-sys/talep_duzenle.php?id=' . (int)$r['id']); ?>">Düzenle</a>
                   <a class="btn-sm btn-danger" href="<?php echo site_url('satinalma-sys/talep_sil.php?id=' . (int)$r['id']); ?>" onclick="return confirm('Bu talebi silmek istediğinize emin misiniz?');">Sil</a>
                   <button class="btn-sm btn-info" onclick="sendMail(<?php echo (int)$r['id']; ?>, '<?php echo sa_h($r['order_code']); ?>')">📧</button>
                   <a class="btn-sm btn-info" href="<?php echo site_url('satinalma-sys/talep_pdf.php?id=' . (int)$r['id']); ?>" target="_blank" title="PDF İndir">📄 PDF</a>
@@ -831,8 +841,9 @@ try {
       </div>
     <?php endif; ?>
   </div>
-</div> <div class="detail-popup" id="shared-detail-popup" style="display: none;">
-  </div>
+</div>
+<div class="detail-popup" id="shared-detail-popup" style="display: none;">
+</div>
 
 <script>
   // Aktif filtre kaldırma
@@ -896,181 +907,181 @@ try {
     console.log('Sayfa yüklendi, tablo elementi:', document.querySelector('.table'));
     console.log('Satır sayısı:', document.querySelectorAll('.table tbody tr').length);
   });
-// YENİ toggleDetailPopup FONKSİYONU (Ok eklenmiş)
-function toggleDetailPopup(btn, talepId) {
-  const popup = document.getElementById('shared-detail-popup');
+  // YENİ toggleDetailPopup FONKSİYONU (Ok eklenmiş)
+  function toggleDetailPopup(btn, talepId) {
+    const popup = document.getElementById('shared-detail-popup');
 
-  // 1. Durum: Zaten bu butona ait popup açıksa, kapat
-  if (popup.style.display === 'block' && popup.dataset.currentTalepId == talepId) {
-    popup.style.display = 'none';
-    popup.dataset.currentTalepId = '';
-    return;
-  }
+    // 1. Durum: Zaten bu butona ait popup açıksa, kapat
+    if (popup.style.display === 'block' && popup.dataset.currentTalepId == talepId) {
+      popup.style.display = 'none';
+      popup.dataset.currentTalepId = '';
+      return;
+    }
 
-  // 2. Durum: Popup açılacak veya buton değişecek
-  popup.style.display = 'block';
-  popup.dataset.currentTalepId = talepId;
-  
-  // Önceki ok yönü sınıfını temizle ve varsayılanı ayarla
-  popup.className = 'detail-popup arrow-bottom'; // Varsayılan: Ok yukarı bakar (popup altta)
-  
-  // Veriyi yükle
-  loadDetailData(talepId, popup);
+    // 2. Durum: Popup açılacak veya buton değişecek
+    popup.style.display = 'block';
+    popup.dataset.currentTalepId = talepId;
 
-  // 3. Konumlandırma
-  const rect = btn.getBoundingClientRect(); // Butonun ekrandaki pozisyonu
-  const btnCenter = rect.left + (rect.width / 2); // Butonun yatay merkezi
+    // Önceki ok yönü sınıfını temizle ve varsayılanı ayarla
+    popup.className = 'detail-popup arrow-bottom'; // Varsayılan: Ok yukarı bakar (popup altta)
 
-  // Varsayılan konum: Butonun alt-solu
-  let popupTop = rect.bottom + 8; // 8px boşluk
-  let popupLeft = rect.left;
-  
-  popup.style.top = popupTop + 'px';
-  popup.style.left = popupLeft + 'px';
-  
-  // 4. Ekran kenarı ve ok pozisyonu kontrolü (Gecikmeli)
-  setTimeout(() => {
-    const popupRect = popup.getBoundingClientRect();
-    
-    // --- DİKEY KONTROL ---
-    // Alta taşıyorsa: Popup'ı butonun üstüne al
-    if (popupRect.bottom > window.innerHeight && (rect.top - popupRect.height - 8) > 0) {
+    // Veriyi yükle
+    loadDetailData(talepId, popup);
+
+    // 3. Konumlandırma
+    const rect = btn.getBoundingClientRect(); // Butonun ekrandaki pozisyonu
+    const btnCenter = rect.left + (rect.width / 2); // Butonun yatay merkezi
+
+    // Varsayılan konum: Butonun alt-solu
+    let popupTop = rect.bottom + 8; // 8px boşluk
+    let popupLeft = rect.left;
+
+    popup.style.top = popupTop + 'px';
+    popup.style.left = popupLeft + 'px';
+
+    // 4. Ekran kenarı ve ok pozisyonu kontrolü (Gecikmeli)
+    setTimeout(() => {
+      const popupRect = popup.getBoundingClientRect();
+
+      // --- DİKEY KONTROL ---
+      // Alta taşıyorsa: Popup'ı butonun üstüne al
+      if (popupRect.bottom > window.innerHeight && (rect.top - popupRect.height - 8) > 0) {
         popupTop = rect.top - popupRect.height - 8; // 8px boşluk
         popup.style.top = popupTop + 'px';
         popup.className = 'detail-popup arrow-top'; // Sınıfı değiştir: Ok aşağı bakar
-    }
-    
-    // --- YATAY KONTROL ---
-    let finalPopupLeft = popupLeft;
-    // Sağa taşıyorsa: Popup'ı butonun sağına hizala (sola aç)
-    if (popupRect.right > window.innerWidth) {
+      }
+
+      // --- YATAY KONTROL ---
+      let finalPopupLeft = popupLeft;
+      // Sağa taşıyorsa: Popup'ı butonun sağına hizala (sola aç)
+      if (popupRect.right > window.innerWidth) {
         finalPopupLeft = rect.right - popupRect.width;
         if (finalPopupLeft < 10) finalPopupLeft = 10; // Ekrandan taşmasın
         popup.style.left = finalPopupLeft + 'px';
-    }
-    
-    // Sola taşıyorsa (çok nadir):
-    if (popupRect.left < 0) {
+      }
+
+      // Sola taşıyorsa (çok nadir):
+      if (popupRect.left < 0) {
         finalPopupLeft = 10; // Ekranın solundan 10px boşluk bırak
         popup.style.left = finalPopupLeft + 'px';
-    }
-    
-    // --- OK POZİSYONUNU HESAPLA ---
-    // Okun konumu = Butonun merkezi - Popup'ın sol konumu
-    let arrowPos = btnCenter - finalPopupLeft;
-    
-    // Okun popup sınırları içinde kaldığından emin ol (min 15px, maks genişlik - 15px)
-    if (arrowPos < 15) arrowPos = 15;
-    if (arrowPos > popupRect.width - 15) arrowPos = popupRect.width - 15;
-    
-    // CSS değişkenini ayarla
-    popup.style.setProperty('--arrow-pos', arrowPos + 'px');
+      }
 
-  }, 100); // 100ms (içeriğin yüklenip boyutun netleşmesi için)
-}
+      // --- OK POZİSYONUNU HESAPLA ---
+      // Okun konumu = Butonun merkezi - Popup'ın sol konumu
+      let arrowPos = btnCenter - finalPopupLeft;
 
-function loadDetailData(talepId, popup) {
-  popup.innerHTML = '<div class="detail-popup-loading">⏳ Yükleniyor...</div>';
-  
-  fetch('/satinalma-sys/talep_ajax.php?action=get_talep_details&talep_id=' + talepId)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success && data.items && data.items.length > 0) {
-        popup.innerHTML = renderDetailContent(data);
-        popup.dataset.loaded = 'true';
-      } else {
-        popup.innerHTML = '<div class="detail-popup-empty">📋 Henüz ürün kalemi eklenmemiş</div>';
-      }
-    })
-    .catch(error => {
-      console.error('Detay yükleme hatası:', error);
-      popup.innerHTML = '<div class="detail-popup-error">❌ Veri yüklenirken hata oluştu</div>';
-    });
-}
+      // Okun popup sınırları içinde kaldığından emin ol (min 15px, maks genişlik - 15px)
+      if (arrowPos < 15) arrowPos = 15;
+      if (arrowPos > popupRect.width - 15) arrowPos = popupRect.width - 15;
 
-function renderDetailContent(data) {
-  let html = '<h4>📋 Tedarikçi Bilgileri</h4>';
-  
-  data.items.forEach(item => {
-    html += '<div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #dee2e6;">';
-    html += '<div style="font-weight: 600; margin-bottom: 8px;">🔹 ' + (item.urun || 'Ürün') + '</div>';
-    
-    if (item.best_price) {
-      const symbol = item.best_price_currency === 'USD' ? '$' : (item.best_price_currency === 'EUR' ? '€' : '₺');
-      html += '<div class="info-row"><span>En İyi Fiyat:</span><strong style="color: #28a745;">' + symbol + parseFloat(item.best_price).toFixed(2) + '</strong></div>';
-    }
-    
-    if (item.selected_supplier) {
-      const selSymbol = item.selected_currency === 'USD' ? '$' : (item.selected_currency === 'EUR' ? '€' : '₺');
-      html += '<div class="info-row">';
-      html += '<span><strong>Seçilen Tedarikçi:</strong></span>';
-      html += '<span style="color: #28a745;">✓ ' + item.selected_supplier;
-      if (item.selected_price) {
-        html += ' (' + selSymbol + parseFloat(item.selected_price).toFixed(2) + ')';
-      }
-      html += '</span></div>';
-    }
-    
-    html += '<div class="info-row"><span>Toplam Teklif:</span><strong>' + (item.quote_count || 0) + '</strong></div>';
-    
-    if (item.quoted_suppliers) {
-      const supplierCount = item.quoted_suppliers.split(',').filter(s => s.trim()).length;
-      html += '<div class="info-row"><span>Teklif Veren Firmalar:</span><strong>' + supplierCount + ' adet</strong></div>';
-    }
-    
-    // Seçili tedarikçi detayları
-    if (item.selected_quote_id) {
-      html += '<div class="selected-supplier-box">';
-      html += '<h5>✅ Seçili Tedarikçi Detayları:</h5>';
-      html += '<div class="supplier-detail-grid">';
-      
-      if (item.selected_supplier) {
-        html += '<div><small><strong>Firma:</strong> ' + item.selected_supplier + '</small></div>';
-      }
-      if (item.selected_price) {
-        const selSymbol = item.selected_currency === 'USD' ? '$' : (item.selected_currency === 'EUR' ? '€' : '₺');
-        html += '<div><small><strong>Fiyat:</strong> ' + selSymbol + parseFloat(item.selected_price).toFixed(2) + '</small></div>';
-      }
-      if (item.selected_delivery_days) {
-        html += '<div><small><strong>Teslimat:</strong> ' + item.selected_delivery_days + ' gün</small></div>';
-      }
-      if (item.selected_payment_term) {
-        html += '<div><small><strong>Ödeme:</strong> ' + item.selected_payment_term + '</small></div>';
-      }
-      if (item.selected_shipping_type) {
-        html += '<div><small><strong>Gönderim:</strong> ' + item.selected_shipping_type + '</small></div>';
-      }
-      if (item.selected_quote_date) {
-        const date = new Date(item.selected_quote_date);
-        html += '<div><small><strong>Teklif Tarihi:</strong> ' + date.toLocaleDateString('tr-TR') + '</small></div>';
-      }
-      
-      html += '</div>'; // supplier-detail-grid
-      
-      if (item.selected_note) {
-        html += '<div class="note-section"><small><strong>Not:</strong> ' + item.selected_note + '</small></div>';
-      }
-      
-      html += '</div>'; // selected-supplier-box
-    }
-    
-    html += '</div>';
-  });
-  
-  return html;
-}
+      // CSS değişkenini ayarla
+      popup.style.setProperty('--arrow-pos', arrowPos + 'px');
 
-// Sayfa dışına tıklandığında popupları kapat
-document.addEventListener('click', function(e) {
-  const popup = document.getElementById('shared-detail-popup');
-  // Tıklanan yer buton DEĞİLSE ve popup'ın kendisi DEĞİLSE kapat
-  if (!e.target.closest('.detay-btn') && !e.target.closest('.detail-popup')) {
-    if (popup) {
-      popup.style.display = 'none';
-      popup.dataset.currentTalepId = '';
-    }
+    }, 100); // 100ms (içeriğin yüklenip boyutun netleşmesi için)
   }
-});
+
+  function loadDetailData(talepId, popup) {
+    popup.innerHTML = '<div class="detail-popup-loading">⏳ Yükleniyor...</div>';
+
+    fetch('/satinalma-sys/talep_ajax.php?action=get_talep_details&talep_id=' + talepId)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.items && data.items.length > 0) {
+          popup.innerHTML = renderDetailContent(data);
+          popup.dataset.loaded = 'true';
+        } else {
+          popup.innerHTML = '<div class="detail-popup-empty">📋 Henüz ürün kalemi eklenmemiş</div>';
+        }
+      })
+      .catch(error => {
+        console.error('Detay yükleme hatası:', error);
+        popup.innerHTML = '<div class="detail-popup-error">❌ Veri yüklenirken hata oluştu</div>';
+      });
+  }
+
+  function renderDetailContent(data) {
+    let html = '<h4>📋 Tedarikçi Bilgileri</h4>';
+
+    data.items.forEach(item => {
+      html += '<div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #dee2e6;">';
+      html += '<div style="font-weight: 600; margin-bottom: 8px;">🔹 ' + (item.urun || 'Ürün') + '</div>';
+
+      if (item.best_price) {
+        const symbol = item.best_price_currency === 'USD' ? '$' : (item.best_price_currency === 'EUR' ? '€' : '₺');
+        html += '<div class="info-row"><span>En İyi Fiyat:</span><strong style="color: #28a745;">' + symbol + parseFloat(item.best_price).toFixed(2) + '</strong></div>';
+      }
+
+      if (item.selected_supplier) {
+        const selSymbol = item.selected_currency === 'USD' ? '$' : (item.selected_currency === 'EUR' ? '€' : '₺');
+        html += '<div class="info-row">';
+        html += '<span><strong>Seçilen Tedarikçi:</strong></span>';
+        html += '<span style="color: #28a745;">✓ ' + item.selected_supplier;
+        if (item.selected_price) {
+          html += ' (' + selSymbol + parseFloat(item.selected_price).toFixed(2) + ')';
+        }
+        html += '</span></div>';
+      }
+
+      html += '<div class="info-row"><span>Toplam Teklif:</span><strong>' + (item.quote_count || 0) + '</strong></div>';
+
+      if (item.quoted_suppliers) {
+        const supplierCount = item.quoted_suppliers.split(',').filter(s => s.trim()).length;
+        html += '<div class="info-row"><span>Teklif Veren Firmalar:</span><strong>' + supplierCount + ' adet</strong></div>';
+      }
+
+      // Seçili tedarikçi detayları
+      if (item.selected_quote_id) {
+        html += '<div class="selected-supplier-box">';
+        html += '<h5>✅ Seçili Tedarikçi Detayları:</h5>';
+        html += '<div class="supplier-detail-grid">';
+
+        if (item.selected_supplier) {
+          html += '<div><small><strong>Firma:</strong> ' + item.selected_supplier + '</small></div>';
+        }
+        if (item.selected_price) {
+          const selSymbol = item.selected_currency === 'USD' ? '$' : (item.selected_currency === 'EUR' ? '€' : '₺');
+          html += '<div><small><strong>Fiyat:</strong> ' + selSymbol + parseFloat(item.selected_price).toFixed(2) + '</small></div>';
+        }
+        if (item.selected_delivery_days) {
+          html += '<div><small><strong>Teslimat:</strong> ' + item.selected_delivery_days + ' gün</small></div>';
+        }
+        if (item.selected_payment_term) {
+          html += '<div><small><strong>Ödeme:</strong> ' + item.selected_payment_term + '</small></div>';
+        }
+        if (item.selected_shipping_type) {
+          html += '<div><small><strong>Gönderim:</strong> ' + item.selected_shipping_type + '</small></div>';
+        }
+        if (item.selected_quote_date) {
+          const date = new Date(item.selected_quote_date);
+          html += '<div><small><strong>Teklif Tarihi:</strong> ' + date.toLocaleDateString('tr-TR') + '</small></div>';
+        }
+
+        html += '</div>'; // supplier-detail-grid
+
+        if (item.selected_note) {
+          html += '<div class="note-section"><small><strong>Not:</strong> ' + item.selected_note + '</small></div>';
+        }
+
+        html += '</div>'; // selected-supplier-box
+      }
+
+      html += '</div>';
+    });
+
+    return html;
+  }
+
+  // Sayfa dışına tıklandığında popupları kapat
+  document.addEventListener('click', function(e) {
+    const popup = document.getElementById('shared-detail-popup');
+    // Tıklanan yer buton DEĞİLSE ve popup'ın kendisi DEĞİLSE kapat
+    if (!e.target.closest('.detay-btn') && !e.target.closest('.detail-popup')) {
+      if (popup) {
+        popup.style.display = 'none';
+        popup.dataset.currentTalepId = '';
+      }
+    }
+  });
 
 
   function sendMail(talepId, orderCode) {
@@ -1107,7 +1118,6 @@ document.addEventListener('click', function(e) {
         btn.disabled = false;
       });
   }
-  
 </script>
 
 <?php include('../includes/footer.php'); ?>
