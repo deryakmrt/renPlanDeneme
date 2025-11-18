@@ -1,7 +1,6 @@
 <?php
 // satinalma-sys/satinalma_rapor.php – FIX: Doğru tablo yapısına göre güncellendi
-// satinalma_order_items: talep_id var, order_id yok
-// Kolon adı: urun (urun_adi değil)
+// Filtreleme ve gösterim satinalma_orders.durum (so.durum) üzerinden yapılıyor.
 
 declare(strict_types=1);
 ini_set('display_errors', '1');
@@ -38,13 +37,15 @@ if ($talep_id !== '') {
   $args[':talep_id'] = $talep_id;
 }
 if ($durum !== '') {
-  $where[] = "oi.durum = :durum";
+  // GÜNCELLENDİ: Filtre artık oi.durum yerine so.durum'a bakıyor
+  $where[] = "so.durum = :durum";
   $args[':durum'] = $durum;
 }
 
 $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 
 // ---- Summary totals ----
+// NOT: Toplam tutar hesabı, genel durum filtresinden etkilenir
 $sqlTotal = "
   SELECT 
     COUNT(oi.id) AS kalem_sayisi,
@@ -66,7 +67,7 @@ $sqlRows = "
     oi.created_at AS siparis_tarihi,
     oi.urun,
     oi.birim,
-    oi.durum,
+    so.durum AS durum, -- GÜNCELLENDİ: oi.durum yerine so.durum
     COALESCE(oi.miktar,0) AS adet,
     COALESCE(oi.birim_fiyat,0) AS birim_fiyat,
     COALESCE(oi.miktar * oi.birim_fiyat,0) AS tutar,
@@ -95,14 +96,16 @@ $taleps = $pdo->query("
   ORDER BY talep_id DESC
 ")->fetchAll(PDO::FETCH_COLUMN);
 
-// Durum listesi - veritabanındaki değerlerle tam eşleşmeli
+// GÜNCELLENDİ: Durum listesi talep_duzenle.php ile aynı hale getirildi
 $durumlar = [
   'Beklemede' => 'Beklemede',
   'Teklif Bekleniyor' => 'Teklif Bekleniyor',
   'Teklif Alındı' => 'Teklif Alındı',
+  'Onaylandı' => 'Onaylandı',
   'Sipariş Verildi' => 'Sipariş Verildi',
   'Teslim Edildi' => 'Teslim Edildi',
-  'İptal' => 'İptal'
+  'Tamamlandı' => 'Tamamlandı',
+  'İptal' => 'İptal' // Raporlama için İptal durumu tutulabilir
 ];
 ?>
 
@@ -190,12 +193,12 @@ $durumlar = [
             </tr>
             <?php else:
             foreach ($rows as $r):
-              // Durum badge class
+              // GÜNCELLENDİ: Badge class'ları yeni durum adlarına göre ayarlandı
               $statusClass = match ($r['durum']) {
-                'onaylandi', 'teslim_edildi' => 'badge-success',
-                'siparis_verildi', 'teklif_alindi' => 'badge-info',
-                'beklemede' => 'badge-warning',
-                'iptal' => 'badge-danger',
+                'Onaylandı', 'Teslim Edildi', 'Tamamlandı' => 'badge-success',
+                'Sipariş Verildi', 'Teklif Alındı' => 'badge-info',
+                'Beklemede', 'Teklif Bekleniyor' => 'badge-warning',
+                'İptal' => 'badge-danger',
                 default => 'badge-secondary'
               };
             ?>
@@ -207,7 +210,7 @@ $durumlar = [
                 <td><?= h($r['tedarikci'] ?: '-') ?></td>
                 <td>
                   <span class="badge <?= $statusClass ?>">
-                    <?= h(ucfirst(str_replace('_', ' ', $r['durum']))) ?>
+                    <?= h($r['durum']) ?>
                   </span>
                 </td>
                 <td class="ta-right"><?= h(number_format((float)$r['adet'], 2, ',', '.')) ?></td>
