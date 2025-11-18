@@ -287,11 +287,28 @@ include('../includes/header.php');
       row.setAttribute('data-item-id', 'new_' + Date.now());
 
       list.appendChild(clone);
+      // YENİ: Yeni eklenen satırın durumunu GENEL DURUM ile eşle
+      const genelDurumSelect = document.getElementById('genelDurumSelect');
+      if(genelDurumSelect){
+          const currentStatus = genelDurumSelect.value;
+          // Az önce yazdığımız fonksiyonu tek satır için çalıştıramadığımızdan manuel yapıyoruz
+          // veya yukarıdaki fonksiyonu çağırarak hepsini tekrar güncelliyoruz (daha pratik)
+          window.updateAllProductStatuses(currentStatus);
+      }
 
       // YENİ: Autocomplete ekle
       const newInput = row.querySelector('input[name="urun[]"]');
       if (newInput) {
         setupProductAutocomplete(newInput);
+      }
+      // ✅ YENİ: Miktar inputuna blur event ekle
+      const quantityInput = row.querySelector('input[name="miktar[]"]');
+      if (quantityInput) {
+        quantityInput.addEventListener('blur', function() {
+          if (this.value && this.value !== '') {
+            this.value = window.formatNumber(this.value);
+          }
+        });
       }
 
       window.showNotification('Satır eklendi', 'success');
@@ -318,7 +335,7 @@ include('../includes/header.php');
       if (!info) return;
       if (info.classList.contains('active')) {
         info.classList.remove('active');
-        btn.textContent = 'Detay';
+        btn.textContent = '📋Detay';
       } else {
         info.classList.add('active');
         btn.textContent = '🔼Gizle';
@@ -1132,7 +1149,62 @@ include('../includes/header.php');
       // İlk yüklemede filtreyi uygula
       applyFilters();
     }
+    // MİKTAR FORMATLAMA FONKSİYONU (Türkçe virgül desteği)
+    window.formatNumber = function(value) {
+      if (!value || value === '') return '';
 
+      // Türkçe virgülü noktaya çevir
+      let cleanValue = value.toString().replace(',', '.');
+      const num = parseFloat(cleanValue);
+
+      if (isNaN(num)) return value;
+
+      // Sayıyı formatla: sondaki sıfırları temizle
+      let formatted = num.toString();
+
+      // Eğer ondalık kısım varsa ve sondaki sıfırları temizle
+      if (formatted.includes('.')) {
+        formatted = formatted.replace(/\.?0+$/, '');
+      }
+
+      // Türkçe format için virgül kullan (opsiyonel)
+      // formatted = formatted.replace('.', ',');
+
+      return formatted;
+    };
+    // GENEL DURUM DEĞİŞİNCE TÜM SATIRLARI GÜNCELLE
+    window.updateAllProductStatuses = function(newStatus) {
+      if (!newStatus) return;
+      
+      // Türkçe karakterleri ve boşlukları CSS class formatına çevir
+      const className = 'status-' + newStatus.replace(/ /g, '')
+                                             .replace(/ı/g, 'i')
+                                             .replace(/ş/g, 's')
+                                             .replace(/ğ/g, 'g')
+                                             .replace(/ü/g, 'u')
+                                             .replace(/ö/g, 'o')
+                                             .replace(/ç/g, 'c')
+                                             .toLowerCase();
+
+      // Tüm satırlardaki badge'leri bul ve güncelle
+      document.querySelectorAll('.product-status').forEach(el => {
+        // Mevcut classları temizle ama 'product-status' kalsın
+        el.className = 'product-status ' + className;
+        el.textContent = newStatus;
+      });
+    };
+
+
+    // Miktar inputlarını otomatik formatla
+    window.formatQuantityInputs = function() {
+      document.querySelectorAll('input[name="miktar[]"]').forEach(input => {
+        if (input.value && input.value !== '') {
+          const formatted = window.formatNumber(input.value);
+          console.log('Formatting:', input.value, '→', formatted); // Debug için
+          input.value = formatted;
+        }
+      });
+    };
     // BİLDİRİM SİSTEMİ
     window.showNotification = function(msg, type) {
       const n = document.createElement('div');
@@ -1303,6 +1375,14 @@ include('../includes/header.php');
       });
 
       document.addEventListener('submit', function(e) {
+        if (e.target && e.target.id === 'mainForm') {
+          // Miktar değerlerini temizle (virgülü noktaya çevir)
+          document.querySelectorAll('input[name="miktar[]"]').forEach(input => {
+            if (input.value) {
+              input.value = input.value.replace(',', '.');
+            }
+          });
+        }
         if (e.target && e.target.id === 'supplierForm') {
           e.preventDefault();
           const form = e.target;
@@ -1434,6 +1514,17 @@ include('../includes/header.php');
       document.querySelectorAll('input[name="urun[]"]').forEach(input => {
         setupProductAutocomplete(input);
       });
+      // Sayfa yüklendiğinde mevcut miktarları formatla
+      window.formatQuantityInputs();
+
+      // Miktar inputlarına blur event ekle (kullanıcı inputtan çıkınca formatla)
+      document.querySelectorAll('input[name="miktar[]"]').forEach(input => {
+        input.addEventListener('blur', function() {
+          if (this.value && this.value !== '') {
+            this.value = window.formatNumber(this.value);
+          }
+        });
+      });
     }
 
     console.log('All functions exported to window - ready!');
@@ -1542,7 +1633,8 @@ include('../includes/header.php');
 
   .product-row {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr auto auto auto auto;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto auto auto;
+    /* 1fr ekledik */
     gap: 15px;
     align-items: end;
     padding: 20px;
@@ -1594,7 +1686,7 @@ include('../includes/header.php');
   }
 
   .supplier-info {
-    grid-column: span 8;
+    grid-column: span 9;
     margin-top: 10px;
     padding: 10px;
     background: white;
@@ -2167,6 +2259,15 @@ include('../includes/header.php');
       transform: translateY(-1px);
     }
 
+    /* Son Onay butonunu alt satıra taşı */
+    .product-row .form-field:has(.approval-btn),
+    .product-row>div:has(.approval-btn) {
+      grid-column: 1 / -1;
+      border-top: 1px dashed #dee2e6;
+      padding-top: 10px;
+      margin-top: 10px;
+    }
+
     .inline-approval {
       display: flex;
       align-items: center;
@@ -2197,6 +2298,12 @@ include('../includes/header.php');
 
     .supplier-item.has-history .supplier-price[style*="color:#28a745"] {
       animation: bestPricePulse 2s infinite;
+    }
+
+    /* Miktar inputları için sayısal görünüm */
+    .miktar-input {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
     }
   }
 </style>
@@ -2274,7 +2381,7 @@ include('../includes/header.php');
         // Mevcut kodun yerine:
         foreach ($items_to_show as $index => $item):
           $item_id = $item['id'] ?? 0;
-          $durum = $item['durum'] ?? 'Beklemede';
+          $durum = $row['durum'] ?? 'Beklemede';
 
           // GÜVENLİ DÖNÜŞÜM
           $quote_count = isset($item['quote_count']) ? (int)$item['quote_count'] : 0;
@@ -2283,6 +2390,17 @@ include('../includes/header.php');
           $selected_price = isset($item['selected_price']) ? $item['selected_price'] : null;
           $selected_supplier_id = isset($item['selected_supplier_id']) ? $item['selected_supplier_id'] : null;
           $quoted_suppliers = isset($item['quoted_suppliers']) ? $item['quoted_suppliers'] : '';
+          // ✅ MİKTARI FORMATLA - Sondaki sıfırları temizle (DÜZELTME)
+          $formatted_miktar = '';
+          if (isset($item['miktar']) && $item['miktar'] !== null && $item['miktar'] !== '') {
+            $miktar_num = floatval($item['miktar']);
+
+            // Sayıyı string'e çevir ve sondaki sıfırları temizle
+            $formatted_miktar = rtrim(rtrim(sprintf('%.4f', $miktar_num), '0'), '.');
+
+            // Debug için (gerekirse kaldırın)
+            // error_log("Miktar format: {$item['miktar']} → {$miktar_num} → {$formatted_miktar}");
+          }
 
           $status_class = 'status-' . strtolower(str_replace([' ', 'ı', 'ş', 'ğ', 'ü', 'ö', 'ç'], ['', 'i', 's', 'g', 'u', 'o', 'c'], $durum));
         ?>
@@ -2297,7 +2415,8 @@ include('../includes/header.php');
             </div>
             <div class="form-field">
               <label>🔢 Miktar</label>
-              <input type="number" step="0.01" name="miktar[]" class="form-control" value="<?= h($item['miktar'] ?? '') ?>" placeholder="0">
+              <input type="text" step="0.01" name="miktar[]" class="form-control miktar-input" value="<?= h($formatted_miktar) ?>" placeholder="0" pattern="[0-9]*[.,]?[0-9]*"
+                inputmode="decimal">
             </div>
             <div class="form-field">
               <label>📏 Birim</label>
@@ -2325,6 +2444,15 @@ include('../includes/header.php');
                 </span>
               </div>
             </div>
+            <!-- Ödeme Türü (Readonly) -->
+            <div class="form-field">
+              <label>💳 Ödeme Türü</label>
+              <input type="text"
+                class="form-control"
+                value="<?= h($item['selected_payment_term'] ?? '-') ?>"
+                placeholder="-"
+                readonly>
+            </div>
             <!-- Durum alanı kaldırıldı - Genel Durum kullanılıyor -->
 
             <button type="button" class="btn btn-primary btn-sm tedarikci-sec-btn"
@@ -2348,8 +2476,8 @@ include('../includes/header.php');
               🗑️
             </button>
             <div class="form-field">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <label style="margin: 0;">✅ Son Onay</label>
+              <div class="inline-approval">
+                <label>✅ Son Onay</label>
                 <button type="button"
                   class="btn btn-sm approval-btn <?= isset($item['son_onay']) && $item['son_onay'] == 1 ? 'approved' : '' ?>"
                   data-item-id="<?= $item_id ?>"
@@ -2456,7 +2584,7 @@ include('../includes/header.php');
       <div class="form-grid grid-4">
         <div class="form-field">
           <label>📊 Genel Durum</label>
-          <select name="durum" class="form-control">
+          <select name="durum" id="genelDurumSelect" class="form-control" onchange="updateAllProductStatuses(this.value)">
             <?php
             $durumlar = ['Beklemede', 'Teklif Bekleniyor', 'Teklif Alındı', 'Onaylandı', 'Sipariş Verildi', 'Teslim Edildi', 'Tamamlandı'];
             $current_durum = $row['durum'] ?? 'Beklemede';
@@ -2660,7 +2788,7 @@ include('../includes/header.php');
     </div>
     <div class="form-field">
       <label>🔢 Miktar</label>
-      <input type="number" step="0.01" name="miktar[]" class="form-control" placeholder="0">
+      <input type="text" step="0.01" name="miktar[]" class="form-control miktar-input" placeholder="0" pattern="[0-9]*[.,]?[0-9]*" inputmode="decimal">
     </div>
     <div class="form-field">
       <label>📏 Birim</label>
@@ -2674,6 +2802,10 @@ include('../includes/header.php');
     <div class="form-field">
       <label>💰 Birim Fiyat (₺)</label>
       <input type="number" step="0.25" name="birim_fiyat[]" class="form-control" placeholder="0.00">
+    </div>
+    <div class="form-field">
+      <label>💳 Ödeme Türü</label>
+      <input type="text" class="form-control" value="-" readonly>
     </div>
     <!-- Durum alanı kaldırıldı -->
     <div class="form-field">
