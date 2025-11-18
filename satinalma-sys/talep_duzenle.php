@@ -661,13 +661,28 @@ include('../includes/header.php');
         html += '</small></div>';
       }
 
-      // FİLTRE BUTONU
-      html += '<div class="mb-3">';
-      html += '<label class="filter-checkbox">';
-      html += '<input type="checkbox" id="filterHistoricalOnly">';
-      html += '<span>Sadece geçmişi olanları göster</span>';
-      html += '</label>';
-      html += '</div>';
+      // TOGGLE FİLTRE BUTONLARI
+        // YENİ FİLTRE KUTUSU
+        const quoteCount = quotes.length;
+        const historicalOnlyCount = historicalSuppliers.filter(s => s.has_history == 1).length;
+
+        html += '<div class="filter-container">';
+        
+        // Teklif Girilmiş Filtresi
+        html += '<label class="checkbox-filter">';
+        html += '<input type="checkbox" id="filterQuotedOnly" ' + (quoteCount > 0 ? 'checked' : '') + '>';
+        html += '💰 Teklif Girilmiş';
+        html += '<span class="filter-badge">' + quoteCount + '</span>';
+        html += '</label>';
+        
+        // Geçmişi Var Filtresi
+        html += '<label class="checkbox-filter">';
+        html += '<input type="checkbox" id="filterHistoricalOnly" ' + (historicalOnlyCount > 0 ? 'checked' : '') + '>';
+        html += '⭐ Geçmişi Var';
+        html += '<span class="filter-badge">' + historicalOnlyCount + '</span>';
+        html += '</label>';
+        
+        html += '</div>';
 
       suppliers.forEach(s => {
         if (!s || !s.id) return;
@@ -755,17 +770,45 @@ include('../includes/header.php');
 
       list.innerHTML = html;
 
-      // Filtre event listener
-      const filterCheckbox = document.getElementById('filterHistoricalOnly');
-      if (filterCheckbox) {
-        filterCheckbox.addEventListener('change', function() {
-          const showOnlyHistorical = this.checked;
-          document.querySelectorAll('#supplierList .supplier-item').forEach(item => {
-            const hasHistory = item.getAttribute('data-has-history') === '1';
-            item.style.display = (showOnlyHistorical && !hasHistory) ? 'none' : 'block';
-          });
+      // Filtre event listeners
+      function applyFilters() {
+        const showQuoted = document.getElementById('filterQuotedOnly')?.checked || false;
+        const showHistorical = document.getElementById('filterHistoricalOnly')?.checked || false;
+        
+        document.querySelectorAll('#supplierList .supplier-item').forEach(item => {
+          const hasQuote = item.getAttribute('data-has-quote') === '1';
+          const hasHistory = item.getAttribute('data-has-history') === '1';
+          
+          let shouldShow = true;
+          
+          // İki filtre de kapalıysa hepsini göster
+          if (!showQuoted && !showHistorical) {
+            shouldShow = true;
+          }
+          // İkisi de açıksa, en az birini karşılayanları göster
+          else if (showQuoted && showHistorical) {
+            shouldShow = hasQuote || hasHistory;
+          }
+          // Sadece teklif filtresi açıksa
+          else if (showQuoted) {
+            shouldShow = hasQuote;
+          }
+          // Sadece geçmiş filtresi açıksa
+          else if (showHistorical) {
+            shouldShow = hasHistory;
+          }
+          
+          item.style.display = shouldShow ? 'block' : 'none';
         });
       }
+
+      const filterQuoted = document.getElementById('filterQuotedOnly');
+      const filterHistorical = document.getElementById('filterHistoricalOnly');
+      if (filterQuoted) filterQuoted.addEventListener('change', applyFilters);
+      if (filterHistorical) filterHistorical.addEventListener('change', applyFilters);
+
+      // İlk yüklemede filtreyi uygula
+      applyFilters();
     }
 
     // YENİ FONKSIYON: Geçmiş tedarikçileri yükle
@@ -800,17 +843,39 @@ include('../includes/header.php');
     }
     // TEDARİKÇİLERİ RENDER ETME
     function renderSuppliers(suppliers, quotes, selectedQuote) {
-      const list = document.getElementById('supplierList');
-      if (!list) return;
+    const list = document.getElementById('supplierList');
+    if (!list) return;
 
-      if (!suppliers || suppliers.length === 0) {
-        list.innerHTML = '<div class="text-center text-muted">Tedarikçi yok</div>';
-        return;
-      }
+    if (!suppliers || suppliers.length === 0) {
+      list.innerHTML = '<div class="text-center text-muted">Tedarikçi yok</div>';
+      return;
+    }
 
-      let html = '';
+    let html = '';
+    
+    // TOGGLE FİLTRE BUTONLARI
+    // YENİ FİLTRE KUTUSU
+    const quoteCount = quotes.filter(q => q && q.price).length;
+    
+    html += '<div class="filter-container">';
 
-      if (selectedQuote) {
+    // Teklif Girilmiş Filtresi
+    html += '<label class="checkbox-filter">';
+    html += '<input type="checkbox" id="filterQuotedOnly" ' + (quoteCount > 0 ? 'checked' : '') + '>';
+    html += '💰 Teklif Girilmiş';
+    html += '<span class="filter-badge">' + quoteCount + '</span>';
+    html += '</label>';
+    
+    // Geçmişi Var Filtresi (Bu senaryoda hep 0 olmalı)
+    html += '<label class="checkbox-filter">';
+    html += '<input type="checkbox" id="filterHistoricalOnly">';
+    html += '⭐ Geçmişi Var';
+    html += '<span class="filter-badge">0</span>';
+    html += '</label>';
+
+    html += '</div>';
+
+    if (selectedQuote) {
         html += '<div class="alert alert-success mb-3">';
         html += '<strong>Seçili:</strong> ' + (selectedQuote.supplier_name || '');
         const selSymbol = selectedQuote.currency === 'USD' ? '$' : (selectedQuote.currency === 'EUR' ? '€' : '₺');
@@ -861,7 +926,47 @@ include('../includes/header.php');
       });
 
       list.innerHTML = html;
-    }
+  
+  // FİLTRE EVENT LİSTENERS
+  function applyFilters() {
+    const showQuoted = document.getElementById('filterQuotedOnly')?.checked || false;
+    const showHistorical = document.getElementById('filterHistoricalOnly')?.checked || false;
+    
+    document.querySelectorAll('#supplierList .supplier-item').forEach(item => {
+      const hasQuote = item.getAttribute('data-has-quote') === '1';
+      const hasHistory = item.getAttribute('data-has-history') === '1';
+      
+      let shouldShow = true;
+      
+      // İki filtre de kapalıysa hepsini göster
+      if (!showQuoted && !showHistorical) {
+        shouldShow = true;
+      }
+      // İkisi de açıksa, en az birini karşılayanları göster
+      else if (showQuoted && showHistorical) {
+        shouldShow = hasQuote || hasHistory;
+      }
+      // Sadece teklif filtresi açıksa
+      else if (showQuoted) {
+        shouldShow = hasQuote;
+      }
+      // Sadece geçmiş filtresi açıksa
+      else if (showHistorical) {
+        shouldShow = hasHistory;
+      }
+      
+      item.style.display = shouldShow ? 'block' : 'none';
+    });
+  }
+
+  const filterQuoted = document.getElementById('filterQuotedOnly');
+  const filterHistorical = document.getElementById('filterHistoricalOnly');
+  if (filterQuoted) filterQuoted.addEventListener('change', applyFilters);
+  if (filterHistorical) filterHistorical.addEventListener('change', applyFilters);
+  
+  // İlk yüklemede filtreyi uygula
+  applyFilters();
+}
 
     function renderHistoricalSuppliers(suppliers, historicalCount) {
       const list = document.getElementById('supplierList');
@@ -897,13 +1002,27 @@ include('../includes/header.php');
         html += '</div>';
       }
 
-      // FİLTRE BUTONU
-      html += '<div class="mb-3">';
-      html += '<label class="filter-checkbox">';
-      html += '<input type="checkbox" id="filterHistoricalOnly" style="margin-right:8px;">';
-      html += '<span>Sadece geçmişi olanları göster</span>';
-      html += '</label>';
-      html += '</div>';
+      // TOGGLE FİLTRE BUTONLARI
+      // YENİ FİLTRE KUTUSU
+        const historicalOnlyCount = suppliers.filter(s => s.has_history == 1).length;
+
+        html += '<div class="filter-container">';
+
+        // Teklif Girilmiş Filtresi (Bu senaryoda hep 0 olmalı)
+        html += '<label class="checkbox-filter">';
+        html += '<input type="checkbox" id="filterQuotedOnly">';
+        html += '💰 Teklif Girilmiş';
+        html += '<span class="filter-badge">0</span>';
+        html += '</label>';
+
+        // Geçmişi Var Filtresi
+        html += '<label class="checkbox-filter">';
+        html += '<input type="checkbox" id="filterHistoricalOnly" ' + (historicalOnlyCount > 0 ? 'checked' : '') + '>';
+        html += '⭐ Geçmişi Var';
+        html += '<span class="filter-badge">' + historicalOnlyCount + '</span>';
+        html += '</label>';
+
+        html += '</div>';
 
       // Tedarikçileri listele
       suppliers.forEach(s => {
@@ -973,17 +1092,45 @@ include('../includes/header.php');
 
       list.innerHTML = html;
 
-      // FİLTRE EVENT LİSTENER
-      const filterCheckbox = document.getElementById('filterHistoricalOnly');
-      if (filterCheckbox) {
-        filterCheckbox.addEventListener('change', function() {
-          const showOnlyHistorical = this.checked;
-          document.querySelectorAll('#supplierList .supplier-item').forEach(item => {
-            const hasHistory = item.getAttribute('data-has-history') === '1';
-            item.style.display = (showOnlyHistorical && !hasHistory) ? 'none' : 'block';
-          });
+      // FİLTRE EVENT LİSTENERS
+      function applyFilters() {
+        const showQuoted = document.getElementById('filterQuotedOnly')?.checked || false;
+        const showHistorical = document.getElementById('filterHistoricalOnly')?.checked || false;
+        
+        document.querySelectorAll('#supplierList .supplier-item').forEach(item => {
+          const hasQuote = item.getAttribute('data-has-quote') === '1';
+          const hasHistory = item.getAttribute('data-has-history') === '1';
+          
+          let shouldShow = true;
+          
+          // İki filtre de kapalıysa hepsini göster
+          if (!showQuoted && !showHistorical) {
+            shouldShow = true;
+          }
+          // İkisi de açıksa, en az birini karşılayanları göster
+          else if (showQuoted && showHistorical) {
+            shouldShow = hasQuote || hasHistory;
+          }
+          // Sadece teklif filtresi açıksa
+          else if (showQuoted) {
+            shouldShow = hasQuote;
+          }
+          // Sadece geçmiş filtresi açıksa
+          else if (showHistorical) {
+            shouldShow = hasHistory;
+          }
+          
+          item.style.display = shouldShow ? 'block' : 'none';
         });
       }
+
+      const filterQuoted = document.getElementById('filterQuotedOnly');
+      const filterHistorical = document.getElementById('filterHistoricalOnly');
+      if (filterQuoted) filterQuoted.addEventListener('change', applyFilters);
+      if (filterHistorical) filterHistorical.addEventListener('change', applyFilters);
+
+      // İlk yüklemede filtreyi uygula
+      applyFilters();
     }
 
     // BİLDİRİM SİSTEMİ
@@ -1272,16 +1419,7 @@ include('../includes/header.php');
             });
         }
       });
-      // Teklif filtresi
-    document.addEventListener('change', function(e) {
-      if (e.target && e.target.id === 'filterQuotedOnly') {
-        const showOnlyQuoted = e.target.checked;
-        document.querySelectorAll('#supplierList .supplier-item').forEach(item => {
-          const hasQuote = item.getAttribute('data-has-quote') === '1';
-          item.style.display = (showOnlyQuoted && !hasQuote) ? 'none' : 'block';
-        });
-      }
-    });
+      
       document.addEventListener('input', function(e) {
         if (e.target && e.target.id === 'supplierSearch') {
           const searchTerm = e.target.value.toLowerCase();
@@ -1820,7 +1958,66 @@ include('../includes/header.php');
       grid-column: span 1;
     }
   }
+  /* ======== YENİ FİLTRE KUTUSU STİLLERİ ======== */
 
+  .filter-container {
+    background: #f8f9fa; /* Arka plan rengi */
+    border: 1px solid #dee2e6; /* Kenarlık */
+    border-radius: var(--border-radius, 8px); /* Kenar yuvarlaklığı */
+    padding: 10px; /* İç boşluk */
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column; /* Öğeleri alt alta sırala */
+    gap: 8px; /* Öğeler arası boşluk */
+  }
+
+  .checkbox-filter {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 600;
+    color: #495057;
+    padding: 8px 10px;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+    user-select: none; /* Metin seçimini engelle */
+  }
+  
+  .checkbox-filter:hover {
+    background: #e9ecef; /* Üzerine gelince hafif arka plan */
+  }
+
+  /* Checkbox'ın boyutunu ve konumunu ayarla */
+  .checkbox-filter input[type="checkbox"] {
+    margin-right: 12px; /* Checkbox ile yazı arası boşluk */
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    /* Eski checkbox'ı gizle (eğer özel stil istenirse) */
+    /* Biz standart checkbox kullanıyoruz, bu yüzden buna gerek yok */
+  }
+
+  .checkbox-filter .filter-badge {
+    background: #007bff;
+    color: white;
+    padding: 3px 9px; /* Biraz daha okunaklı */
+    border-radius: 12px;
+    font-size: 0.8rem; /* Biraz büyütüldü */
+    font-weight: 600;
+    margin-left: auto; /* Rozeti sağa yasla */
+  }
+  
+  /* ======== ESKİ FİLTRE STİLLERİNİ İPTAL ET ======== */
+  
+  .toggle-filter {
+    /* Artık bu kullanılmayacak */
+    display: none; 
+  }
+  
+  .toggle-switch {
+    /* Artık bu kullanılmayacak */
+    display: none; 
+  }
   @media (max-width: 768px) {
     .container {
       padding: 0 10px;
@@ -1865,36 +2062,75 @@ include('../includes/header.php');
     .supplier-item.has-history:hover {
       background: #fff8e1;
     }
+    /* Toggle Switch Stili */
+  .filter-container {
+    display: flex;
+    gap: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+  }
 
-    /* Filtre checkbox stili */
-    .filter-checkbox {
-      display: inline-flex;
-      align-items: center;
-      padding: 10px 15px;
-      background: #f8f9fa;
-      border-radius: 6px;
-      cursor: pointer;
-      user-select: none;
-      transition: background 0.2s;
-      gap: 8px;
-    }
 
-    .filter-checkbox:hover {
-      background: #e9ecef;
-    }
+  .toggle-filter label {
+    font-weight: 600;
+    color: #495057;
+    margin: 0;
+    min-width: 140px;
+  }
 
-    .filter-checkbox input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      cursor: pointer;
-      margin: 0;
-    }
+  
 
-    .filter-checkbox span {
-      font-weight: 500;
-      color: #495057;
-      white-space: nowrap;
-    }
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .3s;
+    border-radius: 26px;
+  }
+
+  .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+  }
+
+  .toggle-switch input:checked + .toggle-slider {
+    background-color: #28a745;
+  }
+
+  .toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+  }
+
+  .filter-badge {
+    background: #007bff;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 5px;
+  }
+
 
     .approval-btn {
       width: 100%;
@@ -2276,13 +2512,6 @@ $current_durum = $row['durum'] ?? 'Beklemede';
         <div class="form-field mb-3">
           <input type="text" id="supplierSearch" class="form-control" placeholder="🔍 Tedarikçi ara...">
         </div>
-        <!-- FİLTRELEME BUTONLARI -->
-        <div class="mb-3 d-flex gap-2">
-          <label class="filter-checkbox">
-            <input type="checkbox" id="filterQuotedOnly">
-            <span>💰 Sadece teklif girilenleri göster</span>
-          </label>
-        </div>
 
         <div class="supplier-list" id="supplierList">
           <!-- AJAX ile yüklenecek -->
@@ -2383,8 +2612,11 @@ $current_durum = $row['durum'] ?? 'Beklemede';
           <label>🚚 Gönderim Türü *</label>
           <select id="shippingType" name="shipping_type" class="form-control" required>
             <option value="">Seçiniz</option>
-            <option value="Ambar">Ambar</option>
-            <option value="Kargo">Kargo</option>
+            <option value="Ambar (Alıcı Ödemeli)">•Ambar (Alıcı Ödemeli)</option>
+            <option value="Ambar (Gönderici Ödemeli)">•Ambar (Gönderici Ödemeli)</option>
+            <option value="Kargo (Alıcı Ödemeli)">◦Kargo (Alıcı Ödemeli)</option>
+            <option value="Kargo (Gönderici Ödemeli)">◦Kargo (Gönderici Ödemeli)</option>
+            <option value="Diğer">Diğer (Nota Yazınız)</option>
           </select>
         </div>
 
