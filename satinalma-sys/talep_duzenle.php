@@ -46,7 +46,7 @@ if (!$pdo) {
 // Tabloları oluştur
 // Durum sütununu güncelle
 try {
-  $pdo->exec("ALTER TABLE satinalma_orders MODIFY COLUMN durum VARCHAR(50) DEFAULT 'Beklemede'");
+  $pdo->exec("ALTER TABLE satinalma_orders MODIFY COLUMN durum VARCHAR(50) DEFAULT 'Teklif Bekleniyor'");
   error_log('satinalma_orders.durum sütunu güncellendi');
 } catch (Exception $e) {
   error_log('Durum sütunu güncelleme hatası: ' . $e->getMessage());
@@ -171,18 +171,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $m = isset($miktarlar[$i]) && $miktarlar[$i] !== '' ? (float)$miktarlar[$i] : null;
     $b = isset($birimler[$i]) ? trim((string)$birimler[$i]) : '';
     $f = isset($birim_fiyatlar[$i]) && $birim_fiyatlar[$i] !== '' ? (float)$birim_fiyatlar[$i] : null;
-    $d = 'Beklemede'; // Varsayılan durum, genel durum alanından yönetiliyor
+    $d = 'Teklif Bekleniyor'; // Varsayılan durum
 
     if ($u === '' && $m === null && $b === '' && $f === null) continue;
     $kalemler[] = ['urun' => $u, 'miktar' => $m, 'birim' => $b, 'birim_fiyat' => $f, 'durum' => $d];
   }
 
   if (empty($kalemler)) {
-    $kalemler[] = ['urun' => f('urun', ''), 'miktar' => (f('miktar', '') !== '' ? (float)f('miktar') : null), 'birim' => f('birim', ''), 'birim_fiyat' => (f('birim_fiyat', '') !== '' ? (float)f('birim_fiyat') : null), 'durum' => 'Beklemede'];
+    $kalemler[] = ['urun' => f('urun', ''), 'miktar' => (f('miktar', '') !== '' ? (float)f('miktar') : null), 'birim' => f('birim', ''), 'birim_fiyat' => (f('birim_fiyat', '') !== '' ? (float)f('birim_fiyat') : null), 'durum' => 'Teklif Bekleniyor'];
   }
 
   $first = $kalemler[0];
-  $durum = f('durum', $row['durum'] ?? 'Beklemede');
+  // Eğer veritabanından eski 'Beklemede' gelirse onu 'Teklif Bekleniyor' yap
+  $dbDurum = $row['durum'] ?? 'Teklif Bekleniyor';
+  if($dbDurum == 'Beklemede') $dbDurum = 'Teklif Bekleniyor';
+
+$durum = f('durum', $dbDurum);
 
   $sql = "UPDATE `$TABLE` SET
                 talep_tarihi = :talep_tarihi,
@@ -231,7 +235,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $rowi['miktar'],
             $rowi['birim'],
             $rowi['birim_fiyat'],
-            'Beklemede', // Sabit durum
+            'Teklif Bekleniyor', // Sabit durum
             $existingIds[$index]
           ]);
         } else {
@@ -1660,29 +1664,39 @@ include('../includes/header.php');
     font-weight: 600;
   }
 
-  .status-beklemede {
-    background: #fff3cd;
-    color: #856404;
-  }
-
+  /* SARI - Teklif Bekleniyor (warning) */
   .status-teklifbekleniyor {
-    background: #d1ecf1;
-    color: #0c5460;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
   }
 
+  /* AÇIK MAVİ (CYAN) - Teklif Alındı (primary) */
   .status-teklifalindi {
-    background: #cce5ff;
-    color: #004085;
+    background: #cffafe;
+    color: #155e75;
+    border: 1px solid #67e8f9;
   }
 
+  /* YEŞİL - Onaylandı (success) */
+  .status-onaylandi {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+  }
+
+  /* MOR - Sipariş Verildi (info) */
   .status-siparisverildi {
-    background: #d4edda;
-    color: #155724;
+    background: #ddd6fe;
+    color: #5b21b6;
+    border: 1px solid #a78bfa;
   }
 
-  .status-teslimedildi {
-    background: #d4edda;
-    color: #155724;
+  /* GRİ - Tamamlandı (secondary) */
+  .status-tamamlandi {
+    background: #e5e7eb;
+    color: #374151;
+    border: 1px solid #d1d5db;
   }
 
   .supplier-info {
@@ -2375,13 +2389,15 @@ include('../includes/header.php');
         ];
 
         $items_to_show = !empty($existing_items) ? $existing_items : [
-          ['id' => null, 'urun' => $row['urun'] ?? '', 'miktar' => $row['miktar'] ?? '', 'birim' => $row['birim'] ?? '', 'birim_fiyat' => $row['birim_fiyat'] ?? '', 'durum' => 'Beklemede', 'quote_count' => 0, 'best_price' => null, 'selected_supplier' => null]
+          ['id' => null, 'urun' => $row['urun'] ?? '', 'miktar' => $row['miktar'] ?? '', 'birim' => $row['birim'] ?? '', 'birim_fiyat' => $row['birim_fiyat'] ?? '', 'durum' => 'Teklif Bekleniyor', 'quote_count' => 0, 'best_price' => null, 'selected_supplier' => null]
         ];
 
         // Mevcut kodun yerine:
         foreach ($items_to_show as $index => $item):
           $item_id = $item['id'] ?? 0;
-          $durum = $row['durum'] ?? 'Beklemede';
+          // Eğer veritabanında eski 'Beklemede' kaydı varsa veya boşsa 'Teklif Bekleniyor' yap
+          $rawDurum = $row['durum'] ?? 'Teklif Bekleniyor';
+          $durum = ($rawDurum == 'Beklemede') ? 'Teklif Bekleniyor' : $rawDurum;
 
           // GÜVENLİ DÖNÜŞÜM
           $quote_count = isset($item['quote_count']) ? (int)$item['quote_count'] : 0;
@@ -2586,8 +2602,16 @@ include('../includes/header.php');
           <label>📊 Genel Durum</label>
           <select name="durum" id="genelDurumSelect" class="form-control" onchange="updateAllProductStatuses(this.value)">
             <?php
-            $durumlar = ['Beklemede', 'Teklif Bekleniyor', 'Teklif Alındı', 'Onaylandı', 'Sipariş Verildi', 'Teslim Edildi', 'Tamamlandı'];
-            $current_durum = $row['durum'] ?? 'Beklemede';
+            // Beklemede ve Teslim Edildi kaldırıldı
+            $durumlar = ['Teklif Bekleniyor', 'Teklif Alındı', 'Onaylandı', 'Sipariş Verildi', 'Tamamlandı'];
+
+            // Eski kayıtlarda 'Beklemede' kaldıysa ekranda düzgün gözüksün diye kontrol
+            $current_durum = $row['durum'] ?? 'Teklif Bekleniyor';
+            if ($current_durum == 'Beklemede') $current_durum = 'Teklif Bekleniyor';
+            if ($current_durum == 'Teslim Edildi') $current_durum = 'Tamamlandı';
+            // Son kontrol: Eğer veritabanı boşsa veya eski kayıt 'Beklemede' ise
+            $current_durum = $row['durum'] ?? 'Teklif Bekleniyor';
+            if ($current_durum == 'Beklemede') $current_durum = 'Teklif Bekleniyor';
             ?>
             <?php foreach ($durumlar as $durum): ?>
               <option value="<?= h($durum) ?>" <?= ($current_durum === $durum) ? 'selected' : '' ?>>
@@ -2780,7 +2804,7 @@ include('../includes/header.php');
 <!-- ÜRÜN SATIRI TEMPLATE -->
 <template id="productRowTemplate">
   <div class="product-row slide-up" data-item-id="0">
-    <div class="product-status status-beklemede">Beklemede</div>
+    <div class="product-status status-teklifbekleniyor">Teklif Bekleniyor</div>
 
     <div class="form-field">
       <label>📦 Ürün</label>
