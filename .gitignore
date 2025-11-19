@@ -1,1 +1,5 @@
 vendor/sabberworm/php-css-parser/
+vendor/masterminds/html5/
+vendor/dompdf/php-svg-lib/
+vendor/dompdf/php-font-lib/
+vendor/dompdf/dompdf/
