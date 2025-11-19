@@ -44,20 +44,36 @@ if ($durum !== '') {
 
 $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 
-// ---- Summary totals ----
-// NOT: Toplam tutar hesabı, genel durum filtresinden etkilenir
-$sqlTotal = "
+// ---- Summary totals (İstatistikler) ----
+// 1. Kalem Sayısı ve Toplam Miktar (Adet)
+$sqlStats = "
   SELECT 
     COUNT(oi.id) AS kalem_sayisi,
-    COALESCE(SUM(COALESCE(oi.miktar,0)),0) AS toplam_adet,
-    COALESCE(SUM(COALESCE(oi.miktar,0) * COALESCE(oi.birim_fiyat,0)),0) AS toplam_tutar
+    COALESCE(SUM(COALESCE(oi.miktar,0)),0) AS toplam_adet
   FROM satinalma_order_items oi
   INNER JOIN satinalma_orders so ON so.id = oi.talep_id
   $whereSql
 ";
-$st = $pdo->prepare($sqlTotal);
+$st = $pdo->prepare($sqlStats);
 $st->execute($args);
-$sum = $st->fetch(PDO::FETCH_ASSOC) ?: ['kalem_sayisi' => 0, 'toplam_adet' => 0, 'toplam_tutar' => 0];
+$stats = $st->fetch(PDO::FETCH_ASSOC) ?: ['kalem_sayisi' => 0, 'toplam_adet' => 0];
+
+// 2. Para Birimine Göre Toplam Tutarlar (PDF mantığı)
+// Not: oi.selected_quote_id üzerinden para birimini buluyoruz.
+// Eğer seçim yapılmamışsa veya para birimi yoksa varsayılan 'TRY' kabul ediyoruz.
+$sqlCurrencies = "
+  SELECT 
+    COALESCE(sq.currency, 'TRY') as para_birimi,
+    SUM(COALESCE(oi.miktar, 0) * COALESCE(oi.birim_fiyat, 0)) as toplam_tutar
+  FROM satinalma_order_items oi
+  INNER JOIN satinalma_orders so ON so.id = oi.talep_id
+  LEFT JOIN satinalma_quotes sq ON sq.id = oi.selected_quote_id
+  $whereSql
+  GROUP BY COALESCE(sq.currency, 'TRY')
+";
+$stCurrency = $pdo->prepare($sqlCurrencies);
+$stCurrency->execute($args);
+$currencyTotals = $stCurrency->fetchAll(PDO::FETCH_ASSOC);
 
 // ---- Detailed rows ----
 $sqlRows = "
@@ -155,15 +171,40 @@ $durumlar = [
     <div style="display:flex; gap:12px; margin-top:20px">
       <div class="stat">
         <div class="stat-label">Toplam Kalem</div>
-        <div class="stat-value"><?= h(number_format((float)$sum['kalem_sayisi'], 0, ',', '.')) ?></div>
+        <div class="stat-value"><?= h(number_format((float)$stats['kalem_sayisi'], 0, ',', '.')) ?></div>
       </div>
       <div class="stat">
         <div class="stat-label">Toplam Adet</div>
-        <div class="stat-value"><?= h(number_format((float)$sum['toplam_adet'], 2, ',', '.')) ?></div>
+        <div class="stat-value"><?= h(number_format((float)$stats['toplam_adet'], 2, ',', '.')) ?></div>
       </div>
       <div class="stat">
-        <div class="stat-label">Toplam Tutar (₺)</div>
-        <div class="stat-value"><?= h(number_format((float)$sum['toplam_tutar'], 2, ',', '.')) ?> ₺</div>
+        <div class="stat-label">Toplam Tutar</div>
+        <div class="stat-value" style="font-size: 18px; display: flex; flex-direction: column; gap: 5px;">
+          <?php if (empty($currencyTotals)): ?>
+            0,00 ₺
+          <?php else: ?>
+            <?php foreach ($currencyTotals as $row): 
+                $curr = $row['para_birimi'];
+                $tutar = $row['toplam_tutar'];
+                // Sembol belirle
+                $symbol = $curr === 'USD' ? '$' : ($curr === 'EUR' ? '€' : '₺');
+                
+                // Sadece tutarı 0'dan büyükse göster (Opsiyonel)
+                if ($tutar <= 0) continue;
+            ?>
+              <div>
+                <?= h(number_format((float)$tutar, 2, ',', '.')) ?> <?= $symbol ?>
+              </div>
+            <?php endforeach; ?>
+            
+            <?php 
+            // Eğer tüm tutarlar 0 ise veya hiç kayıt yoksa yine de 0 göster
+            if (array_sum(array_column($currencyTotals, 'toplam_tutar')) <= 0 && !empty($currencyTotals)) {
+                 echo '0,00 ₺';
+            }
+            ?>
+          <?php endif; ?>
+        </div>
       </div>
     </div>
 
