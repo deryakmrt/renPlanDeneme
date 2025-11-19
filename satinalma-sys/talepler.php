@@ -37,20 +37,19 @@ $HAS_DURUM   = col_exists($pdo, $TABLE, 'durum');
 // ---- Durum renkleri fonksiyonu
 function getStatusBadge($durum)
 {
-  // Varsayılan durum artık Teklif Bekleniyor
+  // Eğer veritabanından boş veya eski 'Beklemede' gelirse 'Teklif Bekleniyor' kabul et
   if (!$durum || $durum == 'Beklemede') $durum = 'Teklif Bekleniyor';
 
   $renkler = [
-    // 'Beklemede' => 'warning', // KALDIRILDI
-    'Teklif Bekleniyor' => 'warning', // Rengi dikkat çekmesi için warning (sarı) yapabiliriz veya info kalsın isterseniz değiştirmeyin.
-    'Teklif Alındı' => 'primary',
-    'Onaylandı' => 'success',
-    'Sipariş Verildi' => 'info',
-    // 'Teslim Edildi' => 'success', // KALDIRILDI
-    'Tamamlandı' => 'primary',
-    'Reddedildi' => 'danger',
-    'İptal' => 'secondary'
+    'Teklif Bekleniyor' => 'warning',   // SARI
+    'Teklif Alındı'     => 'primary',   // Mavi (Standart)
+    'Onaylandı'         => 'success',   // YEŞİL
+    'Sipariş Verildi'   => 'info',      // Açık Mavi
+    'Tamamlandı'        => 'secondary', // GRİ
+    'Reddedildi'        => 'danger',    // Kırmızı
+    'İptal'             => 'dark'       // Koyu Gri/Siyah
   ];
+
   $renk = $renkler[$durum] ?? 'light';
   return '<span class="badge bg-' . $renk . '">' . htmlspecialchars($durum) . '</span>';
 }
@@ -59,14 +58,12 @@ function getStatusBadge($durum)
 function getTalepIstatistikleri($pdo, $TABLE)
 {
   $stats = [
-    'toplam' => 0,
-    //'beklemede' => 0,
+    'toplam'            => 0,
     'teklif_bekleniyor' => 0,
-    'teklif_alindi' => 0,
-    'onaylandi' => 0,
-    'siparis_verildi' => 0,
-    //'teslim_edildi' => 0,
-    'tamamlandi' => 0
+    'teklif_alindi'     => 0,
+    'onaylandi'         => 0,
+    'siparis_verildi'   => 0,
+    'tamamlandi'        => 0
   ];
 
   try {
@@ -78,12 +75,10 @@ function getTalepIstatistikleri($pdo, $TABLE)
 
     foreach ($durumlar as $d) {
       $durumName = trim($d['durum']);
-      // Veritabanında eski kayıtlarda 'Beklemede' varsa onu da 'Teklif Bekleniyor'a sayalım mı?
-      // Yoksa tamamen görmezden mi gelelim? Aşağıda görmezden geliyoruz, isterseniz case ekleyip toplayabilirsiniz.
+
       switch (mb_strtolower($durumName)) {
-        // case 'beklemede' KALDIRILDI (veya teklif_bekleniyor'a eklenebilir)
+        case 'beklemede':           // Eski kayıtlar varsa buraya dahil et
         case 'teklif bekleniyor':
-        case 'beklemede': // Eski kayıtlar istatistikte buraya dahil olsun
           $stats['teklif_bekleniyor'] += (int)$d['sayi'];
           break;
         case 'teklif alındı':
@@ -95,15 +90,14 @@ function getTalepIstatistikleri($pdo, $TABLE)
         case 'sipariş verildi':
           $stats['siparis_verildi'] = (int)$d['sayi'];
           break;
-        // case 'teslim edildi': KALDIRILDI
+        case 'teslim edildi':       // Eski kayıtlar varsa buraya dahil et
         case 'tamamlandı':
-        case 'teslim edildi': // Eski kayıtlar istatistikte tamamlandıya dahil olsun
           $stats['tamamlandi'] += (int)$d['sayi'];
           break;
       }
     }
   } catch (Exception $e) {
-    echo "";
+    // Sessiz kal veya logla
   }
 
   return $stats;
@@ -658,23 +652,28 @@ try {
         <h3><?php echo $istatistikler['toplam']; ?></h3>
         <p>Toplam Talep</p>
       </div>
-      <div class="summary-card info">
+
+      <div class="summary-card warning">
         <h3><?php echo $istatistikler['teklif_bekleniyor']; ?></h3>
         <p>Teklif Bekleniyor</p>
       </div>
+
       <div class="summary-card primary">
         <h3><?php echo $istatistikler['teklif_alindi']; ?></h3>
         <p>Teklif Alındı</p>
       </div>
+
       <div class="summary-card success">
         <h3><?php echo $istatistikler['onaylandi']; ?></h3>
         <p>Onaylandı</p>
       </div>
+
       <div class="summary-card info">
         <h3><?php echo $istatistikler['siparis_verildi']; ?></h3>
         <p>Sipariş Verildi</p>
       </div>
-      <div class="summary-card primary">
+
+      <div class="summary-card secondary" style="border-left-color: #6c757d;">
         <h3><?php echo $istatistikler['tamamlandi']; ?></h3>
         <p>Tamamlandı</p>
       </div>
@@ -721,7 +720,7 @@ try {
             <option value="">Durum seçin</option>
             <option value="Teklif Bekleniyor">Teklif Bekleniyor</option>
             <option value="Onaylandı">Onaylandı</option>
-            <option value="Sipariş Edildi">Sipariş Edildi</option>
+            <option value="Sipariş Verildi">Sipariş Verildi</option>
             <option value="Tamamlandı">Tamamlandı</option>
           </select>
           <button class="btn btn-sm btn-primary" style="margin-left: 8px;" onclick="updateBulkStatus()">Uygula</button>
@@ -747,16 +746,16 @@ try {
         <label for="durum-select">Durum</label>
         <select name="durum" id="durum-select">
           <?php
-          // 'Beklemede' ve 'Teslim Edildi' listeden çıkarıldı
           $durumListesi = [
-            'hepsi' => 'Hepsi',
+            'hepsi'             => 'Hepsi',
             'Teklif Bekleniyor' => 'Teklif Bekleniyor',
-            'Teklif Alındı' => 'Teklif Alındı',
-            'Onaylandı' => 'Onaylandı',
-            'Sipariş Verildi' => 'Sipariş Verildi',
-            'Tamamlandı' => 'Tamamlandı'
+            'Teklif Alındı'     => 'Teklif Alındı',
+            'Onaylandı'         => 'Onaylandı',
+            'Sipariş Verildi'   => 'Sipariş Verildi',
+            'Tamamlandı'        => 'Tamamlandı'
           ];
-          foreach ($durumListesi as $v => $lbl): ?>
+          foreach ($durumListesi as $v => $lbl):
+          ?>
             <option value="<?php echo sa_h($v); ?>" <?php echo ($durum === $v ? 'selected' : ''); ?>><?php echo sa_h($lbl); ?></option>
           <?php endforeach; ?>
         </select>
