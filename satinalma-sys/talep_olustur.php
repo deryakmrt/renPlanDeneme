@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     //':firma' => f('firma'),
     //':veren_kisi' => f('veren_kisi'),
     //':odeme_kosulu' => f('odeme_kosulu'),
-    ':durum' => 'Beklemede',  // ✅ Sabit değer
+    ':durum' => 'Teklif Bekleniyor',  // ✅ Sabit değer
     ':onay_tarihi' => f('onay_tarihi') ?: null,
     ':verildigi_tarih' => f('verildigi_tarih') ?: null,
     ':teslim_tarihi' => f('teslim_tarihi') ?: null,
