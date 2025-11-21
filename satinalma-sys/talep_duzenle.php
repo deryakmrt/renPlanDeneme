@@ -588,6 +588,39 @@ include('../includes/header.php');
         list.innerHTML = '<div class="alert alert-warning">Ürün adı gerekli</div>';
       }
     }
+    // TEKLİF SİLME FONKSİYONU
+    window.deleteQuote = function(quoteId, supplierName) {
+      if (!quoteId) return;
+      
+      if (!confirm('⚠️ DİKKAT:\n\n' + supplierName + ' firmasına ait teklifi silmek istediğinize emin misiniz?\nBu işlem geri alınamaz.')) {
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('id', quoteId);
+
+      fetch('/satinalma-sys/teklif_sil.php', {
+          method: 'POST',
+          body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            window.showNotification('Teklif başarıyla silindi 🗑️', 'success');
+            
+            // Listeyi yenilemek için mevcut ürün adıyla tekrar yükleme yap
+            if(typeof currentProductName !== 'undefined' && currentProductName) {
+                loadSuppliers(currentProductName);
+            }
+          } else {
+            window.showNotification('Hata: ' + (data.error || 'Silinemedi'), 'danger');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          window.showNotification('Bağlantı hatası oluştu', 'danger');
+        });
+    };
 
     // YENİ FONKSIYON: Mevcut verilerle geçmiş verileri birleştir
     function loadAndMergeHistorical(productName, currentData) {
@@ -738,9 +771,21 @@ include('../includes/header.php');
 
         if (hasQuote) {
           const priceStyle = isBestPrice ? 'color:#28a745;font-weight:700;font-size:1.3rem;' : '';
-          html += '<div class="supplier-price" style="' + priceStyle + '">';
+          // Flex yapısı ekledik ki fiyat ve not yan yana dursun
+          html += '<div class="supplier-price" style="' + priceStyle + ' display:flex; align-items:center;">';
           if (isBestPrice) html += '✓ ';
           html += currencySymbol + currentPrice.toFixed(2);
+
+          // --- NOT KONTROLÜ ---
+          if (quote.note && quote.note.trim() !== '') {
+            const safeNote = quote.note.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html += '<span class="note-badge">';
+            html += 'NOT';
+            html += '<span class="note-tooltip">' + safeNote + '</span>';
+            html += '</span>';
+          }
+          // --------------------
+
           html += '</div>';
         } else if (hasHistory && avgPrice) {
           const priceStyle = isBestPrice ? 'color:#28a745;font-weight:700;' : '';
@@ -772,13 +817,21 @@ include('../includes/header.php');
 
         if (hasQuote) {
           html += '<div class="d-flex gap-2 mt-2">';
+          // Seç Butonu
           html += '<button type="button" class="btn btn-' + (isSelected ? 'success' : 'primary') + ' btn-sm flex-fill" ';
           html += 'onclick="selectSupplier(' + s.id + ', \'' + (s.name || '').replace(/'/g, "\\'") + '\', true)">';
           html += (isSelected ? '✓ SEÇİLİ' : '🎯Seç');
-          html += '</button>';
+          html += '</button>'; 
+          // Düzenle Butonu
           html += '<button type="button" class="btn btn-outline btn-sm" ';
           html += 'onclick="openQuoteModal(' + s.id + ', \'' + (s.name || '').replace(/'/g, "\\'") + '\')">';
           html += 'Düzenle</button>';
+          // SİL BUTONU (YENİ) - quote.id verisinin geldiğinden eminiz
+          if(quote && quote.id) {
+              html += '<button type="button" class="btn btn-danger btn-sm btn-icon" ';
+              html += 'onclick="deleteQuote(' + quote.id + ', \'' + (s.name || '').replace(/'/g, "\\'") + '\')" title="Teklifi Sil">';
+              html += '🗑️</button>';
+          }
           html += '</div>';
         } else {
           html += '<button type="button" class="btn btn-primary btn-sm mt-2 w-100" ';
@@ -919,7 +972,24 @@ include('../includes/header.php');
         html += '</div>';
         if (hasQuote) {
           const qSymbol = quote.currency === 'USD' ? '$' : (quote.currency === 'EUR' ? '€' : '₺');
-          html += '<div class="supplier-price">' + qSymbol + parseFloat(quote.price || 0).toFixed(2) + '</div>';
+          
+          html += '<div class="supplier-price" style="display:flex; align-items:center;">';
+          html += qSymbol + parseFloat(quote.price || 0).toFixed(2);
+
+          // --- NOT KONTROLÜ ---
+          // Eğer not varsa ve boş değilse
+          if (quote.note && quote.note.trim() !== '') {
+            // Tırnak işaretleri HTML'i bozmasın diye temizleyelim
+            const safeNote = quote.note.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            html += '<span class="note-badge">';
+            html += 'NOT'; // Rozette yazacak metin
+            html += '<span class="note-tooltip">' + safeNote + '</span>';
+            html += '</span>';
+          }
+          // --------------------
+          
+          html += '</div>';
         }
         html += '</div>';
         html += '<div class="supplier-details">';
@@ -929,13 +999,22 @@ include('../includes/header.php');
 
         if (hasQuote) {
           html += '<div class="d-flex gap-2 mt-2">';
+          // Seç Butonu
           html += '<button type="button" class="btn btn-' + (isSelected ? 'success' : 'primary') + ' btn-sm flex-fill" ';
           html += 'onclick="selectSupplier(' + s.id + ', \'' + (s.name || '').replace(/'/g, "\\'") + '\', true)">';
           html += (isSelected ? '✓ SEÇİLİ' : '🎯Seç');
           html += '</button>';
+          
+          // Düzenle Butonu
           html += '<button type="button" class="btn btn-outline btn-sm" ';
           html += 'onclick="openQuoteModal(' + s.id + ', \'' + (s.name || '').replace(/'/g, "\\'") + '\')">';
           html += 'Düzenle</button>';
+          
+          // SİL BUTONU (YENİ)
+          html += '<button type="button" class="btn btn-danger btn-sm btn-icon" ';
+          html += 'onclick="deleteQuote(' + quote.id + ', \'' + (s.name || '').replace(/'/g, "\\'") + '\')" title="Teklifi Sil">';
+          html += '🗑️</button>';
+          
           html += '</div>';
         } else {
           html += '<button type="button" class="btn btn-primary btn-sm mt-2 w-100" ';
@@ -2319,6 +2398,63 @@ include('../includes/header.php');
       text-align: right;
       font-variant-numeric: tabular-nums;
     }
+  }
+  /* NOT ROZETİ VE TOOLTIP STİLLERİ */
+  .note-badge {
+    background: #d63384;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 6px;
+    margin-left: 8px;
+    cursor: help;
+    font-weight: bold;
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+    box-shadow: 0 2px 4px rgba(214, 51, 132, 0.3);
+  }
+
+  /* Gizli Not Baloncuğu */
+  .note-tooltip {
+    visibility: hidden;
+    width: 220px;
+    background-color: #333;
+    color: #fff;
+    text-align: left;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1000;
+    bottom: 135%; /* Rozetin üstünde çıksın */
+    left: 50%;
+    transform: translateX(-50%); /* Ortala */
+    opacity: 0;
+    transition: opacity 0.3s, bottom 0.3s;
+    font-weight: normal;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    white-space: normal; /* Uzun metinleri alt satıra indir */
+  }
+
+  /* Baloncuğun altındaki küçük ok işareti */
+  .note-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+  }
+
+  /* Üzerine gelince göster */
+  .note-badge:hover .note-tooltip {
+    visibility: visible;
+    opacity: 1;
+    bottom: 125%; /* Hafif animasyon efekti */
   }
 </style>
 
