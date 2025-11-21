@@ -135,7 +135,19 @@ if ($HAS_DURUM && $durum !== '' && strtolower($durum) !== 'hepsi') {
   $where .= " AND t.durum = :durum";
   $params[':durum'] = $durum;
 }
+// ---- Sıralama Ayarı ----
+// Sayfa ilk açıldığında (GET boşsa) VEYA kullanıcı kutuyu seçtiyse 1 olsun.
+$sort_status = (empty($_GET) || !empty($_GET['sort_status'])) ? 1 : 0;
 
+if ($sort_status) {
+    // Özel Sıralama: 1. Teklif Bekleniyor ... -> ... 5. Tamamlandı
+    // FIELD fonksiyonu ile veritabanına özel sıralama emri veriyoruz.
+    // Aynı durumda olanlar kendi içinde yine en yeniden eskiye (id DESC) sıralanır.
+    $orderBy = "FIELD(t.durum, 'Teklif Bekleniyor', 'Teklif Alındı', 'Onaylandı', 'Sipariş Verildi', 'Tamamlandı') ASC, t.id DESC";
+} else {
+    // Varsayılan: En son eklenen en üstte
+    $orderBy = "t.id DESC";
+}
 // SQL sorgularını yap
 try {
   $ct = $pdo->prepare("SELECT COUNT(*) FROM `$TABLE` t LEFT JOIN orders o ON o.proje_adi = t.proje_ismi WHERE $where");
@@ -163,7 +175,7 @@ try {
               GROUP BY o.proje_adi
           ) o ON o.proje_adi = t.proje_ismi 
           WHERE $where 
-          ORDER BY t.id DESC 
+          ORDER BY $orderBy 
           LIMIT :lim OFFSET :off";
 
   $st = $pdo->prepare($sql);
@@ -254,49 +266,51 @@ try {
     color: white;
     border-color: #3b82f6;
   }
-
   /* Özet kartları */
   .summary-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
+    grid-template-columns: repeat(6, 1fr); /* Masaüstünde zorla 6 eşit sütun yap */
+    gap: 0.75rem; /* Kartlar arası boşluğu azalttık (1rem -> 0.75rem) */
+    margin-bottom: 1.5rem;
   }
 
   .summary-card {
     background: white;
-    border-radius: 10px;
-    padding: 1.5rem;
+    border-radius: 8px; /* Köşeleri biraz daha keskinleştirdik */
+    padding: 0.75rem;   /* İç boşluğu yarıya indirdik (1.5rem -> 0.75rem) */
     text-align: center;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border-left: 4px solid #007bff;
+    border-left: 4px solid #007bff;/* Kartın içindeki taşmaları engelle */
+    overflow: hidden;
   }
 
-  .summary-card.warning {
-    border-left-color: #ffc107;
-  }
-
-  .summary-card.success {
-    border-left-color: #28a745;
-  }
-
-  .summary-card.info {
-    border-left-color: #bc52e2ff;
-  }
-
-  .summary-card.primary {
-    border-left-color: #00ddffff;
-  }
-
+  /* Başlık (Sayı) Boyutu */
   .summary-card h3 {
     margin: 0;
-    font-size: 2rem;
+    font-size: 1.5rem; /* Sayıyı küçülttük (2rem -> 1.5rem) */
     font-weight: bold;
+    line-height: 1.2;
   }
-
+  /* Alt Yazı Boyutu */
   .summary-card p {
-    margin: 0.5rem 0 0 0;
+    margin: 0.25rem 0 0 0;
     color: #666;
+    font-size: 0.8rem; /* Yazıyı küçülttük */
+    white-space: nowrap; /* Yazının alt satıra geçmesini engelle */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Sığmazsa ... koy */
+  }
+  .summary-card.warning { border-left-color: #ffc107; }
+  .summary-card.success { border-left-color: #28a745; }
+  .summary-card.info { border-left-color: #bc52e2ff; }
+  .summary-card.primary { border-left-color: #00ddffff; }
+  .summary-card.secondary { border-left-color: #6c757d; }
+
+  /* MOBİL UYUMLULUK: Ekran küçülürse (Tablet/Telefon) sıkışmasın diye eski haline dön */
+  @media (max-width: 1200px) {
+    .summary-cards {
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
   }
 
   /* Aktif filtreler */
@@ -768,6 +782,13 @@ try {
           <?php endforeach; ?>
         </select>
       </div>
+      <div class="form-group"> <!--Önceliğe Göre Sırala butonu -->
+        <label>&nbsp;</label> <div style="display: flex; align-items: center; background: #fff; padding: 6px 12px; border: 1px solid #DADDE1; border-radius: 10px; height: 36px;">
+          <input type="checkbox" id="sort_status" name="sort_status" value="1" <?php echo $sort_status ? 'checked' : ''; ?> style="margin-right: 8px; cursor: pointer;">
+          <label for="sort_status" style="margin:0; cursor: pointer; font-weight: 600; color: #374151; white-space: nowrap; font-size: 12px;">Önceliğe Göre Sırala</label>
+        </div>
+      </div>
+
       <div class="form-group">
         <label>&nbsp;</label>
         <button class="btn btn-primary" type="submit">Uygula</button>
