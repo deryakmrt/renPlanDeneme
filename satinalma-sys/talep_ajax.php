@@ -349,32 +349,43 @@ try {
             }
 
             try {
+                // SORGUTU GÜNCELLEDİK:
+                // En ucuz fiyatı veren firmanın adını (best_price_supplier) alt sorgu ile çekiyoruz.
                 $stmt = $pdo->prepare("
-            SELECT 
-                soi.*,
-                COUNT(DISTINCT sq.id) as quote_count,
-                MIN(sq.price) as best_price,
-                MIN(sq.currency) as best_price_currency,
-                s.name as selected_supplier,
-                sq_sel.price as selected_price,
-                sq_sel.id as selected_quote_id,
-                sq_sel.currency as selected_currency,
-                sq_sel.payment_term as selected_payment_term,
-                sq_sel.delivery_days as selected_delivery_days,
-                sq_sel.shipping_type as selected_shipping_type,
-                sq_sel.note as selected_note,
-                sq_sel.quote_date as selected_quote_date,
-                GROUP_CONCAT(DISTINCT s2.name SEPARATOR ', ') as quoted_suppliers
-            FROM satinalma_order_items soi
-            LEFT JOIN satinalma_quotes sq ON soi.id = sq.order_item_id
-            LEFT JOIN satinalma_quotes sq_sel ON soi.id = sq_sel.order_item_id AND sq_sel.selected = 1
-            LEFT JOIN suppliers s ON sq_sel.supplier_id = s.id
-            LEFT JOIN satinalma_quotes sq2 ON soi.id = sq2.order_item_id
-            LEFT JOIN suppliers s2 ON sq2.supplier_id = s2.id
-            WHERE soi.talep_id = ? 
-            GROUP BY soi.id
-            ORDER BY soi.id ASC
-        ");
+                    SELECT 
+                        soi.*,
+                        COUNT(DISTINCT sq.id) as quote_count,
+                        MIN(sq.price) as best_price,
+                        MIN(sq.currency) as best_price_currency,
+                        
+                        /* --- YENİ EKLENEN KISIM BAŞLANGIÇ --- */
+                        (SELECT s_sub.name 
+                         FROM satinalma_quotes sq_sub 
+                         JOIN suppliers s_sub ON sq_sub.supplier_id = s_sub.id 
+                         WHERE sq_sub.order_item_id = soi.id 
+                         ORDER BY sq_sub.price ASC LIMIT 1) as best_price_supplier,
+                        /* --- YENİ EKLENEN KISIM BİTİŞ --- */
+
+                        s.name as selected_supplier,
+                        sq_sel.price as selected_price,
+                        sq_sel.id as selected_quote_id,
+                        sq_sel.currency as selected_currency,
+                        sq_sel.payment_term as selected_payment_term,
+                        sq_sel.delivery_days as selected_delivery_days,
+                        sq_sel.shipping_type as selected_shipping_type,
+                        sq_sel.note as selected_note,
+                        sq_sel.quote_date as selected_quote_date,
+                        GROUP_CONCAT(DISTINCT s2.name SEPARATOR ', ') as quoted_suppliers
+                    FROM satinalma_order_items soi
+                    LEFT JOIN satinalma_quotes sq ON soi.id = sq.order_item_id
+                    LEFT JOIN satinalma_quotes sq_sel ON soi.id = sq_sel.order_item_id AND sq_sel.selected = 1
+                    LEFT JOIN suppliers s ON sq_sel.supplier_id = s.id
+                    LEFT JOIN satinalma_quotes sq2 ON soi.id = sq2.order_item_id
+                    LEFT JOIN suppliers s2 ON sq2.supplier_id = s2.id
+                    WHERE soi.talep_id = ? 
+                    GROUP BY soi.id
+                    ORDER BY soi.id ASC
+                ");
                 $stmt->execute([$talep_id]);
                 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
