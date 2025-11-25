@@ -1028,7 +1028,20 @@ try {
 
       if (item.best_price) {
         const symbol = item.best_price_currency === 'USD' ? '$' : (item.best_price_currency === 'EUR' ? '€' : '₺');
-        html += '<div class="info-row"><span>En İyi Fiyat:</span><strong style="color: #28a745;">' + symbol + parseFloat(item.best_price).toFixed(2) + '</strong></div>';
+        
+        html += '<div class="info-row">';
+        html += '<span>En İyi Fiyat:</span>';
+        
+        // Sağ tarafı grupluyoruz (Fiyat üstte, firma altta)
+        html += '<div style="text-align: right; line-height: 1.2;">';
+        html += '<strong style="color: #28a745;">' + symbol + parseFloat(item.best_price).toFixed(2) + '</strong>';
+        
+        // Eğer backend'den firma ismi (best_price_supplier) geliyorsa yazdır
+        if (item.best_price_supplier) {
+             html += '<small style="display: block; font-size: 0.60rem !important; color: #6c757d; margin-top: 2px;">(' + item.best_price_supplier + ')</small>';
+        }
+        
+        html += '</div></div>';
       }
 
       if (item.selected_supplier) {
