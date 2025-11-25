@@ -1385,39 +1385,6 @@ include('../includes/header.php');
         })
         .catch(err => console.error('Product history error:', err));
     }
-    window.toggleApproval = function(btn) {
-      const itemId = btn.dataset.itemId;
-      const currentState = btn.classList.contains('approved');
-
-      btn.disabled = true;
-      btn.innerHTML = '⏳ İşleniyor...';
-
-      const formData = new FormData();
-      formData.append('item_id', itemId);
-      formData.append('approved', currentState ? '0' : '1');
-
-      fetch('/satinalma-sys/talep_ajax.php?action=toggle_approval', {
-          method: 'POST',
-          body: formData
-        })
-        .then(r => r.json())
-        .then(data => {
-          if (data.success) {
-            btn.classList.toggle('approved');
-            btn.innerHTML = data.approved ? '✔ Onaylandı' : '⏳ Bekliyor';
-            window.showNotification('Onay güncellendi', 'success');
-          } else {
-            throw new Error(data.error || 'Hata oluştu');
-          }
-        })
-        .catch(err => {
-          window.showNotification('Hata: ' + err.message, 'danger');
-          btn.innerHTML = currentState ? '✔ Onaylandı' : '⏳ Bekliyor';
-        })
-        .finally(() => {
-          btn.disabled = false;
-        });
-    };
 
     function initEventListeners() {
       // Sayfa yüklendiğinde mevcut ürünlerin geçmiş tedarikçilerini yükle
@@ -1716,8 +1683,8 @@ include('../includes/header.php');
 
   .product-row {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto auto auto;
-    /* 1fr ekledik */
+    /* Bir tane 'auto' eksilttik çünkü onay butonunu kaldırdık */
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto auto auto; 
     gap: 15px;
     align-items: end;
     padding: 20px;
@@ -2627,17 +2594,6 @@ include('../includes/header.php');
             <button type="button" class="btn btn-danger btn-sm btn-icon sil-btn" onclick="removeProductRow(this)" title="Satırı Sil">
               🗑️
             </button>
-            <div class="form-field">
-              <div class="inline-approval">
-                <label>✅ Son Onay</label>
-                <button type="button"
-                  class="btn btn-sm approval-btn <?= isset($item['son_onay']) && $item['son_onay'] == 1 ? 'approved' : '' ?>"
-                  data-item-id="<?= $item_id ?>"
-                  onclick="toggleApproval(this)">
-                  <?= isset($item['son_onay']) && $item['son_onay'] == 1 ? '✔ Onaylandı' : '⏳ Bekliyor' ?>
-                </button>
-              </div>
-            </div>
 
             <div class="supplier-info">
               <div class="d-flex justify-content-between align-items-center mb-2">
@@ -2968,15 +2924,6 @@ include('../includes/header.php');
       <input type="text" class="form-control" value="-" readonly>
     </div>
     <!-- Durum alanı kaldırıldı -->
-    <div class="form-field">
-      <label>✅ Son Onay</label>
-      <button type="button"
-        class="btn btn-sm approval-btn <?= $item['son_onay'] ? 'approved' : '' ?>"
-        data-item-id="<?= $item_id ?>"
-        onclick="toggleApproval(this)">
-        <?= $item['son_onay'] ? '✔ Onaylandı' : '⏳ Bekliyor' ?>
-      </button>
-    </div>
 
     <!--Template içindeki tedarikçi seç butonunu bulun ve şöyle değiştirin:-->
     <button type="button" class="btn btn-primary btn-sm"
