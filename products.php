@@ -74,39 +74,7 @@ if ($action === 'delete' && method('POST')) {
 
     // (Silme isteğinde dosya gelmeyeceği için aşağıdakiler koşullu, zararsız)
 
-    if (!empty($_FILES['image']['name']) && is_uploaded_file($_FILES['image']['tmp_name'])) {
-
-        $uploadDir = __DIR__ . '/uploads/products';
-
-        if (!is_dir($uploadDir)) @mkdir($uploadDir, 0775, true);
-
-        $uploadUrl = 'uploads/products';
-
-        $namef = $_FILES['image']['name'];
-
-        $tmpf  = $_FILES['image']['tmp_name'];
-
-        $ext = strtolower(pathinfo($namef, PATHINFO_EXTENSION)); if(!$ext) $ext='jpg';
-
-        $rand = function_exists('random_bytes') ? bin2hex(random_bytes(2)) : (string)mt_rand(1000,9999);
-
-        $pid = (int)($id ?? 0);
-
-        $fname = 'p_'.$pid.'_'.date('Ymd_His').'_'.$rand.'.'.$ext;
-
-        $dest = $uploadDir.'/'.$fname;
-
-        if (move_uploaded_file($tmpf, $dest)) {
-
-            $rel = $uploadUrl.'/'.$fname;
-
-            if (function_exists('ensure_thumbs_for')) ensure_thumbs_for($rel);
-
-            $db->prepare("UPDATE products SET image=?, updated_at=NOW() WHERE id=?")->execute([$rel, $pid]);
-
-        }
-
-    }
+    // Silme işleminde resim işleme gerekmez
 
     if (!empty($_FILES['image']['name']) && is_uploaded_file($_FILES['image']['tmp_name'])) {
 
@@ -171,6 +139,17 @@ if (($action === 'new' || $action === 'edit') && method('POST')) {
         $error = 'Ürün adı zorunlu';
 
     } else {
+        // SKU benzersizlik kontrolü
+        if ($sku !== '') {
+            $checkSku = $db->prepare("SELECT id FROM products WHERE sku=? AND id<>?");
+            $checkSku->execute([$sku, $id]);
+            if ($checkSku->fetchColumn()) {
+                $error = 'Bu SKU zaten kullanılıyor';
+            }
+        }
+    }
+    
+    if (empty($error)) {
 
         if ($id > 0) {
 
@@ -222,8 +201,9 @@ if (($action === 'new' || $action === 'edit') && method('POST')) {
 
         }
 
-        redirect('products.php');
-
+        if (empty($error)) {
+            redirect('products.php');
+        }
     }
 
 }
@@ -653,4 +633,3 @@ $next = min($totalPages, $page+1);
 
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
-
