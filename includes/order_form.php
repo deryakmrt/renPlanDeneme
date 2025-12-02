@@ -640,21 +640,115 @@ document.addEventListener('DOMContentLoaded', function(){
 <!-- Sortable.js for drag-drop -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
-
 <style>
-/* === Büyük metin düzenleyici (tooltip/popup) === */
-.popover-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:9990;display:none}
-.popover-editor{position:fixed;z-index:9991;max-width:384px;width:min(60vw,384px);background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:16px;display:none}
-.popover-editor textarea{width:100%;min-height:108px;max-height:36vh;resize:vertical;overflow:auto;font:inherit;line-height:1.4;padding:10px;border:1px solid #e5e7eb;border-radius:10px}
-.popover-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
-.popover-editor .field-label{font-weight:600;margin-bottom:6px;display:block}
+/* === POP-UP EDİTÖR STİLLERİ (GÜNCELLENMİŞ) === */
+.popover-overlay {
+  position: fixed; inset: 0; background: transparent; z-index: 9990; display: none;
+}
+
+.popover-editor {
+  position: fixed;
+  z-index: 9991;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  display: none;
+  flex-direction: column;
+  
+  /* Varsayılan Boyutlar (Küçültüldü) */
+  width: 400px;
+  height: 250px;
+  
+  /* Kenardan tutup büyütme (Resize) */
+  resize: both;
+  overflow: hidden; /* Resize tutamacının görünmesi için şart */
+  min-width: 320px;
+  min-height: 250px;
+  max-width: 98vw;
+  max-height: 98vh;
+  border: 1px solid #d1d5db;
+}
+
+/* Başlık (Sürükleme Alanı) */
+.popover-header {
+  flex: 0 0 auto;
+  background: #f9fafb;
+  padding: 10px 15px;
+  border-bottom: 1px solid #e5e7eb;
+  cursor: grab; /* Tutma imleci */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+.popover-header:active { cursor: grabbing; }
+
+.field-label {
+  font-weight: 700; color: #1f2937; font-size: 14px; margin: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;
+}
+
+/* Font Buton Grubu */
+.popover-toolbar {
+  display: flex; gap: 4px;
+}
+.popover-toolbar button {
+  cursor: pointer;
+}
+
+/* İçerik Alanı */
+.popover-body {
+  flex: 1 1 auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  position: relative;
+}
+
+.popover-editor textarea {
+  flex: 1;
+  width: 100% !important;
+  height: 100% !important;
+  resize: none; /* Dış kutu büyüdüğü için textarea sabit kalsın */
+  border: none;
+  padding: 15px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.5;
+  box-sizing: border-box;
+  font-size: 14px; /* Varsayılan */
+  outline: none;
+  color: #111;
+}
+
+/* Alt Butonlar */
+.popover-actions {
+  flex: 0 0 auto;
+  padding: 10px 15px;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
 </style>
 
-<!-- Popover editor container -->
 <div id="__popover_overlay" class="popover-overlay"></div>
-<div id="__popover" class="popover-editor" role="dialog" aria-modal="true" aria-label="Metin düzenleyici">
-  <label class="field-label" id="__popover_label"></label>
-  <textarea id="__popover_text"></textarea>
+<div id="__popover" class="popover-editor" role="dialog" aria-modal="true">
+  
+  <div class="popover-header" id="__popover_header">
+    <label class="field-label" id="__popover_label">Ürün Özeti</label>
+    
+    <div class="popover-toolbar">
+      <button type="button" class="btn btn-sm" id="__popover_dec" style="padding:4px 10px; font-weight:bold; background:#fff; border:1px solid #d1d5db; min-width:30px;" title="Küçült">A-</button>
+      <button type="button" class="btn btn-sm" id="__popover_inc" style="padding:4px 10px; font-weight:bold; background:#fff; border:1px solid #d1d5db; min-width:30px;" title="Büyüt">A+</button>
+    </div>
+  </div>
+
+  <div class="popover-body">
+    <textarea id="__popover_text" spellcheck="false"></textarea>
+  </div>
+  
   <div class="popover-actions">
     <button type="button" class="btn" id="__popover_cancel">Vazgeç (Esc)</button>
     <button type="button" class="btn primary" id="__popover_save">Kaydet (Ctrl+Enter)</button>
@@ -663,66 +757,118 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <script>
 (function(){
-  function qs(s,sc){return (sc||document).querySelector(s)}
-  function qsa(s,sc){return Array.prototype.slice.call((sc||document).querySelectorAll(s))}
-
-  var overlay = qs('#__popover_overlay');
-  var pop = qs('#__popover');
-  var tarea = qs('#__popover_text');
-  var label = qs('#__popover_label');
-  var cancelBtn = qs('#__popover_cancel');
-  var saveBtn = qs('#__popover_save');
-  var currentInput = null;
-
+  // Elementleri Seç
+  var overlay = document.getElementById('__popover_overlay');
+  var pop = document.getElementById('__popover');
+  var header = document.getElementById('__popover_header');
+  var tarea = document.getElementById('__popover_text');
+  var label = document.getElementById('__popover_label');
+  var cancelBtn = document.getElementById('__popover_cancel');
+  var saveBtn = document.getElementById('__popover_save');
+  var btnInc = document.getElementById('__popover_inc');
+  var btnDec = document.getElementById('__popover_dec');
   
+  var currentInput = null;
+  var currentFontSize = 14;
+
+  // --- 1. FONT DEĞİŞTİRME FONKSİYONU ---
+  function updateFont(){
+    // !important kullanarak diğer stilleri ezmesini sağlıyoruz
+    tarea.style.setProperty('font-size', currentFontSize + 'px', 'important');
+  }
+  
+  // Buton Olayları (addEventListener ile daha güvenli)
+  btnInc.addEventListener('click', function(e){
+    e.stopPropagation(); // Sürüklemeyi tetikleme
+    if(currentFontSize < 48) {
+        currentFontSize += 2;
+        updateFont();
+    }
+  });
+  
+  btnDec.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(currentFontSize > 10) {
+        currentFontSize -= 2;
+        updateFont();
+    }
+  });
+
+  // --- 2. SÜRÜKLEME MANTIĞI (DRAG) ---
+  var isDragging = false;
+  var dragOffsetX = 0;
+  var dragOffsetY = 0;
+
+  header.onmousedown = function(e) {
+    // Eğer tıklanan yer bir butonsa sürükleme yapma
+    if(e.target.closest('button')) return;
+    
+    isDragging = true;
+    dragOffsetX = e.clientX - pop.offsetLeft;
+    dragOffsetY = e.clientY - pop.offsetTop;
+    header.style.cursor = 'grabbing';
+  };
+
+  document.onmousemove = function(e) {
+    if (isDragging) {
+      var newX = e.clientX - dragOffsetX;
+      var newY = e.clientY - dragOffsetY;
+      pop.style.left = newX + 'px';
+      pop.style.top = newY + 'px';
+    }
+  };
+
+  document.onmouseup = function() {
+    isDragging = false;
+    header.style.cursor = 'grab';
+  };
+
+  // --- 3. AÇILMA VE KONUMLANDIRMA ---
   function openEditor(input){
     currentInput = input;
-    label.textContent = input.name.indexOf('urun_ozeti')>-1 ? 'Ürün Özeti' : 'Kullanım Alanı';
+    
+    // Ürün ismini al
+    var row = input.closest('tr');
+    var prodName = '';
+    if(row){
+        var nameInp = row.querySelector('input[name="name[]"]');
+        if(nameInp) prodName = nameInp.value;
+    }
+
+    // Başlığı ayarla
+    var field = input.name.indexOf('urun_ozeti') > -1 ? 'Ürün Özeti' : 'Kullanım Alanı';
+    label.textContent = field + (prodName ? ' — ' + prodName : '');
+
+    // Değeri yükle
     tarea.value = input.value || '';
+    updateFont(); // Mevcut font ayarını uygula
 
-    // Önce görünür yapıp ölç
+    // Görünür yap
     overlay.style.display = 'block';
-    pop.style.display = 'block';
-    pop.style.top = '-10000px'; // ölçüm için ekrandan uzak
-    pop.style.left = '-10000px';
+    pop.style.display = 'flex';
 
+    // Konumlandırma (Input'un hemen altına)
     var rect = input.getBoundingClientRect();
-    var vw = window.innerWidth, vh = window.innerHeight;
+    var topPos = rect.bottom + 8;
+    var leftPos = rect.left;
 
-    // Tercihen input'un altına ve sola hizala
-    var desiredTop = rect.bottom + 8;
-    var desiredLeft = rect.left;
-
-    var pw = pop.offsetWidth;
-    var ph = pop.offsetHeight;
-
-    // Sağdan taşarsa sola kaydır
-    if (desiredLeft + pw + 16 > vw) {
-      desiredLeft = Math.max(16, vw - pw - 16);
-    } else {
-      desiredLeft = Math.max(16, desiredLeft);
+    // Ekran dışına taşarsa düzelt (Yeni boyutlara göre: 400x250)
+    if(leftPos + 400 > window.innerWidth) leftPos = window.innerWidth - 420;
+    if(leftPos < 10) leftPos = 10;
+    
+    if(topPos + 250 > window.innerHeight) {
+        // Alta sığmıyorsa üste aç
+        topPos = rect.top - 260; 
     }
 
-    // Alttan taşarsa üste yerleştir
-    if (desiredTop + ph + 16 > vh) {
-      var above = rect.top - ph - 8;
-      if (above >= 16) {
-        desiredTop = above;
-      } else {
-        // Sığmıyorsa ekranın ortasına al
-        desiredTop = Math.max(16, (vh - ph) / 2);
-        desiredLeft = Math.max(16, (vw - pw) / 2);
-      }
-    }
+    pop.style.top = topPos + 'px';
+    pop.style.left = leftPos + 'px';
+    
+    // Boyutları sıfırla
+    pop.style.width = '400px';
+    pop.style.height = '250px';
 
-    // Sayfa kaydırmasını ekle
-    pop.style.top = desiredTop + 'px';
-    pop.style.left = desiredLeft + 'px';
-
-    // Gerekirse alanı görünür yap
-    try { input.scrollIntoView({block:'nearest', inline:'nearest'}); } catch(_e) {}
-
-    setTimeout(function(){ tarea.focus(); tarea.select(); }, 0);
+    setTimeout(function(){ tarea.focus(); }, 50);
   }
 
   function closeEditor(){
@@ -730,56 +876,35 @@ document.addEventListener('DOMContentLoaded', function(){
     pop.style.display = 'none';
     currentInput = null;
   }
+
   function saveEditor(){
-    if(!currentInput) return closeEditor();
-    currentInput.value = tarea.value.trim();
-    // change ve input eventleri tetikle (varsa dinleyiciler güncellensin)
-    try{ currentInput.dispatchEvent(new Event('input', {bubbles:true})); }catch(_e){}
-    try{ currentInput.dispatchEvent(new Event('change', {bubbles:true})); }catch(_e){}
+    if(currentInput) {
+      currentInput.value = tarea.value.trim();
+      // Tetikleyiciler
+      try{ currentInput.dispatchEvent(new Event('input', {bubbles:true})); }catch(e){}
+      try{ currentInput.dispatchEvent(new Event('change', {bubbles:true})); }catch(e){}
+    }
     closeEditor();
   }
 
-  // Dinleyiciler
-  document.addEventListener('click', function(ev){
-    var t = ev.target;
-    if (t && (t.matches('input[name="urun_ozeti[]"]') || t.matches('input[name="kullanim_alani[]"]'))) {
-      ev.preventDefault();
-      openEditor(t);
+  // --- 4. GLOBAL DİNLEYİCİLER ---
+  document.addEventListener('click', function(e){
+    // Inputlara tıklanınca aç
+    if(e.target && (e.target.matches('input[name="urun_ozeti[]"]') || e.target.matches('input[name="kullanim_alani[]"]'))){
+      e.preventDefault(); // Inputa odaklanmayı engelle, pop-up aç
+      openEditor(e.target);
     }
   });
+
   overlay.addEventListener('click', closeEditor);
   cancelBtn.addEventListener('click', closeEditor);
   saveBtn.addEventListener('click', saveEditor);
 
   // Klavye kısayolları
   pop.addEventListener('keydown', function(e){
-    if(e.key === 'Escape'){ e.preventDefault(); closeEditor(); }
-    if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){ e.preventDefault(); saveEditor(); }
+    if(e.key === 'Escape') closeEditor();
+    if((e.ctrlKey || e.metaKey) && e.key === 'Enter') saveEditor();
   });
 
-  // Pencere yeniden boyutlanınca popover'ı görünür alanda tut
-  window.addEventListener('resize', function(){
-    if(!currentInput || pop.style.display==='none') return;
-    openEditor(currentInput);
-  });
 })();
 </script>
-
-<style></style>
-
-<style>
-/* Drag & Drop görsel feedback */
-.sortable-ghost {
-  opacity: 0.4;
-  background: #f3f4f6;
-}
-.sortable-drag {
-  opacity: 0.8;
-  cursor: move !important;
-}
-.drag-handle:hover {
-  color: #4b5563;
-}
-</style>
-
-<style>.popover-editor{transform:scale(0.8);transform-origin:top left;}</style>
