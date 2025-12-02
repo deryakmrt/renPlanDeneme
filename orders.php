@@ -1,6 +1,22 @@
 <?php ob_start(); ?>
 
 <style>
+  /* Autocomplete Listesi için Scroll Ayarı */
+  .ui-autocomplete {
+      max-height: 250px;       /* Yaklaşık 5-6 satır sığacak yükseklik */
+      overflow-y: auto;        /* Dikey kaydırma çubuğu çıksın */
+      overflow-x: hidden;      /* Yatay taşmayı engelle */
+      z-index: 9999 !important; /* Her şeyin üstünde görünsün */
+      border: 1px solid #ccc;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+  /* Autocomplete Listesi Hover/Seçim Rengi (Turuncu) */
+  .ui-menu-item .ui-menu-item-wrapper.ui-state-active {
+      background: rgba(255, 165, 0, 0.15) !important; /* %15 Saydam Turuncu */
+      border: 1px solid rgba(255, 165, 0, 0.3) !important; /* Hafif kenarlık */
+      color: #333 !important; /* Yazı rengini bozma */
+      font-weight: normal !important;
+  }
   table tr th, table tr td {
     text-align: center;
   }
@@ -641,10 +657,12 @@ $page = max(1, (int)($_GET['page'] ?? 1));
 $offset = ($page - 1) * $per_page;
 
 $params = [];
-$sql = "SELECT o.*, c.name AS customer_name FROM orders o LEFT JOIN customers c ON c.id=o.customer_id WHERE 1=1";
+// Ürün araması (oi.name) eklendi
+$sql = "SELECT DISTINCT o.*, c.name AS customer_name FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id WHERE 1=1";
 
 if ($q !== '') {
-    $sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ?)";
+    $sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ? OR oi.name LIKE ?)";
+    $params[] = '%'.$q.'%';
     $params[] = '%'.$q.'%';
     $params[] = '%'.$q.'%';
     $params[] = '%'.$q.'%';
@@ -673,9 +691,11 @@ $status_labels = [
   'teslim edildi' => 'Teslim Edildi',
 ];
 $__cnt_params = [];
-$__cnt_sql = "SELECT o.status, COUNT(*) AS cnt FROM orders o LEFT JOIN customers c ON c.id=o.customer_id WHERE 1=1";
+// Ürün araması eklendi ve COUNT(DISTINCT o.id) yapıldı
+$__cnt_sql = "SELECT o.status, COUNT(DISTINCT o.id) AS cnt FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id WHERE 1=1";
 if ($q !== '') {
-    $__cnt_sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ?)";
+    $__cnt_sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ? OR oi.name LIKE ?)";
+    $__cnt_params[] = '%'.$q.'%';
     $__cnt_params[] = '%'.$q.'%';
     $__cnt_params[] = '%'.$q.'%';
     $__cnt_params[] = '%'.$q.'%';
@@ -751,9 +771,11 @@ $stmt->execute($params);
 <?php
   // Sadece arama (q) kapsamına göre adetler; status filtreye dahil edilmez
   $__cnt_params = [];
-  $__cnt_sql = "SELECT o.status, COUNT(*) AS cnt FROM orders o LEFT JOIN customers c ON c.id=o.customer_id WHERE 1=1";
+  // Ürün araması eklendi ve COUNT(DISTINCT o.id) yapıldı
+  $__cnt_sql = "SELECT o.status, COUNT(DISTINCT o.id) AS cnt FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id WHERE 1=1";
   if ($q !== '') {
-    $__cnt_sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ?)";
+    $__cnt_sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ? OR oi.name LIKE ?)";
+    $__cnt_params[] = '%'.$q.'%';
     $__cnt_params[] = '%'.$q.'%';
     $__cnt_params[] = '%'.$q.'%';
     $__cnt_params[] = '%'.$q.'%';
@@ -1529,3 +1551,51 @@ document.addEventListener('DOMContentLoaded', function () {
 })();
 </script>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+
+<script>
+$(function() {
+    // Çakışmaları önlemek için noConflict modu gerekebilir ama önce standart deneyelim
+    var searchInput = $('input[name="q"]');
+
+    if(searchInput.length > 0) {
+        searchInput.autocomplete({
+            source: "ajax_search_products.php",
+            minLength: 2, // 2 harf yazınca aramaya başlar
+            select: function(event, ui) {
+                // Seçilince kutuya yaz ve git
+                searchInput.val(ui.item.label);
+                window.location.href = "orders.php?q=" + encodeURIComponent(ui.item.code);
+                return false;
+            }
+        })
+        // Liste görünümünü özelleştirme
+        .autocomplete("instance")._renderItem = function(ul, item) {
+            // Proje Kodu (Sağa yaslı, küçük)
+            var projectCodeHtml = item.code ? '<span style="float:right; font-size:0.8em; color:#999; margin-left:10px;">#' + item.code + '</span>' : '';
+            
+            // Tarih Satırı (En altta, gri)
+            var dateHtml = item.date ? '<div style="font-size: 0.75em; color: #aaa; margin-top: 2px;">📅 ' + item.date + '</div>' : '';
+
+            return $("<li>")
+                .append("<div style='padding: 8px; border-bottom: 1px solid #eee; cursor: pointer; text-align: left;'>" + 
+                        // 1. Satır: Ürün Adı
+                        "<span style='font-weight: bold; color: #333; font-size: 1.1em; display:block;'>" + item.label + "</span>" + 
+                        
+                        // 2. Satır: Proje Adı (Solda) + Sipariş Kodu (Sağda)
+                        "<div style='font-size: 0.85em; color: #666; margin-top: 3px; overflow:hidden;'>" + 
+                            projectCodeHtml + 
+                            "📂 " + (item.descr || 'Proje Adı Yok') + 
+                        "</div>" +
+                        
+                        // 3. Satır: Tarih
+                        dateHtml +
+                        "</div>")
+                .appendTo(ul);
+        };
+    }
+});
+</script>
