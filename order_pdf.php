@@ -289,4 +289,11 @@ $dompdf = new Dompdf($options);
 $dompdf->loadHtml($html, 'UTF-8');
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
-$dompdf->stream('siparis_' . ($o['order_code'] ?? 'pdf') . '.pdf', ['Attachment' => false]);
+// Dosya adı: Proje Adı_sipariş_STF no (Revizesi).pdf
+$filename = ($o['proje_adi'] ?? '') . '_siparis_' . ($o['order_code'] ?? 'pdf');
+if (!empty($o['revizyon_no'])) {
+    $filename .= ' (' . $o['revizyon_no'] . ')';
+}
+$filename .= '.pdf';
+
+$dompdf->stream($filename, ['Attachment' => false]);
