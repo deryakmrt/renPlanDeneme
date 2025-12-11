@@ -119,6 +119,7 @@ ob_start();
     /* Column widths (9 cols, total ≈ 190mm) */
  margin-top: 4mm; } /*başlıklar */
     table.items th, table.items td { border: 0.3mm solid #000; padding: 1mm; vertical-align: top; word-wrap: break-word; overflow: hidden; }
+    table.items td:nth-child(2) { vertical-align: middle; } /* Görseli ortala */
     table.items td:nth-child(3) { font-size: 9px; } /* Ürün Açıklama */
     table.items td:nth-child(4), table.items th:nth-child(4) { font-size: 10px; } /* Kullanım Alanı */
     table.items td:nth-child(5), table.items th:nth-child(5) { font-size: 10px; } /* Miktar */
