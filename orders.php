@@ -94,7 +94,7 @@ td .wpstat-wrap{margin:auto}
 /* Percent widths that sum to 100% so the table doesn't grow */
 .orders-table th:nth-child(1), .orders-table td:nth-child(1){width:2%}   /* checkbox */
 .orders-table th:nth-child(2), .orders-table td:nth-child(2){width:9%; overflow:hidden; text-overflow:ellipsis; white-space:normal;max-width:120px;text-align:center;line-height:1.2}   /* Müşteri */
-.orders-table th:nth-child(3), .orders-table td:nth-child(3){width:12%; overflow:hidden; text-overflow:ellipsis; white-space:normal;max-width:120px;text-align:center;line-height:1.2}  /* Proje Adı */
+.orders-table th:nth-child(3), .orders-table td:nth-child(3){width:16%; overflow:hidden; text-overflow:ellipsis; white-space:normal;max-width:250px;text-align:center;line-height:1.2}  /* Proje Adı */
 .orders-table th:nth-child(4), .orders-table td:nth-child(4){width:7%;  overflow:hidden; text-overflow:ellipsis; white-space:normal;max-width:120px;text-align:center;line-height:1.2}  /* Sipariş Kodu */
 .orders-table th:nth-child(5), .orders-table td:nth-child(5){width:12%} /* Üretim Durumu */
 .orders-table th:nth-child(6), .orders-table td:nth-child(6){width:8%;  white-space:normal;max-width:120px;text-align:center;line-height:1.2}   /* Sipariş Tarihi */
@@ -199,8 +199,8 @@ td .wpstat-wrap{margin:auto}
 /* Müşteri (col 2) -%1 */
 .orders-table th:nth-child(2), .orders-table td:nth-child(2){ width:8% !important; }
 
-/* Proje Adı (col 3) -%1 */
-.orders-table th:nth-child(3), .orders-table td:nth-child(3){ width:11% !important; }
+/* Proje Adı (col 3) Genişletildi */
+.orders-table th:nth-child(3), .orders-table td:nth-child(3){ width:16% !important; }
 
 /* OVERLAY percent label across full track so it's always fully visible */
 .wpstat-track{position:relative}
