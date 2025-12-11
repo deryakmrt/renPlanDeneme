@@ -130,7 +130,10 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
     $n = trim((string)($names[$i] ?? ''));
     $pid = (int)($p_ids[$i] ?? 0);
     $unit = trim((string)($units[$i] ?? ''));
-    $qty = (float)($qtys[$i] ?? 0);
+    // Miktarı da virgüllü formattan (1,50) ondalıklı formata (1.50) çevir:
+    $qty_raw = $qtys[$i] ?? 0;
+    $qty = is_string($qty_raw) ? _tr_money_to_float($qty_raw) : (float)$qty_raw;
+
     $price_raw = $prices[$i] ?? 0;
     $price = is_string($price_raw) ? _tr_money_to_float($price_raw) : (float)$price_raw;
     $uo = trim((string)($ozet[$i] ?? ''));
@@ -278,8 +281,13 @@ document.addEventListener('DOMContentLoaded', function(){
   function isZeroOrEmpty(s){ s=(s==null?'':String(s)).trim(); return (s===''||s==='0'||s==='0,00'||s==='0.00'); }
   function trToDotDecimal(str){ if(str==null) return ''; var s=String(str).trim(); if(!s) return ''; s=s.replace(/\s/g,'').replace(/\./g,'').replace(',', '.'); return s; }
 
-  // Seçici grupları
-  var selPrice = ['input[name="price[]"]','input[name^="price["]','input[name="price"]','input[name="birim_fiyat[]"]','input[name^="birim_fiyat["]','input[name="birim_fiyat"]','input[aria-label*="Birim Fiyat" i]','input[placeholder*="Birim Fiyat" i]'];
+  // Seçici grupları (Miktar alanlarını da ekledik)
+  var selPrice = [
+    'input[name="qty[]"]','input[name^="qty["]',
+    'input[name="price[]"]','input[name^="price["]','input[name="price"]',
+    'input[name="birim_fiyat[]"]','input[name^="birim_fiyat["]','input[name="birim_fiyat"]',
+    'input[aria-label*="Birim Fiyat" i]','input[placeholder*="Birim Fiyat" i]'
+  ];
   var selOzet  = ['input[name="urun_ozeti[]"]','input[name^="urun_ozeti["]','textarea[name="urun_ozeti[]"]','textarea[name^="urun_ozeti["]'];
   var selKA    = ['input[name="kullanim_alani[]"]','input[name^="kullanim_alani["]','textarea[name="kullanim_alani[]"]','textarea[name^="kullanim_alani["]'];
 
