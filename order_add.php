@@ -142,7 +142,25 @@ if (method('POST')) {
         if ($pid === 0) $pid = null;
 
         $insIt = $db->prepare("INSERT INTO order_items (order_id, product_id, name, unit, qty, price, urun_ozeti, kullanim_alani) VALUES (?,?,?,?,?,?,?,?)");
-        $insIt->execute([$order_id, $pid, $n, trim($units[$i] ?? 'adet'), (float)($qtys[$i] ?? 0), (float)($prices[$i] ?? 0), trim($ozet[$i] ?? ''), trim($kalan[$i] ?? '')]);
+        
+        // Miktar (virgülü noktaya çevir)
+        $raw_qty = $qtys[$i] ?? 0;
+        $val_qty = is_string($raw_qty) ? (float)str_replace(',', '.', $raw_qty) : (float)$raw_qty;
+
+        // Fiyat (virgülü noktaya çevir)
+        $raw_prc = $prices[$i] ?? 0;
+        $val_prc = is_string($raw_prc) ? (float)str_replace(',', '.', $raw_prc) : (float)$raw_prc;
+
+        $insIt->execute([
+            $order_id, 
+            $pid, 
+            $n, 
+            trim($units[$i] ?? 'adet'), 
+            $val_qty, 
+            $val_prc, 
+            trim($ozet[$i] ?? ''), 
+            trim($kalan[$i] ?? '')
+        ]);
     }
 
 
