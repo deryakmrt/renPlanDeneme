@@ -154,8 +154,8 @@
           </td>
           <td><input name="name[]" value="<?= h($it['name'] ?? '') ?>" required></td>
           <td><input name="unit[]" value="<?= h($it['unit'] ?? 'Adet') ?>"></td>
-          <td><input name="qty[]" type="number" step="0.01" value="<?= h($it['qty'] ?? '1') ?>"></td>
-          <?php if ($__is_admin_like): ?><td><input name="price[]" type="number" step="0.01" value="<?= h($it['price'] ?? '0') ?>"></td><?php endif; ?>
+          <td><input name="qty[]" type="text" class="formatted-number" value="<?= number_format((float)($it['qty'] ?? 1), 2, ',', '.') ?>"></td>
+          <?php if ($__is_admin_like): ?><td><input name="price[]" type="text" class="formatted-number" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '.') ?>"></td><?php endif; ?>
           <td><input name="urun_ozeti[]" value="<?= h($it['urun_ozeti'] ?? '') ?>"></td>
           <td><input name="kullanim_alani[]" value="<?= h($it['kullanim_alani'] ?? '') ?>"></td>
           <?php if ($__is_admin_like): ?><td class="right"><button type="button" class="btn" onclick="delRow(this)">Sil</button></td><?php endif; ?>
@@ -529,8 +529,8 @@ function addRow(){
     </td>
     <td><input name="name[]" required></td>
     <td><input name="unit[]" value="Adet"></td>
-    <td><input name="qty[]" type="number" step="0.01" value="1"></td>
-    <?php if ($__is_admin_like): ?><td><input name="price[]" type="number" step="0.01" value="0"></td><?php endif; ?>
+    <td><input name="qty[]" type="text" class="formatted-number" value="1,00"></td>
+    <?php if ($__is_admin_like): ?><td><input name="price[]" type="text" class="formatted-number" value="0,00"></td><?php endif; ?>
     <td><input name="urun_ozeti[]"></td>
     <td><input name="kullanim_alani[]"></td>
     <?php if ($__is_admin_like): ?><td class="right"><button type="button" class="btn" onclick="delRow(this)">Sil</button></td><?php endif; ?>
@@ -568,7 +568,11 @@ function bindSkuInputs(scope){
           var ka = tr.querySelector('input[name="kullanim_alani[]"]');
           if(name && data.name) name.value = data.name;
           if(unit && data.unit) unit.value = data.unit;
-          if(price && (data.price!==undefined)) price.value = data.price;
+          // Fiyatı TR formatına (virgüllü) çevirip yazıyoruz:
+          if(price && (data.price!==undefined)) {
+             var pVal = parseFloat(data.price);
+             price.value = pVal.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+          }
           if(oz && data.urun_ozeti) oz.value = data.urun_ozeti;
           if(ka && data.kullanim_alani) ka.value = data.kullanim_alani;
         }else{
@@ -587,7 +591,14 @@ function onPickProduct(sel){
   const tr = sel.closest('tr');
   tr.querySelector('input[name="name[]"]').value = opt.getAttribute('data-name') || '';
   tr.querySelector('input[name="unit[]"]').value = opt.getAttribute('data-unit') || 'Adet';
-  <?php if ($__is_admin_like): ?>tr.querySelector('input[name="price[]"]').value = opt.getAttribute('data-price') || '0';<?php endif; ?>
+  
+  <?php if ($__is_admin_like): ?>
+    // Data attribute'dan gelen noktalı fiyatı al, virgüllüye çevir
+    var rawPrice = opt.getAttribute('data-price') || '0';
+    var floatPrice = parseFloat(rawPrice);
+    var trPrice = floatPrice.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    tr.querySelector('input[name="price[]"]').value = trPrice;
+  <?php endif; ?>
   tr.querySelector('input[name="urun_ozeti[]"]').value = opt.getAttribute('data-ozet') || '';
   tr.querySelector('input[name="kullanim_alani[]"]').value = opt.getAttribute('data-kalan') || '';
   var raw = opt.getAttribute('data-image') || '';
@@ -622,9 +633,30 @@ document.addEventListener('DOMContentLoaded', function(){
   
   // stok kodu inputlarına dinleyici bağla
   try { bindSkuInputs(); } catch(_e){}
-  // mevcut seçili ürünler için görselleri doldur (özellikle order_edit)
+  // mevcut seçili ürünler için SADECE görselleri getir (Metinleri ve Fiyatı EZME!)
   document.querySelectorAll('select[name="product_id[]"]').forEach(function(s){
-    if (s && s.value) { try { onPickProduct(s); } catch(_e){} }
+    if (s && s.value) {
+       try {
+         var opt = s.options[s.selectedIndex];
+         if(opt){
+           // Sadece RESİM mantığını buraya aldık.
+           // Fiyat veya Özet alanlarına dokunmuyoruz.
+           var raw = opt.getAttribute('data-image') || '';
+           if (raw && !(raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('/'))) {
+             if (raw.startsWith('uploads/')) raw = '/' + raw;
+             else if (raw.startsWith('./')) raw = raw.slice(1);
+             else raw = '/uploads/' + raw;
+           }
+           var tr = s.closest('tr');
+           var imgEl = tr.querySelector('.urun-gorsel-img');
+           if (imgEl) {
+             imgEl.src = raw || '';
+             imgEl.alt = raw ? 'Ürün görseli' : '';
+             imgEl.style.display = raw ? 'block' : 'none';
+           }
+         }
+       } catch(_e){}
+    }
   });
   // müşteri override hidden alanı
   f.addEventListener('submit', function(){
