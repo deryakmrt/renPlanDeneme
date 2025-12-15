@@ -30,7 +30,8 @@ $st->execute([$id]);
 $o = $st->fetch();
 if (!$o) die('Sipariş bulunamadı');
 
-$it = $db->prepare("SELECT oi.*, p.sku, p.image AS image FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=? ORDER BY oi.id ASC");
+// YENİ Hali (Güncel ismi 'guncel_isim' takma adıyla çekiyoruz):
+$it = $db->prepare("SELECT oi.*, p.sku, p.image AS image, p.name AS guncel_isim FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=? ORDER BY oi.id ASC");
 $it->execute([$id]);
 $items = $it->fetchAll();
 
@@ -249,13 +250,17 @@ ob_start();
         <?php endif; ?>
       </td>
       <td>
-        <div style="font-size:10px;"><strong><?= h($it['name'] ?? '') ?></strong></div> <!--ürün adı -->
-        <?php if (!empty($it['sku'])): ?>
-          <div class="small" style="margin-top:1mm;"><strong><?= h($it['sku']) ?></strong></div> <!--ürün kodu -->
-        <?php endif; ?>
-        <?php if (!empty($it['urun_ozeti'])): ?>
-          <div class="small" style="margin-top:1mm;"><?= nl2br(h($it['urun_ozeti'])) ?></div> <!--ürün özeti -->
-        <?php endif; ?>
+          <div style="font-size:10px;">
+              <strong><?= h(!empty($it['guncel_isim']) ? $it['guncel_isim'] : ($it['name'] ?? '')) ?></strong>
+          </div> 
+
+          <?php if (!empty($it['sku'])): ?>
+              <div class="small" style="margin-top:1mm;"><strong><?= h($it['sku']) ?></strong></div>
+          <?php endif; ?>
+
+          <?php if (!empty($it['urun_ozeti'])): ?>
+              <div class="small" style="margin-top:1mm;"><?= nl2br(h($it['urun_ozeti'])) ?></div>
+          <?php endif; ?>
       </td>
       <td><?= h($it['kullanim_alani'] ?? '') ?></td>
       <td class="num"><?= isset($it['qty']) ? number_format((float)$it['qty'],2,',','.') : '' ?></td>
