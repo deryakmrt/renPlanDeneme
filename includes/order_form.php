@@ -618,7 +618,49 @@ function onPickProduct(sel){
 document.addEventListener('DOMContentLoaded', function(){
   var f = document.querySelector('form');
   if(!f) return;
-  
+// --- YENİ EKLENEN GÜVENLİK KODU: Ürün Seçilmeden Fiyat Girilmesini Engelle ---
+  var mainForm = document.querySelector('form');
+  if(mainForm) {
+      mainForm.addEventListener('submit', function(e){
+          // Tablodaki tüm satırları gez
+          var rows = document.querySelectorAll('#itemsTable tr');
+          
+          for(var i=0; i<rows.length; i++){
+              var row = rows[i];
+              // Bu satırdaki Ürün Seçimi (Select) ve Fiyat (Input) alanlarını bul
+              var sel = row.querySelector('select[name="product_id[]"]');
+              var priceInp = row.querySelector('input[name="price[]"]');
+              
+              // Eğer bu satırda ürün seçimi yoksa (başlık satırıysa) geç
+              if(!sel) continue; 
+
+              // Fiyat değerini parse et (1.000,50 -> 1000.50)
+              var priceVal = 0;
+              if(priceInp && priceInp.value) {
+                  var cleanVal = priceInp.value.toString().replace(/\./g, '').replace(',', '.');
+                  priceVal = parseFloat(cleanVal);
+              }
+
+              // KURAL: Eğer Fiyat 0'dan büyükse VE (Ürün seçilmemişse veya değeri boşsa)
+              if(priceVal > 0 && (!sel.value || sel.value === '0' || sel.value === '')) {
+                  e.preventDefault(); // Kaydetmeyi durdur
+                  e.stopPropagation(); // Diğer işlemleri durdur
+                  
+                  alert('DİKKAT: Tabloda fiyat girdiğiniz bir satırda henüz ÜRÜN SEÇMEDİNİZ!\n\nLütfen önce listeden ürün seçin, sonra kaydedin.');
+                  
+                  // Hatayı göstermek için o satıra git ve kırmızı yap
+                  sel.scrollIntoView({behavior: 'smooth', block: 'center'});
+                  sel.style.border = '2px solid red';
+                  sel.focus();
+                  if(priceInp) priceInp.style.backgroundColor = '#fee2e2';
+
+                  // İlk hatada döngüden çık
+                  return;
+              }
+          }
+      }, true); // true: Event capture, daha öncelikli çalışmasını sağlar
+  }
+  // --- GÜVENLİK KODU SONU --- 
   // Sortable.js - Drag & Drop
   var tbody = document.querySelector('#itemsTable tbody');
   if (!tbody) tbody = document.querySelector('#itemsTable');
