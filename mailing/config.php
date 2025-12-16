@@ -10,7 +10,7 @@ return [
     'port'       => 465,
     'secure'     => 'ssl',                      // SSL (465)
     'username'   => 'info@ditetra.com',        // Kullanıcı adı: e-posta adresi
-    'password'   => 'Di20Tetra24+',            // ŞİFRE
+    'password'   => 'Di20Tetra25**',            // ŞİFRE
     'from_email' => 'info@ditetra.com',
     'from_name'  => 'Renled Bildirim',
     'reply_to_from_requester' => true
