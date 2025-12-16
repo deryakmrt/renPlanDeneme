@@ -132,6 +132,40 @@ ob_start();
     table.totals td { padding: 1mm 2mm; }
     table.totals .label { text-align: right; font-weight: 700; }
     table.totals .value { text-align: right; }
+
+    /* --- NOTLAR BÖLÜMÜ --- */
+    .notes-container {
+        margin-top: 5mm;
+        border: 0.3mm solid #000;
+        padding: 2mm;
+        page-break-inside: avoid; /* Sayfa ortasında bölünmesin */
+    }
+    .notes-title {
+        font-weight: 700;
+        font-size: 11px;
+        border-bottom: 0.3mm solid #ccc;
+        margin-bottom: 2mm;
+        padding-bottom: 1mm;
+    }
+    .note-row {
+        margin-bottom: 2mm;
+        border-bottom: 0.1mm dotted #eee;
+        padding-bottom: 1mm;
+    }
+    .note-row:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    .note-meta {
+        font-size: 9px;
+        font-weight: 700;
+        color: #444;
+        margin-bottom: 1px;
+    }
+    .note-body {
+        font-size: 10px;
+        color: #000;
+    }
   </style>
 </head>
 <body>
@@ -262,7 +296,45 @@ ob_start();
 
   </tbody>
 </table>
+<?php if (!empty($o['notes'])): ?>
+<div class="notes-container">
+  <div class="notes-title">Sipariş Notları</div>
+  <?php 
+    // Notları satır satır böl
+    $__notes_lines = array_filter(preg_split("/\r\n|\r|\n/", (string)$o['notes']));
+    
+    foreach ($__notes_lines as $line):
+        $line = trim($line);
+        if (!$line) continue;
 
+        $author = ''; 
+        $date = ''; 
+        $text = $line;
+
+        // Format 1: "Yazar | DD.MM.YYYY HH:MM : Mesaj"
+        if (preg_match('/^(.*?)\s*\|\s*(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})\s*:\s*(.*)$/u', $line, $m)) {
+            $author = trim($m[1]); 
+            $date = $m[2]; 
+            $text = $m[3];
+        }
+        // Format 2: "DD.MM.YYYY HH:MM | Yazar : Mesaj" (Eski format)
+        elseif (preg_match('/^(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2})\s*\|\s*(.*?):\s*(.*)$/u', $line, $m)) {
+            $date = $m[1]; 
+            $author = trim($m[2]); 
+            $text = $m[3];
+        }
+  ?>
+  <div class="note-row">
+      <?php if ($author || $date): ?>
+        <div class="note-meta">
+            <?= h($author) ?> <?= ($author && $date) ? '•' : '' ?> <?= h($date) ?>
+        </div>
+      <?php endif; ?>
+      <div class="note-body"><?= h($text) ?></div>
+  </div>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
 </body>
 </html>
 <?php
