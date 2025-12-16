@@ -197,7 +197,8 @@ td .wpstat-wrap{margin:auto}
 }
 
 /* Müşteri (col 2) -%1 */
-.orders-table th:nth-child(2), .orders-table td:nth-child(2){ width:8% !important; }
+/* Genişliği 8%'den 14%'e çıkardık ve max-width sınırını kaldırdık */
+.orders-table th:nth-child(2), .orders-table td:nth-child(2){ width:14% !important; max-width: none !important; }
 
 /* Proje Adı (col 3) Genişletildi */
 .orders-table th:nth-child(3), .orders-table td:nth-child(3){ width:16% !important; }
@@ -671,7 +672,7 @@ if ($status !== '') {
     $sql .= " AND o.status = ?";
     $params[] = $status;
 }
-$sql .= " ORDER BY CASE WHEN LOWER(o.status) = 'taslak' THEN 0 WHEN LOWER(o.status) = 'tedarik' THEN 1 WHEN LOWER(o.status) = 'sac lazer' THEN 2 WHEN LOWER(o.status) = 'boru lazer' THEN 3 WHEN LOWER(o.status) = 'kaynak' THEN 4 WHEN LOWER(o.status) = 'boya' THEN 5 WHEN LOWER(o.status) = 'elektrik montaj' THEN 6 WHEN LOWER(o.status) = 'test' THEN 7 WHEN LOWER(o.status) = 'paketleme' THEN 8 WHEN LOWER(o.status) = 'sevkiyat' THEN 9 WHEN LOWER(o.status) = 'teslim edildi' THEN 10 ELSE 999 END ASC, CASE WHEN o.order_code REGEXP '-[0-9]+$' THEN CAST(SUBSTRING_INDEX(o.order_code, '-', -1) AS UNSIGNED) ELSE 0 END DESC, o.order_code DESC";
+$sql .= " ORDER BY CASE WHEN LOWER(o.status) = 'tedarik' THEN 1 WHEN LOWER(o.status) = 'sac lazer' THEN 2 WHEN LOWER(o.status) = 'boru lazer' THEN 3 WHEN LOWER(o.status) = 'kaynak' THEN 4 WHEN LOWER(o.status) = 'boya' THEN 5 WHEN LOWER(o.status) = 'elektrik montaj' THEN 6 WHEN LOWER(o.status) = 'test' THEN 7 WHEN LOWER(o.status) = 'paketleme' THEN 8 WHEN LOWER(o.status) = 'sevkiyat' THEN 9 WHEN LOWER(o.status) = 'teslim edildi' THEN 10 ELSE 999 END ASC, CASE WHEN o.order_code REGEXP '-[0-9]+$' THEN CAST(SUBSTRING_INDEX(o.order_code, '-', -1) AS UNSIGNED) ELSE 0 END DESC, o.order_code DESC";
 // Toplam sayfa sayısı için COUNT(*)
 $count_stmt = $db->prepare("SELECT COUNT(*) FROM (" . $sql . ") t");
 $count_stmt->execute($params);
@@ -679,7 +680,6 @@ $count_stmt->execute($params);
 // === Quick status counts for filter bar (counts reflect current search 'q') ===
 $status_labels = [
   '' => 'Tümü',
-  'taslak' => 'Düzenleniyor',
   'tedarik' => 'Tedarik',
   'sac lazer' => 'Sac Lazer',
   'boru lazer' => 'Boru Lazer',
@@ -740,7 +740,6 @@ $stmt->execute($params);
     <select name="bulk_status" style="color:#000; font-size:14px; max-width:160px;">
       <a href="order_new.php" class="btn primary">Yeni Sipariş</a>
 <option value="">Toplu İşlemler</option>
-      <option value="taslak">Düzenleniyor</option> 
       <option value="tedarik">Tedarik</option>
       <option value="sac lazer">Sac Lazer</option>
       <option value="boru lazer">Boru Lazer</option>
@@ -760,7 +759,7 @@ $stmt->execute($params);
     <input name="q" placeholder="Sipariş kodu / müşteri ara…" value="<?= h($q) ?>" style="color:#000; font-size:14px; width:280px; max-width:40vw;">
     <select name="status" style="color:#000; font-size:14px; min-width:180px;">
       <option value="">Durum (hepsi)</option>
-      <?php foreach(['taslak'=>'Düzenleniyor','tedarik'=>'Tedarik','sac lazer'=>'Sac Lazer','boru lazer'=>'Boru Lazer','kaynak'=>'Kaynak','boya'=>'Boya','elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi'] as $k=>$v): ?>
+      <?php foreach(['tedarik'=>'Tedarik','sac lazer'=>'Sac Lazer','boru lazer'=>'Boru Lazer','kaynak'=>'Kaynak','boya'=>'Boya','elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi'] as $k=>$v): ?>
         <option value="<?= h($k) ?>" <?= $status===$k?'selected':'' ?>><?= h($v) ?></option>
       <?php endforeach; ?>
     </select>
@@ -834,7 +833,7 @@ $stmt->execute($params);
 <!-- YATAY DURUM FİLTRESİ (TABLO İÇİ) START -->
 <div class="status-quick-filter" style="font-size:14px" style="color:#000; font-size:14px; font-size:.95rem;">
     <?php
-      $ordered_statuses = ['','taslak','tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi'];
+      $ordered_statuses = ['', 'tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi'];
       $first = true;
       foreach ($ordered_statuses as $sk) {
         $label = $status_labels[$sk] ?? ($sk ?: 'Tümü');
@@ -959,7 +958,6 @@ function __wpstat_icon_svg($key){
 }
 function __wpstat_icon_key($status){
     switch($status){
-        case 'taslak': return 'box';
         case 'tedarik': return 'box';
         case 'sac lazer': return 'laser';
         case 'boru lazer': return 'laser';
@@ -989,13 +987,11 @@ function __wpstat_class_by_pct($pct){
 
 function render_status_pill($status_raw){
     $map = [
-      'taslak'=>0,  
-      'tedarik'=>1,'sac lazer'=>2,'boru lazer'=>3,'kaynak'=>4,'boya'=>5,
+        'tedarik'=>1,'sac lazer'=>2,'boru lazer'=>3,'kaynak'=>4,'boya'=>5,
         'elektrik montaj'=>6,'test'=>7,'paketleme'=>8,'sevkiyat'=>9,'teslim edildi'=>10
     ];
     $labels = [
-      'taslak'=>'⚠Düzenleniyor',  
-      'tedarik'=>'Tedarik','sac lazer'=>'Sac Lazer','boru lazer'=>'Boru Lazer','kaynak'=>'Kaynak','boya'=>'Boya',
+        'tedarik'=>'Tedarik','sac lazer'=>'Sac Lazer','boru lazer'=>'Boru Lazer','kaynak'=>'Kaynak','boya'=>'Boya',
         'elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi'
     ];
     $k = strtolower(trim((string)$status_raw));
@@ -1004,11 +1000,6 @@ function render_status_pill($status_raw){
     $pct = max(10, min(100, $step*10));
     $done = ($pct>=100);
     $class = __wpstat_class_by_pct($pct);
-
-    // --- ÖZEL KURAL: Taslak durumunu SARI yap ---
-    if ($k === 'taslak') {
-        $class = 'wpstat-wip'; 
-    }
     $icon = __wpstat_icon_svg(__wpstat_icon_key($k));
     $label = $labels[$k] ?? $status_raw;
 
