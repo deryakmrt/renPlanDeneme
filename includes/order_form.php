@@ -160,10 +160,30 @@
           <?php if ($__is_admin_like): ?><th class="right" style="width:8%">Sil</th><?php endif; ?>
         </tr>
         <?php if (!$items) { $items = [[]]; } ?>
-        <?php foreach ($items as $it): ?>
+        <?php 
+          $rn = 0; 
+          foreach ($items as $it): 
+          $rn++; 
+
+          // --- YENİ: Kayıtlı ürünün SKU'sunu bul ---
+          $current_sku = '';
+          if (!empty($it['product_id'])) {
+              foreach ($products as $p) {
+                  if ((int)$p['id'] === (int)$it['product_id']) {
+                      $current_sku = $p['sku'] ?? '';
+                      break;
+                  }
+              }
+          }
+          // -----------------------------------------
+        ?>
         <tr>
-          <td class="drag-handle" style="cursor:move;text-align:center;color:#9ca3af;font-size:18px;user-select:none">⋮⋮</td>
-          <td><input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu"></td>
+          <td class="drag-handle" style="cursor:move; vertical-align:middle; text-align:center; color:#9ca3af; font-size:18px; user-select:none; width:50px;">
+            <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
+                <span class="row-index"><?= $rn ?></span> ⋮⋮
+            </div>
+          </td>
+          <td><input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu" value="<?= h($current_sku) ?>"></td>
           <td class="urun-gorsel" style="text-align:center"><img class="urun-gorsel-img" style="max-width:64px;max-height:64px;display:none;margin:0 auto" alt=""></td>
           <td>
             <select name="product_id[]" onchange="onPickProduct(this)">
@@ -171,6 +191,7 @@
               <?php foreach($products as $p): ?>
               <option
                 value="<?= (int)$p['id'] ?>"
+                data-sku="<?= h($p['sku'] ?? '') ?>" 
                 data-name="<?= h($p['name']) ?>"
                 data-unit="<?= h($p['unit']) ?>"
                 data-price="<?= h($p['price']) ?>"
@@ -544,8 +565,13 @@
 <script>
 function addRow(){
   const tr = document.createElement('tr');
+  // Flex yapısını div içine aldık, td normal kaldı
   tr.innerHTML = `
-    <td class="drag-handle" style="cursor:move;text-align:center;color:#9ca3af;font-size:18px;user-select:none">⋮⋮</td>
+    <td class="drag-handle" style="cursor:move; vertical-align:middle; text-align:center; color:#9ca3af; font-size:18px; user-select:none; width:50px;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
+            <span class="row-index"></span> ⋮⋮
+        </div>
+    </td>
     <td><input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu"></td>
     <td class="urun-gorsel" style="text-align:center"><img class="urun-gorsel-img" style="max-width:64px;max-height:64px;display:none;margin:0 auto" alt=""></td>
     <td>
@@ -554,12 +580,13 @@ function addRow(){
         <?php foreach($products as $p): ?>
         <option
           value="<?= (int)$p['id'] ?>"
+          data-sku="<?= h($p['sku'] ?? '') ?>"
           data-name="<?= h($p['name']) ?>"
           data-unit="<?= h($p['unit']) ?>"
           data-price="<?= h($p['price']) ?>"
           data-ozet="<?= h($p['urun_ozeti']) ?>"
           data-kalan="<?= h($p['kullanim_alani']) ?>"
-                data-image="<?= h($p['image'] ?? '') ?>"
+          data-image="<?= h($p['image'] ?? '') ?>"
         ><?= h($p['name']) ?><?= $p['sku'] ? ' ('.h($p['sku']).')':'' ?></option>
         <?php endforeach; ?>
       </select>
@@ -574,11 +601,28 @@ function addRow(){
   `;
   document.querySelector('#itemsTable').appendChild(tr);
   bindSkuInputs(tr);
+  renumberRows(); // Numaraları güncelle
 }
+
 function delRow(btn){
   const tr = btn.closest('tr');
   if(!tr) return;
   tr.parentNode.removeChild(tr);
+  renumberRows(); // Silince numaraları kaydır
+}
+
+// YENİ: Satırları numaralandırma fonksiyonu
+function renumberRows() {
+    const rows = document.querySelectorAll('#itemsTable tr');
+    let count = 0;
+    rows.forEach((tr) => {
+        // Başlık satırını (th) atla, içinde td olanları say
+        if (tr.querySelector('td')) {
+            count++;
+            const span = tr.querySelector('.row-index');
+            if (span) span.textContent = count;
+        }
+    });
 }
 function bindSkuInputs(scope){
   var root = scope || document;
@@ -626,6 +670,13 @@ function onPickProduct(sel){
   const opt = sel.options[sel.selectedIndex];
   if(!opt) return;
   const tr = sel.closest('tr');
+  
+  // YENİ: Stok Kodu (SKU) alanını doldur
+  var skuInput = tr.querySelector('input[name="stok_kodu[]"]');
+  if(skuInput) {
+      skuInput.value = opt.getAttribute('data-sku') || '';
+  }
+
   tr.querySelector('input[name="name[]"]').value = opt.getAttribute('data-name') || '';
   tr.querySelector('input[name="unit[]"]').value = opt.getAttribute('data-unit') || 'Adet';
   
@@ -706,7 +757,11 @@ document.addEventListener('DOMContentLoaded', function(){
       handle: '.drag-handle',
       animation: 150,
       ghostClass: 'sortable-ghost',
-      dragClass: 'sortable-drag'
+      dragClass: 'sortable-drag',
+      // YENİ: Sürükleme bitince numaraları güncelle
+      onEnd: function() {
+          renumberRows();
+      }
     });
   }
   
@@ -752,6 +807,24 @@ document.addEventListener('DOMContentLoaded', function(){
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <style>
+/* --- YENİ EKLENEN STİLLER (Satır No & Highlight) --- */
+.row-index {
+    display: inline-block;
+    width: 20px;
+    color: #cbd5e1; /* Silik gri */
+    font-size: 11px;
+    font-weight: bold;
+    text-align: right;
+    margin-right: 6px;
+    user-select: none;
+}
+/* Düzenlenen satırın rengi (Turuncu çerçeve ve zemin) */
+tr.active-editing td {
+    background-color: #fff7ed !important;
+    border-top: 1px solid #fdba74 !important;
+    border-bottom: 1px solid #fdba74 !important;
+}
+
 /* === POP-UP EDİTÖR STİLLERİ (GÜNCELLENMİŞ) === */
 .popover-overlay {
   position: fixed; inset: 0; background: transparent; z-index: 9990; display: none;
@@ -938,17 +1011,30 @@ document.addEventListener('DOMContentLoaded', function(){
   function openEditor(input){
     currentInput = input;
     
-    // Ürün ismini al
     var row = input.closest('tr');
     var prodName = '';
+    var rowNum = '?';
+
     if(row){
+        // 1. Aktif satırı boya (öncekileri temizle)
+        document.querySelectorAll('tr.active-editing').forEach(r => r.classList.remove('active-editing'));
+        row.classList.add('active-editing');
+
+        // 2. Ürün ismini al
         var nameInp = row.querySelector('input[name="name[]"]');
         if(nameInp) prodName = nameInp.value;
+
+        // 3. Satır numarasını al
+        var idxSpan = row.querySelector('.row-index');
+        if(idxSpan) rowNum = idxSpan.textContent;
     }
 
-    // Başlığı ayarla
+   // Başlığı ayarla: "Ürün Özeti 5- Vida"
     var field = input.name.indexOf('urun_ozeti') > -1 ? 'Ürün Özeti' : 'Kullanım Alanı';
-    label.textContent = field + (prodName ? ' — ' + prodName : '');
+    var title = field + ' ' + rowNum;
+    if(prodName) title += '- ' + prodName;
+    
+    label.textContent = title;
 
     // Değeri yükle
     tarea.value = input.value || '';
@@ -986,6 +1072,8 @@ document.addEventListener('DOMContentLoaded', function(){
     overlay.style.display = 'none';
     pop.style.display = 'none';
     currentInput = null;
+    // Aktif satır rengini kaldır
+    document.querySelectorAll('tr.active-editing').forEach(r => r.classList.remove('active-editing'));
   }
 
   function saveEditor(){
