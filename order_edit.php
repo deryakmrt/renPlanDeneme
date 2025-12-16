@@ -56,6 +56,11 @@ if (method('POST')) {
     $AUD_stB2->execute(array($id));
     $AUD_beforeItems = $AUD_stB2->fetchAll(PDO::FETCH_ASSOC);
   } catch (Exception $e) { $AUD_beforeOrder = null; $AUD_beforeItems = array(); }
+// --- YAYINLA BUTONU TIKLANDI MI? ---
+  if (isset($_POST['yayinla_butonu'])) {
+      $_POST['status'] = 'tedarik'; // Durumu 'tedarik' yap ve herkese aç
+  }
+  // -----------------------------------
 
   csrf_check();
   

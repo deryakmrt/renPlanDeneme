@@ -590,8 +590,15 @@ if ($action === 'new' || $action === 'edit') {
 
 </div>
 
-        <div class="row mt">
+        <div class="row mt" style="align-items:center; gap:10px;">
           <button class="btn primary"><?= $order['id'] ? 'Güncelle' : 'Kaydet' ?></button>
+          
+          <?php if(($order['status'] ?? '') === 'taslak_gizli'): ?>
+              <button type="submit" name="yayinla_butonu" value="1" class="btn" style="background-color:#cd94ff; color:#fff; font-weight:bold;">
+                 🚀 SİPARİŞİ YAYINLA (Herkese Aç)
+              </button>
+          <?php endif; ?>
+
           <a class="btn" href="orders.php">Vazgeç</a>
         </div>
       </form>
@@ -660,6 +667,11 @@ $offset = ($page - 1) * $per_page;
 $params = [];
 // Ürün araması (oi.name) eklendi
 $sql = "SELECT DISTINCT o.*, c.name AS customer_name FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id WHERE 1=1";
+// --- GİZLİLİK FİLTRESİ (DÜZELTİLDİ) ---
+if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
+    $sql .= " AND o.status != 'taslak_gizli'";
+}
+// -------------------------------------
 
 if ($q !== '') {
     $sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ? OR oi.name LIKE ?)";
@@ -672,7 +684,7 @@ if ($status !== '') {
     $sql .= " AND o.status = ?";
     $params[] = $status;
 }
-$sql .= " ORDER BY CASE WHEN LOWER(o.status) = 'tedarik' THEN 1 WHEN LOWER(o.status) = 'sac lazer' THEN 2 WHEN LOWER(o.status) = 'boru lazer' THEN 3 WHEN LOWER(o.status) = 'kaynak' THEN 4 WHEN LOWER(o.status) = 'boya' THEN 5 WHEN LOWER(o.status) = 'elektrik montaj' THEN 6 WHEN LOWER(o.status) = 'test' THEN 7 WHEN LOWER(o.status) = 'paketleme' THEN 8 WHEN LOWER(o.status) = 'sevkiyat' THEN 9 WHEN LOWER(o.status) = 'teslim edildi' THEN 10 ELSE 999 END ASC, CASE WHEN o.order_code REGEXP '-[0-9]+$' THEN CAST(SUBSTRING_INDEX(o.order_code, '-', -1) AS UNSIGNED) ELSE 0 END DESC, o.order_code DESC";
+$sql .= " ORDER BY CASE WHEN LOWER(o.status) = 'taslak_gizli' THEN 0 WHEN LOWER(o.status) = 'tedarik' THEN 1 WHEN LOWER(o.status) = 'sac lazer' THEN 2 WHEN LOWER(o.status) = 'boru lazer' THEN 3 WHEN LOWER(o.status) = 'kaynak' THEN 4 WHEN LOWER(o.status) = 'boya' THEN 5 WHEN LOWER(o.status) = 'elektrik montaj' THEN 6 WHEN LOWER(o.status) = 'test' THEN 7 WHEN LOWER(o.status) = 'paketleme' THEN 8 WHEN LOWER(o.status) = 'sevkiyat' THEN 9 WHEN LOWER(o.status) = 'teslim edildi' THEN 10 ELSE 999 END ASC, CASE WHEN o.order_code REGEXP '-[0-9]+$' THEN CAST(SUBSTRING_INDEX(o.order_code, '-', -1) AS UNSIGNED) ELSE 0 END DESC, o.order_code DESC";
 // Toplam sayfa sayısı için COUNT(*)
 $count_stmt = $db->prepare("SELECT COUNT(*) FROM (" . $sql . ") t");
 $count_stmt->execute($params);
@@ -694,6 +706,12 @@ $status_labels = [
 $__cnt_params = [];
 // Ürün araması eklendi ve COUNT(DISTINCT o.id) yapıldı
 $__cnt_sql = "SELECT o.status, COUNT(DISTINCT o.id) AS cnt FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id WHERE 1=1";
+// --- GİZLİLİK FİLTRESİ (DÜZELTİLDİ) ---
+// Sadece yetkisiz kullanıcılardan gizle. Adminler hepsini görsün.
+if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
+    $__cnt_sql .= " AND o.status != 'taslak_gizli'";
+}
+// -------------------------------------
 if ($q !== '') {
     $__cnt_sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ? OR oi.name LIKE ?)";
     $__cnt_params[] = '%'.$q.'%';
@@ -774,6 +792,11 @@ $stmt->execute($params);
   $__cnt_params = [];
   // Ürün araması eklendi ve COUNT(DISTINCT o.id) yapıldı
   $__cnt_sql = "SELECT o.status, COUNT(DISTINCT o.id) AS cnt FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id WHERE 1=1";
+// --- GİZLİLİK FİLTRESİ (DÜZELTİLDİ) ---
+if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
+    $__cnt_sql .= " AND o.status != 'taslak_gizli'";
+}
+// -------------------------------------
   if ($q !== '') {
     $__cnt_sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ? OR oi.name LIKE ?)";
     $__cnt_params[] = '%'.$q.'%';
@@ -1234,11 +1257,25 @@ function termin_badge_html($termin, $teslim=null, $bitis=null){ // <-- 3. parame
 }
 ?>
 <!--================================================ -->
-<?php while($o = $stmt->fetch()): ?>
+<?php while($o = $stmt->fetch()): 
+  // Taslak ise sarı arka plan rengi belirle
+        $row_style = '';
+        if (($o['status']??'') === 'taslak_gizli') {
+            $row_style = 'style="background-color: #fffbeb;"'; // Açık Sarı
+        }?>
+        <tr <?= $row_style ?>>
     <tr class="order-row" data-order-id="<?= (int)$o['id'] ?>"><td><input type='checkbox' class='orderCheck' name='order_ids[]' value='<?= (int)$o['id'] ?>'></td><td><div class="twolines"><?= h($o['customer_name']) ?></div></td>
       <td><div class="twolines"><?= h($o['proje_adi']) ?></div></td>
       <td><?= h($o['order_code']) ?></td>
-      <td><?= render_status_pill($o['status']); ?></td>
+      <td>
+    <?php if(($o['status']??'') === 'taslak_gizli'): ?>
+        <span class="badge" style="background:#f59e0b; color:#fff; padding:4px 8px; border-radius:4px; font-size:11px;">
+            🔒 TASLAK
+        </span>
+    <?php else: ?>
+        <?= render_status_pill($o['status']) ?>
+    <?php endif; ?>
+</td>
       <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= fmt_date_dmy($o['siparis_tarihi'] ?? null) ?></div></td>
       <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= termin_badge_html($o['termin_tarihi'] ?? null, $o['teslim_tarihi'] ?? null, $o['bitis_tarihi'] ?? null) ?></div></td>
       <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= fmt_date_dmy($o['baslangic_tarihi'] ?? null) ?></div></td>

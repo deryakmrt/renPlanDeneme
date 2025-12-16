@@ -24,11 +24,41 @@
     <div class="grid g4 mt" style="gap:12px">
       <div>
         <label>Durum</label>
-        <select name="status">
-          <?php foreach(['tedarik'=>'Tedarik','sac lazer'=>'Sac Lazer','boru lazer'=>'Boru Lazer','kaynak'=>'Kaynak','boya'=>'Boya','elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi'] as $k=>$v): ?>
-            <option value="<?= h($k) ?>" <?= ($order['status']??'')===$k?'selected':'' ?>><?= h($v) ?></option>
-          <?php endforeach; ?>
-        </select>
+        <?php if (($order['status'] ?? '') === 'taslak_gizli'): ?>
+            <div style="padding:8px; border:1px dashed #d97706; background:#fffbeb; border-radius:6px; color:#d97706;">
+                <div style="font-weight:bold; display:flex; align-items:center; gap:6px;">
+                    🔒 Taslak (Gizli)
+                </div>
+                <div style="font-size:11px; margin-top:2px;">Yayınla diyene kadar kimse görmez.</div>
+                <input type="hidden" name="status" value="taslak_gizli">
+            </div>
+        <?php else: ?>
+            <select name="status">
+              <?php 
+              // Normal Durum Listesi
+              $status_list = [
+                  'tedarik' => 'Tedarik',
+                  'sac lazer' => 'Sac Lazer',
+                  'boru lazer' => 'Boru Lazer',
+                  'kaynak' => 'Kaynak',
+                  'boya' => 'Boya',
+                  'elektrik montaj' => 'Elektrik Montaj',
+                  'test' => 'Test',
+                  'paketleme' => 'Paketleme',
+                  'sevkiyat' => 'Sevkiyat',
+                  'teslim edildi' => 'Teslim Edildi'
+              ];
+              // Eğer veritabanında listede olmayan bir durum varsa (örn: eski 'taslak'), onu da ekle ki bozulmasın
+              $__curStat = $order['status'] ?? '';
+              if ($__curStat && !isset($status_list[$__curStat]) && $__curStat !== 'taslak_gizli') {
+                  $status_list[$__curStat] = ucfirst($__curStat);
+              }
+
+              foreach($status_list as $k=>$v): ?>
+                <option value="<?= h($k) ?>" <?= ($order['status']??'')===$k?'selected':'' ?>><?= h($v) ?></option>
+              <?php endforeach; ?>
+            </select>
+        <?php endif; ?>
       </div>
       <div><label>Sipariş Kodu</label><input name="order_code" value="<?= h($order['order_code'] ?? '') ?>"></div>
       <div>
@@ -499,6 +529,13 @@
       <?php if ($__is_admin_like): ?><a class="btn primary" href="order_pdf.php?id=<?= (int)$order['id'] ?>">PDF</a><?php endif; ?>
       <a class="btn" style="background-color:#16a34a;border-color:#15803d;color:#fff" href="order_pdf_uretim.php?id=<?= (int)$order['id'] ?>" target="_blank">Üretim Föyü</a>
       <button type="submit" class="btn primary"><?= $mode==='edit' ? 'Güncelle' : 'Kaydet' ?></button>
+      
+      <?php if (($order['status'] ?? '') === 'taslak_gizli' && $mode === 'edit'): ?>
+          <button type="submit" name="yayinla_butonu" value="1" class="btn" style="background-color:#cd94ff; color:#fff; font-weight:bold; margin-left:5px;">
+             🚀 SİPARİŞİ YAYINLA
+          </button>
+      <?php endif; ?>
+
       <a class="btn" href="orders.php">Vazgeç</a>
     </div>
   </form>
