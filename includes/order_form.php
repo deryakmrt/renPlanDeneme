@@ -25,10 +25,25 @@
       <div>
         <label>Durum</label>
         <select name="status">
-          <?php foreach(['tedarik'=>'Tedarik','sac lazer'=>'Sac Lazer','boru lazer'=>'Boru Lazer','kaynak'=>'Kaynak','boya'=>'Boya','elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi'] as $k=>$v): ?>
-            <option value="<?= h($k) ?>" <?= ($order['status']??'')===$k?'selected':'' ?>><?= h($v) ?></option>
-          <?php endforeach; ?>
-        </select>
+  <?php 
+  // Yeni listemiz:
+  $status_list = [
+      'taslak' => '⚠DÜZENLENİYOR', // Dikkat çekmesi için emoji koyabilirsin
+      'tedarik' => 'Tedarik',
+      'sac lazer' => 'Sac Lazer',
+      'boru lazer' => 'Boru Lazer',
+      'kaynak' => 'Kaynak',
+      'boya' => 'Boya',
+      'elektrik montaj' => 'Elektrik Montaj',
+      'test' => 'Test',
+      'paketleme' => 'Paketleme',
+      'sevkiyat' => 'Sevkiyat',
+      'teslim edildi' => 'Teslim Edildi'
+  ];
+  foreach($status_list as $k=>$v): ?>
+    <option value="<?= h($k) ?>" <?= ($order['status']??'')===$k?'selected':'' ?>><?= h($v) ?></option>
+  <?php endforeach; ?>
+</select>
       </div>
       <div><label>Sipariş Kodu</label><input name="order_code" value="<?= h($order['order_code'] ?? '') ?>"></div>
       <div>
