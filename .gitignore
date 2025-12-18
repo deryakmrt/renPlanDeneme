@@ -14,3 +14,6 @@ vendor/dompdf/dompdf/
 .vs/renPlanDeneme/v17/.wsuo
 .vs/renPlanDeneme/v17/DocumentLayout.json
 /google_lib
+delete_file.php
+get_token.php
+upload_drive.php
