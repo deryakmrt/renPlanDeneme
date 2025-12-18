@@ -561,6 +561,88 @@
     </div>
   </form>
 </div>
+<?php if ($mode === 'edit' && !empty($order['id'])): ?>
+<div class="card mt" style="border-top:4px solid #3b82f6;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h3 style="margin:0;">📁 Proje Dosyaları (Google Drive)</h3>
+        <span style="font-size:12px; color:#666;">
+            15 GB Alan • 
+            <a href="https://drive.google.com/drive/folders/1fQeSige0mjICeLkjKVxspD7TlMY16C6U?authuser=renplancloud@gmail.com" target="_blank" style="text-decoration:none; color:#3b82f6;">
+    📂 Klasörü Aç &rarr;
+</a>
+        </span>
+    </div>
+
+    <div class="file-list" style="margin-bottom:20px;">
+        <?php
+        // Dosyaları çekelim
+        $f_stmt = $db->prepare("SELECT * FROM order_files WHERE order_id = ? ORDER BY id DESC");
+        $f_stmt->execute([$order['id']]);
+        $files = $f_stmt->fetchAll();
+
+        if (count($files) > 0):
+        ?>
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="background:#f3f4f6; text-align:left; color:#555;">
+                        <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Dosya Adı</th>
+                        <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Yükleyen</th>
+                        <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Tarih</th>
+                        <th style="padding:8px; border-bottom:1px solid #e5e7eb; text-align:right;">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($files as $file): ?>
+                    <tr>
+                        <td style="padding:8px; border-bottom:1px solid #eee;">
+                            <a href="<?= h($file['web_view_link']) ?>" target="_blank" style="text-decoration:none; color: #2563eb; font-weight:500; display:flex; align-items:center; gap:6px;">
+                                📄 <?= h($file['file_name']) ?>
+                                <small style="color: #999;">↗</small>
+                            </a>
+                        </td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; color:#444;">
+                            <?= h($file['uploaded_by'] ?? '-') ?>
+                        </td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; color:#666;">
+                            <?= date('d.m.Y H:i', strtotime($file['created_at'])) ?>
+                        </td>
+                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right;">
+                            <a href="delete_file.php?id=<?= $file['id'] ?>&order_id=<?= $order['id'] ?>" 
+                               onclick="return confirm('Bu dosyayı Drive\'dan ve buradan silmek istediğinize emin misiniz?');"
+                               style="color: #dc2626; text-decoration:none; font-size:12px; border:1px solid #fee2e2; background:#fef2f2; padding:4px 8px; border-radius:4px;">
+                               Sil 🗑
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php else: ?>
+            <div style="padding:15px; background: #f9fafb; border:1px dashed #d1d5db; border-radius:6px; text-align:center; color:#6b7280;">
+                Henüz bu siparişe ait dosya yüklenmemiş.
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <div style="background: #f0f9ff; padding:15px; border-radius:8px; border:1px solid #bae6fd;">
+        <form action="upload_drive.php" method="POST" enctype="multipart/form-data" style="display:flex; align-items:center; gap:10px;">
+            <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+            
+            <div style="flex:1;">
+                <label style="display:block; font-size:12px; font-weight:bold; color: #0369a1; margin-bottom:4px;">Yeni Dosya Seç (PDF, DWG, Excel...)</label>
+                <input type="file" name="file_upload" required style="width:100%; padding:8px; background: #fff; border:1px solid #cbd5e1; border-radius:4px;">
+            </div>
+            
+            <button type="submit" class="btn" style="background-color: #0284c7; color:white; height:42px; margin-top:18px;">
+                ☁️ Drive'a Yükle
+            </button>
+        </form>
+        <div style="font-size:11px; color: #0c4a6e; margin-top:6px;">
+            * Dosyalar güvenli bir şekilde Google Drive hesabınıza yüklenir.
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <script>
 function addRow(){
