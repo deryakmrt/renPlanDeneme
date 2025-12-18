@@ -103,9 +103,13 @@ ob_start();
     table.kv td { border: 0.3mm solid #000; padding: 1mm 2mm; vertical-align: top; }
     table.kv td.label { width: 40mm; font-weight: 700; }
 
-    /* Ürün tablosu */
-    table.items { width:100%;
-    /* Column widths (reordered): S.No, Görsel, Ürün Açıklama, Kullanım Alanı, Miktar, Birim, Termin */
+    /* Ürün tablosu*/
+    table.items { 
+        width: 100%; 
+        margin-top: 5mm; /* Üstteki boşluk ayarı ile uyumlu hale getirildi */
+        border-collapse: collapse;
+    }
+    /* Kolon Genişlikleri (Ayrı ayrı tanımlanmalı) */
     table.items col:nth-child(1) { width: 8mm; }  /* S.No */
     table.items col:nth-child(2) { width: 18mm; } /* Görsel */
     table.items col:nth-child(3) { width: 95mm; } /* Ürün Açıklama (kod dahil) */
@@ -113,7 +117,7 @@ ob_start();
     table.items col:nth-child(5) { width: 13mm; } /* Miktar */
     table.items col:nth-child(6) { width: 13mm; } /* Birim */
     table.items col:nth-child(7) { width: 20mm; } /* Termin */
- margin-top: 4mm; }
+
     table.items th, table.items td { border: 0.3mm solid #000; padding: 1mm; vertical-align: top; word-wrap: break-word; overflow: hidden; }
     table.items td:nth-child(2) { vertical-align: middle; } /* Görseli ortala */
     table.items td:nth-child(3) { font-size: 9px; } /* Ürün Açıklama */
@@ -219,7 +223,7 @@ ob_start();
         <tr><td class="label">Siparişi Alan</td><td><?= h($o['siparisi_alan'] ?? '') ?></td></tr>
         <tr><td class="label">Siparişi Giren</td><td><?= h($o['siparisi_giren'] ?? '') ?></td></tr>
         <tr><td class="label">Sipariş Tarihi</td><td><?= $siparis_tarihi_fmt ?></td></tr>
-        <tr><td class="label">Fatura Para Birimi</td><td><?= h($o['fatura_para_birimi'] ?? $o['currency'] ?? '') ?></td></tr>
+        <tr><td class="label">Kontrol Personeli</td><td>&nbsp;</td></tr>
       </table>
     </td>
     <td class="right">
@@ -227,19 +231,10 @@ ob_start();
         <tr><td class="label">Proje Adı</td><td><?= h($o['proje_adi'] ?? '') ?></td></tr>
         <tr><td class="label">Revizyon No</td><td><?= h($o['revizyon_no'] ?? '') ?></td></tr>
         <tr><td class="label">Nakliye Türü</td><td><?= h($o['nakliye_turu'] ?? '') ?></td></tr>
-        <tr><td class="label">Ödeme Koşulu</td><td><?= h($o['odeme_kosulu'] ?? '') ?></td></tr>
-        <tr><td class="label">Ödeme Para Birimi</td><td><?= h($o['odeme_para_birimi'] ?? '') ?></td></tr>
+        <tr><td class="label">Üretim Personeli</td><td>&nbsp;</td></tr>
+        <tr><td class="label">Kalite Personeli</td><td>&nbsp;</td></tr>
       </table>
     </td>
-  </tr>
-  <tr>
-    <td class="left" style="padding-top:2mm;">
-      <table class="kv">
-        
-        
-      </table>
-    </td>
-    <td></td>
   </tr>
 </table>
 
