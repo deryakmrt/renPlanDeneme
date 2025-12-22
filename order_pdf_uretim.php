@@ -33,6 +33,62 @@ if (!$o) die('Sipariş bulunamadı');
 $it = $db->prepare("SELECT oi.*, p.sku, p.image AS image, p.name AS guncel_isim FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=? ORDER BY oi.id ASC");
 $it->execute([$id]);
 $items = $it->fetchAll();
+// --- [YENİ - İSTİSNALI] GRUPLAMA VE TOPLAM HESAPLAMA MANTIĞI ---
+$product_groups = [];
+
+foreach ($items as $item_row) {
+    // Verileri çek
+    $raw_sku  = trim($item_row['sku'] ?? '');
+    $raw_name = trim($item_row['name'] ?? ''); 
+    $qty      = (float)($item_row['qty'] ?? 0);
+    $unit     = trim($item_row['unit'] ?? 'Adet');
+
+    // 1. SKU Boşsa İsimden Çıkar (RN ile başlıyorsa)
+    if (empty($raw_sku) && strpos($raw_name, 'RN') === 0) {
+        $name_parts = explode(' ', $raw_name);
+        $raw_sku = $name_parts[0];
+    }
+
+    // Grup Adını Belirle
+    $group_name = 'Kodsuz Ürünler'; 
+    
+    if (!empty($raw_sku)) {
+        
+        // --- ÖZEL İSTİSNA: MELİSA RAY SERİSİ (RN-MLS-RAY) ---
+        // Bu seriyi montaj tipine göre ayırıyoruz (TR, SR, SU, SA)
+        if (strpos($raw_sku, 'RN-MLS-RAY') === 0) {
+            if (strpos($raw_sku, 'TR') !== false) {
+                $group_name = 'RN-MLS-RAY (Trimless)';
+            } elseif (strpos($raw_sku, 'SR') !== false) {
+                $group_name = 'RN-MLS-RAY (Sarkıt)';
+            } elseif (strpos($raw_sku, 'SU') !== false) {
+                $group_name = 'RN-MLS-RAY (Sıva Üstü)';
+            } elseif (strpos($raw_sku, 'SA') !== false) {
+                $group_name = 'RN-MLS-RAY (Sıva Altı)';
+            } else {
+                // Hiçbiri yoksa düz Melisa Ray olarak kalsın
+                $group_name = 'RN-MLS-RAY';
+            }
+        }
+        // --- STANDART MANTIK (Diğer Tüm Ürünler İçin) ---
+        else {
+            $parts = explode('-', $raw_sku);
+            // Eğer en az 2 parça varsa (Örn: RN ve LDN), birleştir (RN-LDN)
+            if (count($parts) >= 2) {
+                $group_name = $parts[0] . '-' . $parts[1];
+            } else {
+                $group_name = $raw_sku;
+            }
+        }
+    }
+
+    // Diziye Kaydet
+    if (!isset($product_groups[$group_name][$unit])) {
+        $product_groups[$group_name][$unit] = 0;
+    }
+    $product_groups[$group_name][$unit] += $qty;
+}
+// -----------------------------------------------------
 
 // Logo: önce yerel, yoksa uzak
 $CUSTOM_LOGO = file_exists(__DIR__ . '/assets/renled-logo.png') ? (__DIR__ . '/assets/renled-logo.png') : 'https://renplan.ditetra.com/assets/renled-logo.png';
@@ -328,6 +384,39 @@ ob_start();
       <div class="note-body"><?= h($text) ?></div>
   </div>
   <?php endforeach; ?>
+</div>
+<?php endif; ?>
+<?php if (!empty($product_groups)): ?>
+<div style="margin-top: 10mm; page-break-inside: avoid; width: 60%;">
+    <div style="font-weight: 700; font-size: 11px; border-bottom: 0.3mm solid #ccc; margin-bottom: 2mm; padding-bottom: 1mm;">
+        Ürün Grubu Toplamları
+    </div>
+    <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+        <thead>
+            <tr style="background-color: #f2f4f7;">
+                <th style="border: 0.3mm solid #000; padding: 1.5mm; text-align: left;">Grup Kodu</th>
+                <th style="border: 0.3mm solid #000; padding: 1.5mm; text-align: center;">Birim</th>
+                <th style="border: 0.3mm solid #000; padding: 1.5mm; text-align: right;">Toplam Miktar</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($product_groups as $grp_name => $units): ?>
+                <?php foreach ($units as $unit_name => $total_qty): ?>
+                <tr>
+                    <td style="border: 0.3mm solid #000; padding: 1.5mm; font-weight: bold; color: #444;">
+                        <?= h($grp_name) ?>
+                    </td>
+                    <td style="border: 0.3mm solid #000; padding: 1.5mm; text-align: center;">
+                        <?= h($unit_name) ?>
+                    </td>
+                    <td style="border: 0.3mm solid #000; padding: 1.5mm; text-align: right;">
+                        <?= number_format($total_qty, 2, ',', '.') ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
 </div>
 <?php endif; ?>
 </body>
