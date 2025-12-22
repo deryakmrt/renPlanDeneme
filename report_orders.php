@@ -315,6 +315,31 @@ include __DIR__ . '/includes/header.php';
 
 
 <div class="container-card">
+  <div class="container-card" style="margin-bottom: 20px; background: #f0fdf4; border-color: #bbf7d0;">
+    <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #166534;">📅 Günlük Faaliyet Raporları</h3>
+    <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+        
+        <div style="display: flex; gap: 10px;">
+            <?php 
+            for ($i = 0; $i < 5; $i++) {
+                $d = date('Y-m-d', strtotime("-$i days"));
+                $label = ($i === 0) ? 'Bugün' : (($i === 1) ? 'Dün' : date('d.m', strtotime($d)));
+                echo '<a href="report_daily_print.php?date='.$d.'" target="_blank" class="btn" style="background:#fff; border-color:#86efac; color:#14532d;">';
+                echo '📄 ' . $label . ' <span style="font-size:10px; color:#999;">('.date('d.m.Y', strtotime($d)).')</span>';
+                echo '</a>';
+            }
+            ?>
+        </div>
+
+        <div style="border-left: 1px solid #bbf7d0; padding-left: 20px; display: flex; align-items: center; gap: 10px;">
+            <label style="font-size: 13px; font-weight: 600; color: #166534;">Başka bir gün:</label>
+            <form action="report_daily_print.php" method="get" target="_blank" style="display:flex; gap:5px;">
+                <input type="date" name="date" class="input" style="padding: 6px; width: 140px;" required>
+                <button type="submit" class="btn btn-primary" style="padding: 6px 12px;">Raporla</button>
+            </form>
+        </div>
+    </div>
+</div>
   <h2 style="margin:0 0 14px 2px">Satış Raporları</h2>
 
   <?php if ($queryError): ?>
