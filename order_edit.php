@@ -227,7 +227,152 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
     $AUD_extra  = array('source'=>'order_edit.php','order_field_diffs'=>$AUD_orderFieldDiffs,'item_diffs'=>array('added'=>$AUD_added,'removed'=>$AUD_removed,'updated'=>$AUD_updated));
     audit_log_action('update','orders',$id,$AUD_before,$AUD_after,$AUD_extra);
   }
-redirect('orders.php');
+
+  // --- YENİ EKLENEN KISIM: SADECE YAYINLA BUTONUNA BASILDIYSA MAİL AT ---
+  if (isset($_POST['yayinla_butonu'])) {
+      try {
+          // Gerekli dosyaları çağır
+          require_once __DIR__ . '/mailing/notify.php';
+          require_once __DIR__ . '/mailing/mailer.php';
+          require_once __DIR__ . '/mailing/templates.php';
+
+          if (function_exists('rp_sql_ensure')) rp_sql_ensure();
+
+          $order_id = $id; 
+
+          // Güncel veriyi veritabanından taze çek
+          $mail_ord = $db->query("SELECT * FROM orders WHERE id=$order_id")->fetch(PDO::FETCH_ASSOC);
+
+          if ($mail_ord) {
+              // 1. Reply-To Belirle
+              $___reply_to = null;
+              $___cu_email = null;
+              if (function_exists('current_user')) {
+                  $___cu = current_user();
+                  if (!empty($___cu['email'])) $___cu_email = $___cu['email'];
+              }
+              if (isset($_SESSION['user_email']) && $_SESSION['user_email']) $___cu_email = $_SESSION['user_email'];
+              if ($___cu_email && filter_var($___cu_email, FILTER_VALIDATE_EMAIL)) $___reply_to = $___cu_email;
+
+              // 2. Müşteri Bilgilerini Çek
+              $customer_name = ''; $customer_email = ''; $customer_phone = ''; $billing_address = ''; $shipping_address = '';
+              if (!empty($mail_ord['customer_id'])) {
+                  $cst = $db->prepare("SELECT name, email, phone, billing_address, shipping_address FROM customers WHERE id=? LIMIT 1");
+                  $cst->execute([$mail_ord['customer_id']]);
+                  if ($c = $cst->fetch(PDO::FETCH_ASSOC)) {
+                      $customer_name = $c['name'] ?? '';
+                      $customer_email = $c['email'] ?? '';
+                      $customer_phone = $c['phone'] ?? '';
+                      $billing_address = $c['billing_address'] ?? '';
+                      $shipping_address = $c['shipping_address'] ?? '';
+                  }
+              }
+
+              // 3. Kalemleri Çek
+              $items_mail = [];
+              $it = $db->prepare("SELECT oi.*, p.sku, p.image FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=? ORDER BY oi.id ASC");
+              $it->execute([$order_id]);
+              $items_mail = $it->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+              // 4. Görsel Linki İçin Base URL
+              $scheme = (!empty($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http'));
+              $base_url = $scheme . '://' . $_SERVER['HTTP_HOST'];
+
+              $fix_image_url = function ($img) use ($base_url) {
+                  $img = trim($img ?? '');
+                  if (empty($img)) return '';
+                  if (preg_match('#^https?://#i', $img)) return $img;
+                  if ($img[0] === '/') return $base_url . $img;
+                  if (preg_match('#^uploads/#', $img)) return $base_url . '/' . $img;
+                  return $base_url . '/uploads/' . $img;
+              };
+
+              $fmt_date = function ($val) {
+                  if (!$val || substr($val,0,10)=='0000-00-00') return '';
+                  return date('d-m-Y', strtotime($val));
+              };
+
+              // 5. Payload Hazırla
+              $payload_order = [
+                  'order_code'          => (string)$mail_ord['order_code'],
+                  'revizyon_no'         => (string)$mail_ord['revizyon_no'],
+                  'customer_name'       => $customer_name,
+                  'customer_id'         => (string)$mail_ord['customer_id'],
+                  'email'               => $customer_email,
+                  'phone'               => $customer_phone,
+                  'billing_address'     => $billing_address,
+                  'shipping_address'    => $shipping_address,
+                  'siparis_veren'       => (string)$mail_ord['siparis_veren'],
+                  'siparisi_alan'       => (string)$mail_ord['siparisi_alan'],
+                  'siparisi_giren'      => (string)$mail_ord['siparisi_giren'],
+                  'siparis_tarihi'      => $fmt_date($mail_ord['siparis_tarihi']),
+                  'fatura_para_birimi'  => (string)($mail_ord['fatura_para_birimi'] ?: $mail_ord['currency']),
+                  'odeme_para_birimi'   => (string)$mail_ord['odeme_para_birimi'],
+                  'odeme_kosulu'        => (string)$mail_ord['odeme_kosulu'],
+                  'proje_adi'           => (string)$mail_ord['proje_adi'],
+                  'nakliye_turu'        => (string)$mail_ord['nakliye_turu'],
+                  'termin_tarihi'       => $fmt_date($mail_ord['termin_tarihi']),
+                  'baslangic_tarihi'    => $fmt_date($mail_ord['baslangic_tarihi']),
+                  'bitis_tarihi'        => $fmt_date($mail_ord['bitis_tarihi']),
+                  'teslim_tarihi'       => $fmt_date($mail_ord['teslim_tarihi']),
+                  'notes'               => (string)$mail_ord['notes'],
+                  'items'               => []
+              ];
+
+              foreach ($items_mail as $r) {
+                  $payload_order['items'][] = [
+                      'gorsel'          => $fix_image_url($r['image']),
+                      'urun_kod'        => (string)($r['sku'] ?? ''),
+                      'urun_adi'        => (string)($r['name'] ?? ''),
+                      'urun_aciklama'   => (string)($r['urun_ozeti'] ?? ''),
+                      'kullanim_alani'  => (string)($r['kullanim_alani'] ?? ''),
+                      'miktar'          => (float)($r['qty'] ?? 0),
+                      'birim'           => (string)($r['unit'] ?? ''),
+                      'termin_tarihi'   => $fmt_date($r['termin_tarihi'] ?? $mail_ord['termin_tarihi'] ?? ''),
+                      'fiyat'           => (float)($r['price'] ?? 0),
+                  ];
+              }
+
+              // 6. Gönderim
+              $___ok = false;
+              if (function_exists('rp_notify_order_created')) {
+                  // notify.php içindeki fonksiyonu kullan
+                  list($___ok, ) = rp_notify_order_created($order_id, $payload_order);
+              }
+              
+              // Eğer fonksiyon başarısız olduysa veya yoksa manuel gönder
+              if (!$___ok) {
+                  $toList = [];
+                  // Alıcıları belirle
+                  if (function_exists('rp_get_recipients')) {
+                      list($toList,,) = rp_get_recipients();
+                  } else {
+                      $cfg = function_exists('rp_cfg') ? rp_cfg() : [];
+                      $toRaw = (string)($cfg['notify']['recipients'] ?? '');
+                      foreach (explode(',', $toRaw) as $em) if($em=trim($em)) $toList[]=$em;
+                  }
+                  
+                  $bccList = [];
+                  if ($___reply_to) $bccList[] = $___reply_to;
+
+                  $viewUrl = ($base_url . '/order_view.php?id=' . $order_id);
+                  if (function_exists('rp_build_view_url')) $viewUrl = rp_build_view_url('order', $order_id);
+
+                  $subject2 = rp_subject('order', $payload_order);
+                  $html2    = rp_email_html('order', $payload_order, $viewUrl);
+                  $text2    = rp_email_text('order', $payload_order, $viewUrl);
+                  
+                  rp_send_mail($subject2, $html2, $text2, $toList, [], $bccList, $___reply_to);
+              }
+          }
+      } catch (Throwable $e) { 
+          // Hata olsa bile süreci durdurma, logla geç
+          error_log('Yayinla mail hatasi: '.$e->getMessage());
+      }
+  }
+  // ------------------------------------------------------------------------
+
+  redirect('orders.php');
 }
 
 // Dropdown verileri
