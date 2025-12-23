@@ -9,6 +9,112 @@ ini_set('display_errors','1'); ini_set('display_startup_errors','1'); error_repo
 require_once __DIR__ . '/includes/helpers.php';
 require_login();
 $db = pdo();
+// =========================================================================================
+// [YENİ] CANLI ÜRETİM YÜKÜ GRAFİK MOTORU (V2 - GENİŞLETİLMİŞ DURUM KONTROLÜ)
+// =========================================================================================
+
+// 1. Verileri Çek (Hem boşluklu 'sac lazer' hem de alt çizgili 'sac_lazer' versiyonlarını kapsar)
+$sqlStats = "SELECT o.status, oi.name, p.sku, SUM(oi.qty) as total_qty
+             FROM order_items oi
+             JOIN orders o ON oi.order_id = o.id
+             LEFT JOIN products p ON oi.product_id = p.id
+             WHERE o.status IN (
+                'tedarik', 
+                'sac_lazer', 'sac lazer', 
+                'boru_lazer', 'boru lazer', 
+                'kaynak', 
+                'boya', 
+                'elektrik_montaj', 'elektrik montaj', 
+                'test', 
+                'paketleme'
+             )
+             GROUP BY o.status, p.sku, oi.name";
+
+$stS = $db->query($sqlStats);
+$rowsS = $stS->fetchAll(PDO::FETCH_ASSOC);
+
+// 2. Verileri İşle ve Grupla
+$data_tedarik = []; // Üretime Girecekler
+$data_uretim  = []; // Sahada Olanlar
+
+$total_tedarik_qty = 0;
+$total_uretim_qty  = 0;
+
+// Üretim aşamaları (Tüm varyasyonlarıyla)
+$production_steps = [
+    'sac_lazer', 'sac lazer', 
+    'boru_lazer', 'boru lazer', 
+    'kaynak', 
+    'boya', 
+    'elektrik_montaj', 'elektrik montaj', 
+    'test', 
+    'paketleme'
+];
+
+foreach ($rowsS as $r) {
+    $status = $r['status'];
+    $qty    = (float)$r['total_qty'];
+    
+    // --- AİLE GRUBU BELİRLEME ---
+    $raw_sku  = trim($r['sku'] ?? '');
+    $raw_name = trim($r['name'] ?? '');
+    
+    if (empty($raw_sku) && strpos($raw_name, 'RN') === 0) {
+        $parts = explode(' ', $raw_name);
+        $raw_sku = $parts[0];
+    }
+    
+    $family_code = 'DİĞER'; 
+    
+    if (!empty($raw_sku)) {
+        if (strpos($raw_sku, 'RN-MLS-RAY') === 0) {
+            if (strpos($raw_sku, 'TR') !== false) $family_code = 'RN-MLS-RAY (TR)';
+            elseif (strpos($raw_sku, 'SR') !== false) $family_code = 'RN-MLS-RAY (SR)';
+            elseif (strpos($raw_sku, 'SU') !== false) $family_code = 'RN-MLS-RAY (SU)';
+            elseif (strpos($raw_sku, 'SA') !== false) $family_code = 'RN-MLS-RAY (SA)';
+            else $family_code = 'RN-MLS-RAY';
+        } 
+        else {
+            $parts = explode('-', $raw_sku);
+            if (count($parts) >= 2) {
+                $family_code = $parts[0] . '-' . $parts[1];
+            } else {
+                $family_code = $raw_sku;
+            }
+        }
+    }
+
+    // KATEGORİLEME MANTIĞI
+    if ($status === 'tedarik') {
+        if (!isset($data_tedarik[$family_code])) $data_tedarik[$family_code] = 0;
+        $data_tedarik[$family_code] += $qty;
+        $total_tedarik_qty += $qty;
+    } 
+    elseif (in_array($status, $production_steps)) {
+        if (!isset($data_uretim[$family_code])) $data_uretim[$family_code] = 0;
+        $data_uretim[$family_code] += $qty;
+        $total_uretim_qty += $qty;
+    }
+}
+
+// 3. JSON Hazırla (Büyükten küçüğe)
+arsort($data_tedarik);
+arsort($data_uretim);
+
+function limit_chart_data($arr) {
+    if (count($arr) <= 12) return $arr;
+    $top = array_slice($arr, 0, 12, true);
+    $others = array_slice($arr, 12, null, true);
+    $top['DİĞER'] = array_sum($others);
+    return $top;
+}
+
+$data_tedarik = limit_chart_data($data_tedarik);
+$data_uretim  = limit_chart_data($data_uretim);
+
+$json_tedarik = json_encode(['labels'=>array_keys($data_tedarik), 'data'=>array_values($data_tedarik)], JSON_UNESCAPED_UNICODE);
+$json_uretim  = json_encode(['labels'=>array_keys($data_uretim),  'data'=>array_values($data_uretim)], JSON_UNESCAPED_UNICODE);
+// =========================================================================================
 
 if (!function_exists('h')) { function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); } }
 if (!function_exists('fmt_tr_money')) { function fmt_tr_money($v){ if($v===null||$v==='')return ''; return number_format((float)$v,2,',','.'); }
@@ -340,6 +446,125 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div>
 </div>
+<div style="margin-bottom: 30px; border-bottom: 2px dashed #e2e8f0; padding-bottom: 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h3 style="margin:0; color:#312e81; font-size:18px; display:flex; align-items:center; gap:10px;">
+            🏭 Canlı Üretim Sahası
+            <span style="background:#e0e7ff; color:#3730a3; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:normal;">Anlık Adet Yükü</span>
+        </h3>
+        <div style="font-size:12px; color:#999;">
+            <span style="display:inline-block; width:8px; height:8px; background:#22c55e; border-radius:50%; margin-right:5px;"></span>
+            Canlı Veri
+        </div>
+    </div>
+    
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+        
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:20px; position:relative; overflow:hidden;">
+            <div style="position:absolute; top:-10px; right:-10px; font-size:80px; opacity:0.05; color:#15803d;">⏳</div>
+            <div style="text-align:center; margin-bottom:15px; position:relative; z-index:2;">
+                <h4 style="margin:0; color:#166534; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Üretime Girecekler</h4>
+                <div style="font-size:13px; color:#15803d; opacity:0.8;">(Tedarik Aşaması)</div>
+                <div style="font-size:28px; font-weight:800; color:#15803d; margin-top:5px; text-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                    <?=number_format($total_tedarik_qty,0,',','.')?> <span style="font-size:14px;font-weight:600;">Adet</span>
+                </div>
+            </div>
+            <div style="height:250px; position:relative; z-index:2;">
+                <canvas id="chartTedarik"></canvas>
+            </div>
+        </div>
+
+        <div style="background:#fff7ed; border:1px solid #ffedd5; border-radius:12px; padding:20px; position:relative; overflow:hidden;">
+            <div style="position:absolute; top:-10px; right:-10px; font-size:80px; opacity:0.05; color:#c2410c;">⚙️</div>
+            <div style="text-align:center; margin-bottom:15px; position:relative; z-index:2;">
+                <h4 style="margin:0; color:#9a3412; font-size:15px; text-transform:uppercase; letter-spacing:0.5px;">Üretimde Olanlar</h4>
+                <div style="font-size:13px; color:#c2410c; opacity:0.8;">(Lazer'den Paketlemeye)</div>
+                <div style="font-size:28px; font-weight:800; color:#c2410c; margin-top:5px; text-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                    <?=number_format($total_uretim_qty,0,',','.')?> <span style="font-size:14px;font-weight:600;">Adet</span>
+                </div>
+            </div>
+            <div style="height:250px; position:relative; z-index:2;">
+                <canvas id="chartUretim"></canvas>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const dTedarik = <?=$json_tedarik?>;
+    const dUretim  = <?=$json_uretim?>;
+
+    // Otomatik Renk Üretici (Canlı Pastel Tonlar)
+    function generateColors(count, hueStart) {
+        let colors = [];
+        for(let i=0; i<count; i++) {
+            // Renkleri birbirinden uzaklaştırarak üret
+            let hue = (hueStart + (i * 45)) % 360; 
+            colors.push(`hsl(${hue}, 70%, 55%)`);
+        }
+        return colors;
+    }
+
+    function renderChart(id, dataObj, startHue) {
+        const container = document.getElementById(id).parentNode;
+        
+        if(dataObj.data.length === 0) {
+            container.innerHTML = "<div style='display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-style:italic;'><div style='font-size:24px;margin-bottom:5px;'>∅</div>Veri Yok</div>";
+            return;
+        }
+
+        const ctx = document.getElementById(id).getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: dataObj.labels,
+                datasets: [{
+                    data: dataObj.data,
+                    backgroundColor: generateColors(dataObj.data.length, startHue),
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 15
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        position: 'right', 
+                        labels: { boxWidth: 12, font: {size: 11}, padding: 15 } 
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        titleColor: '#1e293b',
+                        bodyColor: '#1e293b',
+                        borderColor: '#e2e8f0',
+                        borderWidth: 1,
+                        padding: 10,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                let value = context.parsed;
+                                return ' ' + label + ': ' + value + ' Adet';
+                            }
+                        }
+                    }
+                },
+                layout: { padding: 10 },
+                animation: {
+                    animateScale: true,
+                    animateRotate: true
+                }
+            }
+        });
+    }
+
+    renderChart('chartTedarik', dTedarik, 150); // 150: Yeşil tonlarından başla
+    renderChart('chartUretim', dUretim, 25);    // 25: Turuncu tonlarından başla
+});
+</script>
   <h2 style="margin:0 0 14px 2px">Satış Raporları</h2>
 
   <?php if ($queryError): ?>
