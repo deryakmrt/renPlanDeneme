@@ -508,14 +508,15 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     function renderChart(id, dataObj, startHue) {
-        const container = document.getElementById(id).parentNode;
+        const canvas = document.getElementById(id);
+        const container = canvas.parentNode;
         
         if(dataObj.data.length === 0) {
             container.innerHTML = "<div style='display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-style:italic;'><div style='font-size:24px;margin-bottom:5px;'>∅</div>Veri Yok</div>";
             return;
         }
 
-        const ctx = document.getElementById(id).getContext('2d');
+        const ctx = canvas.getContext('2d');
         new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -534,7 +535,32 @@ document.addEventListener('DOMContentLoaded', function(){
                 plugins: {
                     legend: { 
                         position: 'right', 
-                        labels: { boxWidth: 12, font: {size: 11}, padding: 15 } 
+                        labels: { boxWidth: 12, font: {size: 11}, padding: 15 },
+                        // [GÜNCELLENMİŞ] TIKLAMA OLAYI
+                        onClick: function(e, legendItem, legend) {
+                            const index = legendItem.index;
+                            const ci = legend.chart;
+                            
+                            // 1. Gizle/Göster işlemini yap
+                            ci.toggleDataVisibility(index);
+                            ci.update();
+
+                            // 2. Görünür Olanları Yeniden Topla
+                            let visibleTotal = 0;
+                            ci.data.datasets[0].data.forEach((val, i) => {
+                                // getDataVisibility(i) false değilse (true veya undefined) görünür demektir.
+                                if (ci.getDataVisibility(i) !== false) {
+                                    visibleTotal += parseFloat(val);
+                                }
+                            });
+
+                            // 3. Ekrandaki Sayıyı Güncelle
+                            // DOM Yolu: Canvas -> Parent(Chart Div) -> Kardeş(Başlık Divi) -> Son Çocuk(Sayı Divi)
+                            const infoDiv = ci.canvas.parentElement.previousElementSibling;
+                            if(infoDiv && infoDiv.lastElementChild) {
+                                infoDiv.lastElementChild.innerHTML = visibleTotal.toLocaleString('tr-TR') + ' <span style="font-size:14px;font-weight:600;">Adet</span>';
+                            }
+                        }
                     },
                     tooltip: {
                         backgroundColor: 'rgba(255, 255, 255, 0.9)',
