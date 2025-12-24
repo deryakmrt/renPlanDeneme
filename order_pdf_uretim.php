@@ -33,7 +33,64 @@ if (!$o) die('Sipariş bulunamadı');
 $it = $db->prepare("SELECT oi.*, p.sku, p.image AS image, p.name AS guncel_isim FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=? ORDER BY oi.id ASC");
 $it->execute([$id]);
 $items = $it->fetchAll();
-// --- [YENİ - İSTİSNALI] GRUPLAMA VE TOPLAM HESAPLAMA MANTIĞI ---
+// // --- [YENİ - İSTİSNALI] GRUPLAMA VE TOPLAM HESAPLAMA MANTIĞI ---
+// $product_groups = [];
+
+// foreach ($items as $item_row) {
+//     // Verileri çek
+//     $raw_sku  = trim($item_row['sku'] ?? '');
+//     $raw_name = trim($item_row['name'] ?? ''); 
+//     $qty      = (float)($item_row['qty'] ?? 0);
+//     $unit     = trim($item_row['unit'] ?? 'Adet');
+
+//     // 1. SKU Boşsa İsimden Çıkar (RN ile başlıyorsa)
+//     if (empty($raw_sku) && strpos($raw_name, 'RN') === 0) {
+//         $name_parts = explode(' ', $raw_name);
+//         $raw_sku = $name_parts[0];
+//     }
+
+//     // Grup Adını Belirle
+//     $group_name = 'Kodsuz Ürünler'; 
+    
+//     if (!empty($raw_sku)) {
+        
+//         // --- ÖZEL İSTİSNA: MELİSA RAY SERİSİ (RN-MLS-RAY) ---
+//         // Bu seriyi montaj tipine göre ayırıyoruz (TR, SR, SU, SA)
+//         if (strpos($raw_sku, 'RN-MLS-RAY') === 0) {
+//             if (strpos($raw_sku, 'TR') !== false) {
+//                 $group_name = 'RN-MLS-RAY (Trimless)';
+//             } elseif (strpos($raw_sku, 'SR') !== false) {
+//                 $group_name = 'RN-MLS-RAY (Sarkıt)';
+//             } elseif (strpos($raw_sku, 'SU') !== false) {
+//                 $group_name = 'RN-MLS-RAY (Sıva Üstü)';
+//             } elseif (strpos($raw_sku, 'SA') !== false) {
+//                 $group_name = 'RN-MLS-RAY (Sıva Altı)';
+//             } else {
+//                 // Hiçbiri yoksa düz Melisa Ray olarak kalsın
+//                 $group_name = 'RN-MLS-RAY';
+//             }
+//         }
+//         // --- STANDART MANTIK (Diğer Tüm Ürünler İçin) ---
+//         else {
+//             $parts = explode('-', $raw_sku);
+//             // Eğer en az 2 parça varsa (Örn: RN ve LDN), birleştir (RN-LDN)
+//             if (count($parts) >= 2) {
+//                 $group_name = $parts[0] . '-' . $parts[1];
+//             } else {
+//                 $group_name = $raw_sku;
+//             }
+//         }
+//     }
+
+//     // Diziye Kaydet
+//     if (!isset($product_groups[$group_name][$unit])) {
+//         $product_groups[$group_name][$unit] = 0;
+//     }
+//     $product_groups[$group_name][$unit] += $qty;
+// }
+// // -----------------------------------------------------
+// --- [GÜNCELLENDİ] GRUPLAMA VE TOPLAM HESAPLAMA MANTIĞI ---
+// Eski aile/seri mantığı kaldırıldı. Sadece birebir aynı kodlu ürünler toplanır.
 $product_groups = [];
 
 foreach ($items as $item_row) {
@@ -43,43 +100,18 @@ foreach ($items as $item_row) {
     $qty      = (float)($item_row['qty'] ?? 0);
     $unit     = trim($item_row['unit'] ?? 'Adet');
 
-    // 1. SKU Boşsa İsimden Çıkar (RN ile başlıyorsa)
+    // SKU Boşsa İsimden Çıkar (Güvenlik önlemi olarak kalsın)
     if (empty($raw_sku) && strpos($raw_name, 'RN') === 0) {
         $name_parts = explode(' ', $raw_name);
         $raw_sku = $name_parts[0];
     }
 
-    // Grup Adını Belirle
-    $group_name = 'Kodsuz Ürünler'; 
-    
+    // Grup Adını Belirle: Direkt olarak SKU (Kod) neyse onu kullan.
+    // Eğer kod yoksa ürün adını kullan. Parçalama/Birleştirme YOK.
     if (!empty($raw_sku)) {
-        
-        // --- ÖZEL İSTİSNA: MELİSA RAY SERİSİ (RN-MLS-RAY) ---
-        // Bu seriyi montaj tipine göre ayırıyoruz (TR, SR, SU, SA)
-        if (strpos($raw_sku, 'RN-MLS-RAY') === 0) {
-            if (strpos($raw_sku, 'TR') !== false) {
-                $group_name = 'RN-MLS-RAY (Trimless)';
-            } elseif (strpos($raw_sku, 'SR') !== false) {
-                $group_name = 'RN-MLS-RAY (Sarkıt)';
-            } elseif (strpos($raw_sku, 'SU') !== false) {
-                $group_name = 'RN-MLS-RAY (Sıva Üstü)';
-            } elseif (strpos($raw_sku, 'SA') !== false) {
-                $group_name = 'RN-MLS-RAY (Sıva Altı)';
-            } else {
-                // Hiçbiri yoksa düz Melisa Ray olarak kalsın
-                $group_name = 'RN-MLS-RAY';
-            }
-        }
-        // --- STANDART MANTIK (Diğer Tüm Ürünler İçin) ---
-        else {
-            $parts = explode('-', $raw_sku);
-            // Eğer en az 2 parça varsa (Örn: RN ve LDN), birleştir (RN-LDN)
-            if (count($parts) >= 2) {
-                $group_name = $parts[0] . '-' . $parts[1];
-            } else {
-                $group_name = $raw_sku;
-            }
-        }
+        $group_name = $raw_sku;
+    } else {
+        $group_name = $raw_name ?: 'Diğer Ürünler';
     }
 
     // Diziye Kaydet

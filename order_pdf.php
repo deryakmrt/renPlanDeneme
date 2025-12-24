@@ -280,6 +280,67 @@ ob_start();
   <tr><td class="label">Genel Toplam</td><td class="value"><?= $fmt($genel) ?> <?= h($currencySymbol) ?></td></tr>
 </table>
 
+<?php
+// 1. Gruplama Mantığı (Sadece Kod Eşleşmesi - Basit)
+$product_groups = [];
+foreach ($items as $item_row) {
+    $raw_sku  = trim($item_row['sku'] ?? '');
+    $raw_name = trim($item_row['guncel_isim'] ?? $item_row['name'] ?? ''); 
+    $qty      = (float)($item_row['qty'] ?? 0);
+    $unit     = trim($item_row['unit'] ?? 'Adet');
+
+    if (empty($raw_sku) && strpos($raw_name, 'RN') === 0) {
+        $name_parts = explode(' ', $raw_name);
+        $raw_sku = $name_parts[0];
+    }
+
+    if (!empty($raw_sku)) {
+        $group_name = $raw_sku;
+    } else {
+        $group_name = $raw_name ?: 'Diğer Ürünler';
+    }
+
+    if (!isset($product_groups[$group_name][$unit])) {
+        $product_groups[$group_name][$unit] = 0;
+    }
+    $product_groups[$group_name][$unit] += $qty;
+}
+?>
+
+<?php if (!empty($product_groups)): ?>
+<div style="margin-top: 10mm; page-break-inside: avoid; width: 60%;">
+    <div style="font-weight: 700; font-size: 11px; border-bottom: 0.3mm solid #ccc; margin-bottom: 2mm; padding-bottom: 1mm;">
+        Ürün Grubu Toplamları
+    </div>
+    <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+        <thead>
+            <tr style="background-color: #f2f4f7;">
+                <th style="border: 0.3mm solid #000; padding: 1.5mm; text-align: left;">Grup Kodu</th>
+                <th style="border: 0.3mm solid #000; padding: 1.5mm; text-align: center;">Birim</th>
+                <th style="border: 0.3mm solid #000; padding: 1.5mm; text-align: right;">Toplam Miktar</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($product_groups as $grp_name => $units): ?>
+                <?php foreach ($units as $unit_name => $total_qty): ?>
+                <tr>
+                    <td style="border: 0.3mm solid #000; padding: 1.5mm; font-weight: bold; color: #444;">
+                        <?= h($grp_name) ?>
+                    </td>
+                    <td style="border: 0.3mm solid #000; padding: 1.5mm; text-align: center;">
+                        <?= h($unit_name) ?>
+                    </td>
+                    <td style="border: 0.3mm solid #000; padding: 1.5mm; text-align: right;">
+                        <?= number_format($total_qty, 2, ',', '.') ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+<?php endif; ?>
+
 </body>
 </html>
 <?php
