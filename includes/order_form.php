@@ -710,6 +710,7 @@ function bindSkuInputs(scope){
   var root = scope || document;
   var inputs = root.querySelectorAll('.stok-kodu');
   inputs.forEach(function(inp){
+    // Avoid double-binding
     if(inp.dataset.boundSku === '1') return;
     inp.dataset.boundSku = '1';
     inp.addEventListener('change', async function(){
@@ -722,31 +723,19 @@ function bindSkuInputs(scope){
           var tr = this.closest('tr');
           var sel = tr.querySelector('select[name="product_id[]"]');
           if(sel){ sel.value = String(data.id); try{ sel.dispatchEvent(new Event('change', {bubbles:true})); }catch(_e){ sel.dispatchEvent(new Event('change')); } }
-          
+          // Fill fields in case user didn't choose from select
           var name = tr.querySelector('input[name="name[]"]');
           var unit = tr.querySelector('input[name="unit[]"]');
-          var price = tr.querySelector('input[name="price[]"]'); // Fiyat alanı
+          var price = tr.querySelector('input[name="price[]"]');
           var oz = tr.querySelector('input[name="urun_ozeti[]"]');
           var ka = tr.querySelector('input[name="kullanim_alani[]"]');
-
           if(name && data.name) name.value = data.name;
           if(unit && data.unit) unit.value = data.unit;
-          
-          // [DÜZELTME BAŞLANGIÇ] ---------------------------
+          // Fiyatı TR formatına (virgüllü) çevirip yazıyoruz:
           if(price && (data.price!==undefined)) {
              var pVal = parseFloat(data.price);
-             // Eğer veritabanındaki fiyat 0'dan büyükse GÜNCELLE.
-             // Ama 0 ise ve siz zaten elle bir fiyat yazdıysanız DOKUNMA.
-             if (pVal > 0) {
-                 price.value = pVal.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-             } else {
-                 // Gelen fiyat 0. Eğer kutucuk zaten boşsa veya 0 ise 0,00 yap. Doluysa elleşme.
-                 var currentVal = parseFloat(price.value.replace(/\./g,'').replace(',','.') || 0);
-                 if (currentVal === 0) price.value = '0,00';
-             }
+             price.value = pVal.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
           }
-          // [DÜZELTME BİTİŞ] ------------------------------
-
           if(oz && data.urun_ozeti) oz.value = data.urun_ozeti;
           if(ka && data.kullanim_alani) ka.value = data.kullanim_alani;
         }else{
@@ -773,38 +762,26 @@ function onPickProduct(sel){
   tr.querySelector('input[name="name[]"]').value = opt.getAttribute('data-name') || '';
   tr.querySelector('input[name="unit[]"]').value = opt.getAttribute('data-unit') || 'Adet';
   
-  // [DÜZELTME BAŞLANGIÇ] ---------------------------
-  var priceInput = tr.querySelector('input[name="price[]"]');
-  if(priceInput) {
-      var newPrice = parseFloat(opt.getAttribute('data-price') || 0);
-      
-      // Veritabanı fiyatı 0'dan büyükse yaz.
-      if (newPrice > 0) {
-          priceInput.value = newPrice.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-      } else {
-          // Veritabanı fiyatı 0 ise, mevcut kutudaki değere bak.
-          var currentVal = parseFloat(priceInput.value.replace(/\./g,'').replace(',','.') || 0);
-          // Sadece kutu boş veya 0 ise güncelle, doluysa dokunma.
-          if (currentVal === 0) priceInput.value = '0,00';
-      }
-  }
-  // [DÜZELTME BİTİŞ] ------------------------------
-
+  <?php if ($__is_admin_like): ?>
+    // Data attribute'dan gelen noktalı fiyatı al, virgüllüye çevir
+    var rawPrice = opt.getAttribute('data-price') || '0';
+    var floatPrice = parseFloat(rawPrice);
+    var trPrice = floatPrice.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    tr.querySelector('input[name="price[]"]').value = trPrice;
+  <?php endif; ?>
   tr.querySelector('input[name="urun_ozeti[]"]').value = opt.getAttribute('data-ozet') || '';
   tr.querySelector('input[name="kullanim_alani[]"]').value = opt.getAttribute('data-kalan') || '';
-  
-  // Görsel güncelleme
-  var imgCell = tr.querySelector('.urun-gorsel-img');
-  var newImg = opt.getAttribute('data-image');
-  if(imgCell){
-      if(newImg){
-          // URL düzeltme (gerekirse)
-          if(newImg.indexOf('http')!==0 && newImg.indexOf('/')!==0) newImg = '/uploads/products/'+newImg;
-          imgCell.src = newImg;
-          imgCell.style.display = 'block';
-      } else {
-          imgCell.style.display = 'none';
-      }
+  var raw = opt.getAttribute('data-image') || '';
+  if (raw && !(raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('/'))) {
+    if (raw.startsWith('uploads/')) raw = '/' + raw;
+    else if (raw.startsWith('./')) raw = raw.slice(1);
+    else raw = '/uploads/' + raw;
+  }
+  var imgEl = tr.querySelector('.urun-gorsel-img');
+  if (imgEl) {
+    imgEl.src = raw || '';
+    imgEl.alt = raw ? 'Ürün görseli' : '';
+    imgEl.style.display = raw ? 'block' : 'none';
   }
 }
 
