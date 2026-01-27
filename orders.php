@@ -21,7 +21,121 @@
     text-align: center;
   }
 
+/* --- GÜNCELLENMİŞ DASHBOARD TASARIMI V2 --- */
   
+/* 1. Ana Panel (GÜÇLÜ METALİK GRADYAN DOKUSU) */
+  .dashboard-control-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      
+      /* BELİRGİN GRADYAN GEÇİŞİ */
+      /* %0 Sıcak Altın/Bakır -> %50 Beyaz (Temiz) -> %100 Tatlı Gül Rengi */
+      /* Bu geçiş, panele 'metalik bir parlama' hissi verir */
+      background: linear-gradient(110deg, #fbe4c5ff 10%, #fff5f0 50%, #ffe3e4ff 100%);
+      
+      /* DETAYLAR */
+      border: 1px solid #ffdcb3; /* Çerçeve artık belirgin bir altın tonunda */
+      border-left: 6px solid #ff6b00; /* Sol vurgu (Neon Turuncu) */
+      
+      white-space: nowrap;
+      overflow-x: auto;
+
+      /* HİZALAMA */
+      width: 98% !important;
+      max-width: 98% !important;
+      margin: 15px auto !important;
+      border-radius: 10px;
+      
+      /* ÜÇ BOYUTLU GÖLGE */
+      /* Panelin havada süzüldüğünü hissettiren sıcak gölge */
+      box-shadow: 0 10px 15px -3px rgba(255, 107, 0, 0.08), 
+                  0 4px 6px -2px rgba(255, 107, 0, 0.05);
+  }
+
+  /* 2. Sol Bölüm (Buton + Arama + Filtre) */
+  .dashboard-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1; /* Sol taraf genişlesin */
+  }
+
+  /* 3. Sağ Bölüm (Toplu İşlemler) */
+  .dashboard-right {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: #f8fafc;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      margin-left: auto; /* En sağa yasla */
+  }
+
+  /* 4. NEON TURUNCU BUTON (Dikkat Çekici) */
+  .btn-dashboard-neon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #ff9f43 0%, #ff6b00 100%); /* Gradyan Geçiş */
+      color: #fff !important;
+      border: none;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 8px 20px;
+      border-radius: 50px;
+      text-transform: uppercase;
+      text-decoration: none !important;
+      box-shadow: 0 4px 15px rgba(255, 107, 0, 0.4); /* Neon Parlama */
+      transition: all 0.3s ease;
+      white-space: nowrap;
+  }
+  .btn-dashboard-neon:hover {
+      background: linear-gradient(135deg, #ff6b00 0%, #e65100 100%);
+      box-shadow: 0 6px 20px rgba(255, 107, 0, 0.6); /* Parlama Artışı */
+      transform: translateY(-2px);
+  }
+
+  /* 5. Kompakt Arama Kutusu */
+  .input-dashboard {
+      padding-left: 30px !important;
+      border-radius: 20px !important;
+      border: 1px solid #cbd5e1;
+      height: 36px;
+      width: 200px !important; /* Sabit genişlik */
+      font-size: 13px;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E") no-repeat 10px center;
+  }
+
+  /* 6. Kompakt Select Kutusu (Durum) */
+  .select-dashboard {
+      border-radius: 20px !important;
+      border: 1px solid #cbd5e1;
+      height: 36px;
+      padding-left: 10px;
+      font-size: 13px;
+      background-color: #fff;
+      cursor: pointer;
+      width: 140px !important; /* Genişliği sınırladık */
+  }
+
+  /* 7. Filtrele Butonu */
+  .btn-dashboard-filter {
+      height: 36px;
+      border-radius: 20px !important;
+      font-size: 13px;
+      padding: 0 15px;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      color: #64748b;
+  }
+  .btn-dashboard-filter:hover {
+      background: #f1f5f9;
+      color: #334155;
+  }
 /* === SCOPED: wpstat pill === */
 .wpstat-wrap{display:flex;flex-direction:column;align-items:center;gap:.35rem}
 .wpstat-track{display:block; width:140px;height:24px;background:#e8eaee;border-radius:999px;position:relative;box-shadow:inset 0 1px 2px rgba(0,0,0,.06)}
@@ -827,37 +941,57 @@ $sql .= " LIMIT " . (int)$per_page . " OFFSET " . (int)$offset;
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 ?>
-<div class="row mb" style="color:#000; font-size:14px; align-items:center; gap:12px; flex-wrap:nowrap; flex-direction:row;align-items:center;flex-wrap:nowrap;gap:12px;">
-  <a class="btn primary" href="order_add.php">Yeni Sipariş</a>
-  <form method="post" action="orders.php?a=bulk_update" style="color:#000; font-size:14px; display:flex;gap:8px;align-items:center;flex-direction:row;flex-wrap:nowrap;" id="bulkForm" onsubmit="return collectBulkIds(this)"><?php csrf_input(); ?>
-    <select name="bulk_status" style="color:#000; font-size:14px; max-width:160px;">
-      <a href="order_new.php" class="btn primary">Yeni Sipariş</a>
-<option value="">Toplu İşlemler</option>
-      <option value="tedarik">Tedarik</option>
-      <option value="sac lazer">Sac Lazer</option>
-      <option value="boru lazer">Boru Lazer</option>
-      <option value="kaynak">Kaynak</option>
-      <option value="boya">Boya</option>
-      <option value="elektrik montaj">Elektrik Montaj</option>
-      <option value="test">Test</option>
-      <option value="paketleme">Paketleme</option>
-      <option value="sevkiyat">Sevkiyat</option>
-      <option value="teslim edildi">Teslim Edildi</option>
-    </select>
-    <button type="submit" class="btn">Uygula</button>
-  </form>
-  
-<?php if (($action ?? 'list') === 'list') : ?><form method="post" action="orders.php?a=delete_all" onsubmit="return confirm('TÜM siparişleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');" style="color:#000; font-size:14px; display:inline-block;margin-left:8px;"><?php csrf_input(); ?></form><?php endif; ?>
-  <form class="row" method="get" style="color:#000; font-size:14px; gap:8px; align-items:center; flex:0 0 auto;">
-    <input name="q" placeholder="Sipariş kodu / müşteri ara…" value="<?= h($q) ?>" style="color:#000; font-size:14px; width:280px; max-width:40vw;">
-    <select name="status" style="color:#000; font-size:14px; min-width:180px;">
-      <option value="">Durum (hepsi)</option>
-      <?php foreach(['tedarik'=>'Tedarik','sac lazer'=>'Sac Lazer','boru lazer'=>'Boru Lazer','kaynak'=>'Kaynak','boya'=>'Boya','elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi'] as $k=>$v): ?>
-        <option value="<?= h($k) ?>" <?= $status===$k?'selected':'' ?>><?= h($v) ?></option>
-      <?php endforeach; ?>
-    </select>
-    <button class="btn">Ara</button>
-  </form>
+<div class="dashboard-control-bar">
+
+  <div class="dashboard-left">
+      
+      <a class="btn-dashboard-neon" href="order_add.php">
+          <span>➕</span> YENİ SİPARİŞ
+      </a>
+
+      <form method="get" style="display:flex; gap:8px; align-items:center; margin:0;">
+          
+          <input name="q" class="input-dashboard" placeholder="🧐Ara..." value="<?= h($q) ?>">
+
+          <select name="status" class="select-dashboard">
+              <option value="">Durum (Tümü)</option>
+              <?php foreach(['tedarik'=>'Tedarik','sac lazer'=>'Sac Lazer','boru lazer'=>'Boru Lazer','kaynak'=>'Kaynak','boya'=>'Boya','elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi'] as $k=>$v): ?>
+                <option value="<?= h($k) ?>" <?= $status===$k?'selected':'' ?>><?= h($v) ?></option>
+              <?php endforeach; ?>
+          </select>
+
+          <button class="btn-dashboard-filter">Filtrele</button>
+      </form>
+  </div>
+
+  <div class="dashboard-right">
+      <form method="post" action="orders.php?a=bulk_update" style="display:flex; gap:5px; align-items:center; margin:0;" id="bulkForm" onsubmit="return collectBulkIds(this)">
+          <?php csrf_input(); ?>
+          <span style="font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase;">Toplu İşlem:</span>
+          
+          <select name="bulk_status" style="font-size:12px; padding:4px; border:1px solid #e2e8f0; border-radius:4px; background:#fff;">
+              <option value="">Seçiniz...</option>
+              <option value="tedarik">Tedarik</option>
+              <option value="sac lazer">Sac Lazer</option>
+              <option value="boru lazer">Boru Lazer</option>
+              <option value="kaynak">Kaynak</option>
+              <option value="boya">Boya</option>
+              <option value="elektrik montaj">Elektrik Montaj</option>
+              <option value="test">Test</option>
+              <option value="paketleme">Paketleme</option>
+              <option value="sevkiyat">Sevkiyat</option>
+              <option value="teslim edildi">Teslim Edildi</option>
+          </select>
+          <button type="submit" class="btn btn-sm btn-light" style="font-size:11px; border:1px solid #e2e8f0;">Uygula</button>
+      </form>
+      
+      <?php if (($action ?? 'list') === 'list') : ?>
+        <form method="post" action="orders.php?a=delete_all" onsubmit="return confirm('TÜM siparişleri silmek istediğinize emin misiniz?');" style="margin:0;">
+            <?php csrf_input(); ?>
+        </form>
+      <?php endif; ?>
+  </div>
+
 </div>
 
 
