@@ -267,6 +267,17 @@ td .wpstat-wrap{margin:auto}
       overflow: hidden !important; /* Dış scroll asla çıkmasın */
   }
 
+  /* --- SAYFA GENİŞLETME AYARI (Full Width) --- */
+  /* Container ve Wrap sınıflarının daraltmasını iptal et */
+  .container, .wrap, .card {
+      max-width: 98% !important; /* Genişlik sınırını kaldır */
+      width: 98% !important;     /* Ekranın %99'unu kapla */
+      margin-left: auto !important;
+      margin-right: auto !important;
+      padding-left: 5px !important;  /* Kenarlara yapışmasın diye minik boşluk */
+      padding-right: 5px !important;
+  }
+
   /* 2. Header.php'den gelen ana kapsayıcıyı (.wrap) ekran boyuna eşitle */
   .wrap {
       height: 100vh; /* Ekran yüksekliği kadar */
