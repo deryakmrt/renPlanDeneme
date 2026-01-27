@@ -1373,8 +1373,28 @@ endif;
   $end   = min($total_pages, $page + $window);
 ?>
 <div class="row" style="color:#000; font-size:14px; margin:10px 0; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-  <!-- pager removed -->
+  
+  <div class="pager d-flex gap-1" style="color:#000; font-size:14px; flex:1 1 auto; margin-top:6px;">
+    <?php if ($page > 1): ?>
+      <a class="btn" href="<?= h($first_link) ?>">&laquo; İlk</a>
+      <a class="btn" href="<?= h($prev_link) ?>">&lsaquo; Önceki</a>
+    <?php else: ?>
+      <span class="btn disabled">&laquo; İlk</span>
+      <span class="btn disabled">&lsaquo; Önceki</span>
+    <?php endif; ?>
 
+    <?php for($i=$start;$i<=$end;$i++): $lnk = __orders_page_link($i, $base); ?>
+      <a class="btn <?= $i==(int)$page?'btn-primary':'' ?>" href="<?= h($lnk) ?>"><?= (int)$i ?></a>
+    <?php endfor; ?>
+
+    <?php if ($page < $total_pages): ?>
+      <a class="btn" href="<?= h($next_link) ?>">Sonraki &rsaquo;</a>
+      <a class="btn" href="<?= h($last_link) ?>">Son &raquo;</a>
+    <?php else: ?>
+      <span class="btn disabled">Sonraki &rsaquo;</span>
+      <span class="btn disabled">Son &raquo;</span>
+    <?php endif; ?>
+  </div>
   <form method="get" class="row" style="color:#000; font-size:14px; gap:6px; align-items:center; flex:0 0 auto;">
     <label>Sayfa:</label>
     <input type="number" name="page" value="<?= (int)$page ?>" min="1" max="<?= (int)$total_pages ?>" style="color:#000; font-size:14px; width:72px">
