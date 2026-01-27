@@ -253,9 +253,73 @@ td .wpstat-wrap{margin:auto}
 }
 
 /* Kalan süreye göre renk pozisyonu */
-.btn-delete-timer[data-remaining] {
-  /* JS ile güncellenecek */
-}
+  .btn-delete-timer[data-remaining] {
+    /* JS ile güncellenecek */
+  }
+
+  /* --- EXCEL MODU / SABİT DÜZEN (APP MODE) --- */
+  
+  /* 1. Sayfanın en dışındaki ana kaydırmayı tamamen kapat */
+  html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden !important; /* Dış scroll asla çıkmasın */
+  }
+
+  /* 2. Header.php'den gelen ana kapsayıcıyı (.wrap) ekran boyuna eşitle */
+  .wrap {
+      height: 100vh; /* Ekran yüksekliği kadar */
+      display: flex;
+      flex-direction: column; /* Alt alta dizilim */
+      overflow: hidden; /* Taşmayı engelle */
+      padding-bottom: 0 !important;
+  }
+
+  /* 3. Üstteki Filtreler ve Butonlar (Row) uzamasın, olduğu kadar yer kaplasın */
+  .wrap > .row {
+      flex: 0 0 auto; 
+      padding: 10px 15px 0 15px;
+      margin: 0 !important;
+  }
+
+  /* 4. Tablonun olduğu Beyaz Kartı (Card) kalan tüm boşluğa yay */
+  .wrap > .card {
+      flex: 1; /* Kalan tüm yüksekliği doldur */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; /* Kartın kendisi kaymasın */
+      margin: 10px 15px !important; /* Kenarlardan boşluk */
+      border-radius: 8px;
+  }
+
+  /* 5. Tablo Alanını (Table Responsive) Kaydırılabilir Yap */
+  .wrap > .card > .table-responsive {
+      flex: 1; /* Kartın içini doldur */
+      overflow-y: auto; /* SADECE burası aşağı yukarı kaysın */
+      overflow-x: auto; /* Sağa sola kaydırma */
+      min-height: 0; /* Flex hatasını önler */
+  }
+
+  /* 6. Tablo Başlıklarını (Müşteri, Proje vb.) En Üste Çivile */
+  .wrap > .card > .table-responsive thead th {
+      position: sticky;
+      top: 0;
+      background: #f8fafc; /* Başlık arka plan rengi */
+      z-index: 50; /* Yazıların üstünde kalsın */
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      border-top: none;
+  }
+
+  /* 7. En Alttaki Sayfalama (Pager) Kısmını Sabitle */
+  /* Kartın içindeki son .row (Sayfalama alanı) */
+  .wrap > .card > .row:last-child {
+      flex: 0 0 auto; /* Uzamasın */
+      background: #fff;
+      border-top: 1px solid #eee;
+      padding: 10px;
+      z-index: 60;
+  }
 </style>
 
 <?php
