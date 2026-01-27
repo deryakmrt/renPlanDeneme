@@ -855,7 +855,7 @@ $offset = ($page - 1) * $per_page;
 
 $params = [];
 // Ürün araması (oi.name) eklendi
-$sql = "SELECT DISTINCT o.*, c.name AS customer_name FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id WHERE 1=1";
+$sql = "SELECT DISTINCT o.*, c.name AS customer_name, c.email AS customer_email FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id WHERE 1=1";
 // --- GİZLİLİK FİLTRESİ (DÜZELTİLDİ) ---
 if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
     $sql .= " AND o.status != 'taslak_gizli'";
@@ -1490,64 +1490,75 @@ function termin_badge_html($termin, $teslim=null, $bitis=null){ // <-- 3. parame
       <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= fmt_date_dmy($o['baslangic_tarihi'] ?? null) ?></div></td>
       <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= bitis_badge_html($o['bitis_tarihi'] ?? null, $o['termin_tarihi'] ?? null) ?></div></td>
       <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= teslim_badge_html($o['teslim_tarihi'] ?? null, $o['bitis_tarihi'] ?? null) ?></div></td>
-      <td class="right">
-        <a class="btn" href="order_edit.php?id=<?= (int)$o['id'] ?>" title="Düzenle" aria-label="Düzenle"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l8.06-8.06.92.92L5.92 19.58zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></a>
-        <a class="btn" href="order_view.php?id=<?= (int)$o['id'] ?>" title="Görüntüle" aria-label="Görüntüle"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 5c-7.633 0-11 7-11 7s3.367 7 11 7 11-7 11-7-3.367-7-11-7zm0 12a5 5 0 1 1 .001-10.001A5 5 0 0 1 12 17z"/><circle cx="12" cy="12" r="3"/></svg></a>
-<?php $___role = current_user()['role'] ?? ''; if (in_array($___role, ['admin','sistem_yoneticisi'], true)): ?>
-        <a class="btn primary" href="order_pdf.php?id=<?= (int)$o['id'] ?>" title="STF PDF" aria-label="STF PDF">STF</a>
+      <td class="right" style="vertical-align: middle; width: 74px; padding: 2px;">
         
-        <?php endif; ?><a class="btn btn-ustf" href="order_pdf_uretim.php?id=<?= (int)$o['id'] ?>" title="ÜSTF PDF" aria-label="ÜSTF PDF">ÜSTF</a>
-      
-<?php 
-$___role = current_user()['role'] ?? ''; 
-$___is_admin = ($___role === 'admin');
-$___is_sys_mgr = ($___role === 'sistem_yoneticisi');
-$___show_delete = $___is_admin;
-$___remaining_pct = 0;
-$___remaining_sec = 0;
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px; width: 100%;">
 
-// Sistem yöneticisi için 3 dakika kontrolü
-if ($___is_sys_mgr && !$___is_admin && !empty($o['created_at']) && $o['created_at'] !== '0000-00-00 00:00:00') {
-    try {
-        $___created = new DateTime($o['created_at']);
-        $___now = new DateTime();
-        $___elapsed_sec = $___now->getTimestamp() - $___created->getTimestamp();
-        $___total_sec = 3 * 60; // 3 dakika = 180 saniye
-        $___remaining_sec = max(0, $___total_sec - $___elapsed_sec);
-        
-        if ($___remaining_sec > 0) {
-            $___show_delete = true;
-            $___remaining_pct = ($___remaining_sec / $___total_sec) * 100;
-        }
-    } catch (Exception $e) { /* sessiz geç */ }
-}
+            <a class="btn" href="order_edit.php?id=<?= (int)$o['id'] ?>" title="Düzenle" 
+               style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background: #fff; border:1px solid #e1e5eaff; color:#333;">
+               <span style="font-size:15px;">✏️</span>
+            </a>
+            
+            <a class="btn" href="order_view.php?id=<?= (int)$o['id'] ?>" title="Görüntüle" 
+               style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background:#fff; border:1px solid #e1e5eaff; color:#333;">
+               <span style="font-size:15px;">👁️</span>
+            </a>
 
-if ($___show_delete): 
-    if ($___is_admin) {
-        // Admin için normal kırmızı buton
-        ?>
-        <a class="btn btn-danger" href="/order_delete.php?id=<?= (int)$o['id'] ?>&confirm=EVET" onclick="return confirm('Bu siparişi kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');">Sil</a>
-        <?php
-    } else {
-        // Sistem yöneticisi için zamanlı buton
-        $___min = floor($___remaining_sec / 60);
-        $___sec = $___remaining_sec % 60;
-        $___time_text = sprintf('%d:%02d', $___min, $___sec);
-        ?>
-        <a class="btn btn-delete-timer" 
-           href="/order_delete.php?id=<?= (int)$o['id'] ?>&confirm=EVET" 
-           data-remaining="<?= (int)$___remaining_sec ?>"
-           data-order-id="<?= (int)$o['id'] ?>"
-           style="--timer-pct: <?= number_format($___remaining_pct, 2) ?>%"
-           onclick="return confirm('Bu siparişi kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.');">
-           Sil (<?= $___time_text ?>)
-        </a>
-        <?php
-    }
-endif; 
-?>
+            <div style="grid-column: 1; width:100%;">
+                <?php $___role = current_user()['role'] ?? ''; 
+                if (in_array($___role, ['admin','sistem_yoneticisi'], true)): ?>
+                    <a class="btn" href="order_pdf.php?id=<?= (int)$o['id'] ?>" target="_blank" title="STF" 
+                       style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background: #ffedd5; color: #ea580c; border:1px solid #fed7aa; font-size:13px; font-weight:800;">STF</a>
+                <?php endif; ?>
+            </div>
+            
+            <a class="btn" href="order_pdf_uretim.php?id=<?= (int)$o['id'] ?>" target="_blank" title="ÜSTF" 
+               style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background: #dcfce7; color: #16a34a; border:1px solid #bbf7d0; font-size:13px; font-weight:800;">ÜSTF</a>
 
-</td>
+            <div style="grid-column: 1; width:100%;">
+                <?php 
+                $___is_admin = ($___role === 'admin');
+                $___is_sys_mgr = ($___role === 'sistem_yoneticisi');
+                $___show_delete = $___is_admin;
+                $___remaining_sec = 0; $___remaining_pct = 0;
+
+                if ($___is_sys_mgr && !$___is_admin && !empty($o['created_at']) && $o['created_at'] !== '0000-00-00 00:00:00') {
+                    try {
+                        $___elapsed = time() - (new DateTime($o['created_at']))->getTimestamp();
+                        $___remaining_sec = max(0, 180 - $___elapsed);
+                        if ($___remaining_sec > 0) { $___show_delete = true; $___remaining_pct = ($___remaining_sec/180)*100; }
+                    } catch (Exception $e) {}
+                }
+
+                if ($___show_delete): 
+                    if ($___is_admin): ?>
+                        <a class="btn" href="order_delete.php?id=<?= (int)$o['id'] ?>&confirm=EVET" onclick="return confirm('Silmek istediğinize emin misiniz?');" title="Sil" 
+                           style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background:#fff; border:1px solid #e1e5eaff; color:#ef4444;">
+                           <span style="font-size:15px;">🗑️</span>
+                        </a>
+                    <?php else: 
+                        $___tm = sprintf('%d:%02d', floor($___remaining_sec/60), $___remaining_sec%60); ?>
+                        <a class="btn btn-delete-timer" href="order_delete.php?id=<?= (int)$o['id'] ?>&confirm=EVET" data-remaining="<?= (int)$___remaining_sec ?>" onclick="return confirm('Silmek istiyor musunuz?');"
+                           style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; font-size:9px; --timer-pct:<?= number_format($___remaining_pct,2) ?>%">
+                           <?= $___tm ?>
+                        </a>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+
+            <div style="grid-column: 2; width:100%;">
+                <?php if (!empty($o['customer_email'])): ?>
+                    <a class="btn" href="order_send_mail.php?id=<?= (int)$o['id'] ?>" title="Mail Gönder" 
+                       style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background:#fff; border:1px solid #e1e5eaff; color:#d97706;">
+                       <span style="font-size:15px;">📧</span>
+                    </a>
+                <?php else: ?>
+                    <span class="btn disabled" style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; border:1px solid #f3f4f6; color: #e5e7eb; background:#fff;">📧</span>
+                <?php endif; ?>
+            </div>
+
+        </div>
+      </td>
     </tr>
 <?php endwhile; ?>
   </table>
@@ -1720,43 +1731,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 <!-- mail-button-inject -->
-<script>
-(function(){
-  function mk(id){
-    var a=document.createElement('a');
-    a.className='btn';
-    a.href='order_send_mail.php?id='+id;
-    a.title='E-posta gönder';
-    a.setAttribute('aria-label','E-posta gönder');
-    a.innerHTML='✉︎';
-    return a;
-  }
-  function injectList(){
-    // Find the small "eye" (view) anchor and insert one mail button after it
-    var eyes = document.querySelectorAll('a[title="Görüntüle"], a[aria-label="Görüntüle"], a[href^="order_view.php?id="]');
-    eyes.forEach(function(eye){
-      if(eye.dataset.mailInjected) return;
-      var href=eye.getAttribute('href')||'';
-      var m=href.match(/order_view\.php\?id=(\d+)/);
-      if(!m) return;
-      var id=m[1];
-      // don't duplicate if next sibling already points to order_send_mail
-      var ns=eye.nextElementSibling;
-      if(ns && ns.tagName==='A' && /order_send_mail\.php\?id=/.test(ns.getAttribute('href')||'')) {
-        eye.dataset.mailInjected='1'; return;
-      }
-      eye.after(mk(id));
-      eye.dataset.mailInjected='1';
-    });
-  }
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded', injectList);
-  } else { injectList(); }
-  // In case of dynamic reloads/pagination
-  setTimeout(injectList, 500);
-  setTimeout(injectList, 1500);
-})();
-</script>
 <script>
 // Zamanlı silme butonları için countdown
 (function(){
