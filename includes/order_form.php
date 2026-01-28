@@ -13,7 +13,7 @@
       <?php if ($__is_admin_like): ?>
       <a class="btn primary" href="order_pdf.php?id=<?= (int)$order['id'] ?>">STF</a>
 <?php endif; ?>
-      <button type="button" class="btn primary" onclick="this.closest('.card').querySelector('form').submit()">Güncelle</button>
+      <button type="button" class="btn primary" onclick="this.closest('.card').querySelector('form').requestSubmit()">Güncelle</button>
       <a class="btn" href="orders.php">Vazgeç</a>
     </div>
   <?php endif; ?>
