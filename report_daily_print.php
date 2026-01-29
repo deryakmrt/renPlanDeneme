@@ -51,10 +51,12 @@ $data = [
 // A) YENİ SİPARİŞLER (Orders tablosundan created_at ile)
 // ------------------------------------------------------------------------------------
 try {
+    // GÜNCELLEME: Taslak statüsündeki siparişleri rapordan hariç tut
     $sqlNew = "SELECT o.id, o.order_code, o.proje_adi, o.created_at, o.siparis_veren, o.siparisi_giren, c.name as cust_name
                FROM orders o
                LEFT JOIN customers c ON o.customer_id = c.id
                WHERE DATE(o.created_at) = ?
+                 AND o.status NOT IN ('taslak', 'taslak_gizli') 
                ORDER BY o.created_at ASC";
 
     $stNew = $db->prepare($sqlNew);
