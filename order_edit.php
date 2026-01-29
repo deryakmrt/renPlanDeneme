@@ -476,9 +476,24 @@ document.addEventListener('DOMContentLoaded', function(){
   document.querySelectorAll('form').forEach(function(form){
     form.addEventListener('submit', function(){
       qAll(selPrice).forEach(function(inp){
+        // 1. Mevcut (virgüllü) değeri hafızaya al
+        var originalVal = inp.value; 
+        
+        // 2. Gönderim için noktaya çevir
         var raw = trToDotDecimal(inp.value);
         var num = Number(raw);
-        if (isFinite(num)) inp.value = num.toFixed(2);
+        if (isFinite(num)) {
+            inp.value = num.toFixed(2);
+            
+            // 3. EMNİYET KİLİDİ: 
+            // Form verisi paketlendikten hemen sonra (10ms), kutudaki görüntüyü
+            // tekrar eski haline (virgüllü) döndür. 
+            // Böylece sayfa yenilenmezse bile kutuda "8.00" kalmaz, "8,00" geri gelir.
+            // Bu sayede bir sonraki kayıtta "800" olma riski biter.
+            setTimeout(function(){
+                inp.value = originalVal;
+            }, 10);
+        }
       });
     }, true);
   });
