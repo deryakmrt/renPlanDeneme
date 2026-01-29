@@ -279,39 +279,100 @@
     <?php endif; ?>
   </div>
 
-  <div class="note-input" style="display:flex; gap:8px; align-items:center;">
-    <input type="text" name="new_note" placeholder="Yeni not yaz..." style="flex:1; padding:8px 10px; border:1px solid #e6e8ee; border-radius:8px;" />
-    <!-- Var olan backend 'notes' alanı devam etsin diye gizli textarea -->
+  <div class="note-input" style="display:flex; gap:8px; align-items:center; position:relative;">
+    <input type="text" id="temp_note_input" 
+           onkeydown="if(event.key==='Enter'){event.preventDefault(); document.getElementById('btn_add_note_ui').click();}" 
+           placeholder="(+yeni not ekle)" 
+           style="flex:1; padding:8px 10px; border:1px solid #e6e8ee; border-radius:8px; padding-right:70px;" />
+    
+    <div style="position:absolute; right:6px; display:flex; gap:4px;">
+        <button type="button" id="btn_add_note_ui" class="btn-bonibon btn-bonibon-ok" title="Listeye Ekle">✔</button>
+        <button type="button" id="btn_cancel_note_ui" class="btn-bonibon btn-bonibon-cancel" title="Temizle">⨉</button>
+    </div>
+
     <textarea name="notes" id="notes-ghost" style="display:none;"><?= h($order['notes'] ?? '') ?></textarea>
-  </div>
+</div>
 </div>
 
 <script>
 (function(){
   var container = document.getElementById('notes-block');
   if(!container) return;
-  var form = container.closest('form');
-  if(!form) return;
+  
+  // Elementleri seç
+  var inp = document.getElementById('temp_note_input');
+  var btnAdd = document.getElementById('btn_add_note_ui');
+  var btnCancel = document.getElementById('btn_cancel_note_ui');
+  var ghost = document.getElementById('notes-ghost');
+  var listWrapper = container.querySelector('.notes-wrapper');
 
   function pad(n){ return (n<10?'0':'')+n; }
 
-  // Yeni not ekleme (submit anında 'Author | dd.mm.yyyy hh:mm: Text' formatında sona ekle)
-  form.addEventListener('submit', function(){
-    var ghost = document.getElementById('notes-ghost');
-    var nn = form.querySelector('input[name="new_note"]');
-    if(ghost && nn){
-      var val = (nn.value || '').trim();
-      if(val){
-        var d = new Date();
-        var stamp = pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-        var username = container.getAttribute('data-user') || 'Kullanıcı';
-        var line = username + ' | ' + stamp + ': ' + val;
-        var base = (ghost.value || '').replace(/\s+$/,'');
-        if(base) base += "\n";
-        ghost.value = base + line;
+  // 1. Notu Listeye ve Gizli Alana Ekleme Fonksiyonu
+  function addNoteToUI() {
+      var val = (inp.value || '').trim();
+      if(!val) return; // Boşsa işlem yapma
+
+      // Tarih ve İsim Oluştur
+      var d = new Date();
+      var stamp = pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      var username = container.getAttribute('data-user') || 'Kullanıcı';
+      
+      // Format: İsim | Tarih: Not
+      var fullLine = username + ' | ' + stamp + ': ' + val;
+
+      // A) GÖRSEL OLARAK LİSTEYE EKLE (HTML OLUŞTUR)
+      var itemDiv = document.createElement('div');
+      itemDiv.className = 'note-item';
+      itemDiv.setAttribute('data-original', fullLine);
+      itemDiv.style.cssText = 'margin-bottom:8px; display:flex; align-items:flex-start; gap:8px; animation: fadeIn 0.3s;';
+      
+      itemDiv.innerHTML = `
+        <div style="flex:1 1 auto;">
+          <div class="note-meta" style="font-size:12px; color:#6b7280; margin-bottom:2px;">
+            <strong>${username}</strong> · <span class="note-time">${stamp}</span>
+          </div>
+          <div class="note-text" style="display:inline-block; padding:8px 10px; border:1px solid #e6e8ee; border-radius:12px; background:#eff6ff;">
+            ${val.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+          </div>
+        </div>
+        <button type="button" class="note-del" title="Sil" style="border:none; background:transparent; cursor:pointer; padding:4px 6px; font-size:12px; color:#9aa0ad;">🗑</button>
+      `;
+
+      // Varsa "Henüz not yok" yazısını kaldır
+      if(listWrapper.innerText.trim() === 'Henüz not yok.') {
+          listWrapper.innerHTML = '';
       }
-    }
-  }, {passive:true});
+
+      listWrapper.appendChild(itemDiv);
+      listWrapper.scrollTop = listWrapper.scrollHeight; // En alta kaydır
+
+      // B) GİZLİ TEXTAREA'YA EKLE (Veritabanı için)
+      // Mevcut ghost içeriğini al, yeni satırı ekle
+      var currentGhost = ghost.value.replace(/\s+$/,''); // Sondaki boşlukları temizle
+      if(currentGhost) currentGhost += "\n";
+      ghost.value = currentGhost + fullLine;
+
+      // C) INPUTU TEMİZLE
+      inp.value = '';
+      inp.focus();
+  }
+
+  // Buton Olayları
+  if(btnAdd) {
+      btnAdd.addEventListener('click', function(e){
+          e.preventDefault(); // Form submit olmasın
+          addNoteToUI();
+      });
+  }
+
+  if(btnCancel) {
+      btnCancel.addEventListener('click', function(e){
+          e.preventDefault();
+          inp.value = ''; // Sadece temizle
+          inp.focus();
+      });
+  }
 
   // Yardımcı: ghost'u DOM'daki satırlardan yeniden oluştur
   function rebuildGhost(){
@@ -996,6 +1057,35 @@ tr.active-editing td {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+/* Bonibon Butonlar (Notlar için) */
+.btn-bonibon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%; /* Tam yuvarlak */
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.btn-bonibon:hover { transform: scale(1.15); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+.btn-bonibon:active { transform: scale(0.95); }
+
+/* Onay (Yeşil) */
+.btn-bonibon-ok {
+    background-color: #d1fae5; /* Açık nane yeşili */
+    color: #059669;            /* Koyu yeşil */
+    border: 1px solid #10b981;
+}
+/* İptal (Kırmızı) */
+.btn-bonibon-cancel {
+    background-color: #fee2e2; /* Açık kırmızı */
+    color: #dc2626;            /* Koyu kırmızı */
+    border: 1px solid #ef4444;
 }
 </style>
 
