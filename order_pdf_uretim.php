@@ -30,7 +30,7 @@ $st->execute([$id]);
 $o = $st->fetch();
 if (!$o) die('Sipariş bulunamadı');
 
-$it = $db->prepare("SELECT oi.*, p.sku, p.image AS image, p.name AS guncel_isim FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=? ORDER BY oi.id ASC");
+$it = $db->prepare("SELECT oi.*, p.sku, p.image AS image, p.name AS guncel_isim, p.parent_id FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=? ORDER BY oi.id ASC");
 $it->execute([$id]);
 $items = $it->fetchAll();
 // // --- [YENİ - İSTİSNALI] GRUPLAMA VE TOPLAM HESAPLAMA MANTIĞI ---
@@ -353,11 +353,33 @@ ob_start();
   <?php $i=1; foreach($items as $it): ?>
     <tr>
       <td class="center" style="width:8mm; min-width:8mm; max-width:8mm; padding-left:0.6mm; padding-right:0.6mm;"><?= $i++ ?></td>
-      <td>
-        <?php if (!empty($it['image'])): ?> <!--ürün görseli -->
-          <img src="<?= h($it['image']) ?>" style="max-width:18mm;max-height:18mm;display:block">
-        <?php endif; ?>
-      </td>
+      <td style="text-align: center; vertical-align: middle; padding: 1mm;">
+    <?php 
+        // 1. Mevcut resmi al
+        $showImage = $it['image']; 
+        
+        // 2. Resim yoksa ve bir varyasyonsa (Babasını kontrol et)
+        if (empty($showImage) && !empty($it['parent_id'])) {
+            $stmtParent = $db->prepare("SELECT image FROM products WHERE id = ?");
+            $stmtParent->execute([$it['parent_id']]);
+            $parentImg = $stmtParent->fetchColumn();
+            if ($parentImg) $showImage = $parentImg;
+        }
+
+        // 3. Resmi Göster (Varsa)
+        if (!empty($showImage)): 
+            $imgSrc = $showImage;
+            if (!preg_match('~^https?://~', $imgSrc) && strpos($imgSrc, '/') !== 0) {
+                if (file_exists(__DIR__ . '/uploads/product_images/' . $imgSrc)) {
+                    $imgSrc = 'uploads/product_images/' . $imgSrc;
+                } else {
+                    $imgSrc = (file_exists('images/' . $imgSrc) ? 'images/' : '') . $imgSrc;
+                }
+            }
+    ?>
+      <img src="<?= h($imgSrc) ?>" style="max-width:18mm; max-height:18mm; display:block; margin: 0 auto; object-fit:contain;">
+    <?php endif; ?>
+</td>
       <td>
         <div style="font-size:10px;">
             <strong><?= h(!empty($it['guncel_isim']) ? $it['guncel_isim'] : ($it['name'] ?? '')) ?></strong>
