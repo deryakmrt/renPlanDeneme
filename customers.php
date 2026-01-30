@@ -72,7 +72,7 @@ include __DIR__ . '/includes/header.php';
 // Form (yeni/düzenle)
 if ($action === 'new' || $action === 'edit') {
     $id = (int)($_GET['id'] ?? 0);
-    $row = ['id'=>0,'name'=>'','email'=>'','phone'=>'','billing_address'=>'','shipping_address'=>'','ilce'=>'','il'=>'','ulke'=>'','vergi_dairesi'=>'','vergi_no'=>'','website'=>''];
+    $row = ['id'=>0,'name'=>'','email'=>'','phone'=>'','billing_address'=>'','shipping_address'=>'','ilce'=>'','il'=>'Konya','ulke'=>'','vergi_dairesi'=>'','vergi_no'=>'','website'=>''];
     if ($action === 'edit' && $id) {
         $stmt = $db->prepare("SELECT * FROM customers WHERE id=?");
         $stmt->execute([$id]);
@@ -80,32 +80,32 @@ if ($action === 'new' || $action === 'edit') {
     }
     ?>
     <div class="card">
-      <h2><?= $row['id'] ? 'Müşteri Düzenle' : 'Yeni Müşteri' ?></h2>
+      <h2><?= $row['id'] ? '👤Müşteri Düzenle' : '👤Yeni Müşteri' ?></h2>
       <?php if (!empty($error)): ?><div class="alert mb"><?= h($error) ?></div><?php endif; ?>
       <form method="post">
         <?php csrf_input(); ?>
         <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
 <div class="row mt" style="display:flex;flex-wrap:wrap;gap:12px">
   <div style="flex:1;min-width:220px">
-    <label>Ad Soyad / Ünvan</label>
+    <label>👤Ad Soyad / Ünvan</label>
     <input name="name" value="<?= h($row['name']) ?>">
   </div>
   <div style="flex:1;min-width:220px">
-    <label>Telefon</label>
+    <label>📞Telefon</label>
     <input name="phone" value="<?= h($row['phone']) ?>">
   </div>
   <div style="flex:1;min-width:220px">
-    <label>E-posta</label>
-    <input type="email" name="email" value="<?= h($row['email']) ?>">
+    <label>📧E-posta</label>
+    <input type="email" name="email" value="<?= h($row['email']) ?>" style="color:#000">
   </div>
 </div>
 <div class="row mt" style="display:flex;flex-wrap:wrap;gap:12px">
   <div style="flex:1;min-width:220px">
-    <label>İlçe</label>
+    <label>📍İlçe</label>
     <input name="ilce" value="<?= h($row['ilce']) ?>" placeholder="İlçe">
   </div>
   <div style="flex:1;min-width:220px">
-    <label>İl</label>
+    <label>📍İl</label>
     <select name="il">
                 <option value="Adana" <?= $row['il']==="Adana"?'selected':'' ?>>Adana</option>
                 <option value="Adıyaman" <?= $row['il']==="Adıyaman"?'selected':'' ?>>Adıyaman</option>
@@ -191,7 +191,7 @@ if ($action === 'new' || $action === 'edit') {
             </select>
   </div>
   <div style="flex:1;min-width:220px">
-    <label>Ülke</label>
+    <label>🌍Ülke</label>
     <select name="ulke">
                 <option value="Türkiye" <?= $row['ulke']==="Türkiye"?'selected':'' ?>>Türkiye</option>
                 <option value="Almanya" <?= $row['ulke']==="Almanya"?'selected':'' ?>>Almanya</option>
@@ -258,25 +258,25 @@ if ($action === 'new' || $action === 'edit') {
 </div>
 <div class="row mt" style="display:flex;flex-wrap:wrap;gap:12px">
   <div style="flex:1;min-width:280px">
-    <label class="mt">Fatura Adresi</label>
+    <label class="mt">🧾Fatura Adresi</label>
     <textarea name="billing_address" rows="3"><?= h($row['billing_address']) ?></textarea>
   </div>
   <div style="flex:1;min-width:280px">
-    <label class="mt">Sevk Adresi</label>
+    <label class="mt">🚚Sevk Adresi</label>
     <textarea name="shipping_address" rows="3"><?= h($row['shipping_address']) ?></textarea>
   </div>
 </div>
 <div class="row mt" style="display:flex;flex-wrap:wrap;gap:12px">
   <div style="flex:1;min-width:220px">
-    <label>Web Site</label>
+    <label>🌐Web Site</label>
     <input type="text" inputmode="url" type="text" inputmode="url" name="website" value="<?= h($row['website']) ?>" placeholder="https://...">
   </div>
   <div style="flex:1;min-width:220px">
-    <label>Vergi Dairesi</label>
+    <label>🏢Vergi Dairesi</label>
     <input name="vergi_dairesi" value="<?= h($row['vergi_dairesi']) ?>">
   </div>
   <div style="flex:1;min-width:220px">
-    <label>Vergi Numarası</label>
+    <label>🔢Vergi Numarası</label>
     <input name="vergi_no" value="<?= h($row['vergi_no']) ?>">
   </div>
 </div>
@@ -314,11 +314,11 @@ if ($q !== '') {
   <div class="table-responsive">
 <table>
     <tr>
-      <th>ID</th>
-      <th>Ad</th>
-      <th>E-posta</th>
-      <th>Telefon</th>
-      <th class="right">İşlem</th>
+      <th>🔖ID</th>
+      <th>👤Ad</th>
+      <th>📧E-posta</th>
+      <th>📞Telefon</th>
+      <th class="right"> 🛠️İşlem</th>
     </tr>
     <?php while($r = $stmt->fetch()): ?>
     <tr>
