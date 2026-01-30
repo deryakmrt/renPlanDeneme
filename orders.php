@@ -945,9 +945,11 @@ $stmt->execute($params);
 
   <div class="dashboard-left">
       
+      <?php if (in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])): ?>
       <a class="btn-dashboard-neon" href="order_add.php">
           <span>➕</span> YENİ SİPARİŞ
       </a>
+      <?php endif; ?>
 
       <form method="get" style="display:flex; gap:8px; align-items:center; margin:0;">
           

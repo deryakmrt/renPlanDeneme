@@ -6,7 +6,13 @@ require_login();
 $db = pdo();
 $pc = $db->query('SELECT COUNT(*) FROM products')->fetchColumn();
 $cc = $db->query('SELECT COUNT(*) FROM customers')->fetchColumn();
-$oc = $db->query('SELECT COUNT(*) FROM orders')->fetchColumn();
+// SİPARİŞ SAYISI (Yetkiye Göre Filtreli)
+$sqlOrders = "SELECT COUNT(*) FROM orders";
+if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
+    // Admin değilse taslakları sayma
+    $sqlOrders .= " WHERE status != 'taslak_gizli'";
+}
+$oc = $db->query($sqlOrders)->fetchColumn();
 
 include __DIR__ . '/includes/header.php';
 ?>
