@@ -47,6 +47,12 @@ $__cats = $__brands = [];
 try { $__cats = $db->query("SELECT id,name FROM product_categories ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch (Exception $e) { $__cats = []; }
 
 try { $__brands = $db->query("SELECT id,name FROM product_brands ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch (Exception $e) { $__brands = []; }
+// --- TÜM ANA ÜRÜNLERİ ÇEK (Baba Adayları) ---
+$__parents = [];
+try {
+    // Sadece kendisi bir varyasyon olmayan ürünleri getir
+    $__parents = $db->query("SELECT id, name, sku FROM products WHERE parent_id IS NULL ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {}
 
 
 
@@ -155,7 +161,53 @@ if (($action === 'new' || $action === 'edit') && method('POST')) {
 
             $stmt = $db->prepare("UPDATE products SET sku=?, name=?, unit=?, price=?, urun_ozeti=?, kullanim_alani=?, category_id=?, brand_id=? WHERE id=?");
 
-            $stmt->execute([$sku,$name,$unit,$price,$urun_ozeti,$kullanim_alani,$category_id,$brand_id,$id]);
+            // --- HATA YAKALAMA VE MÜKERRER KAYIT KONTROLÜ ---
+            try {
+                $stmt->execute([$sku,$name,$unit,$price,$urun_ozeti,$kullanim_alani,$category_id,$brand_id,$id]);
+            } catch (PDOException $e) {
+                // Hata kodu 23000 (Integrity constraint violation) ise
+                if ($e->getCode() == '23000') {
+                    // Sayfa yapısını bozmadan şık bir uyarı bas
+                    echo '<div style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #fef2f2;">';
+                    echo '  <div style="background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; max-width: 500px; border: 1px solid #fee2e2;">';
+                    echo '      <div style="font-size: 50px; margin-bottom: 15px;">🛑</div>';
+                    echo '      <h2 style="color: #b91c1c; margin-top: 0;">Bu Kod Zaten Var!</h2>';
+                    echo '      <p style="color: #4b5563; line-height: 1.6;">Girmeye çalıştığınız <b>"'.h($sku).'"</b> SKU kodu (veya boş kod) sistemde başka bir ürüne ait.</p>';
+                    echo '      <p style="color: #4b5563; font-size: 13px;">İpucu: Eğer varyasyon yapıyorsanız, her varyasyonun SKU kodu (veya sonuna eklenen kodu) benzersiz olmalıdır.</p>';
+                    echo '      <button onclick="history.back()" style="background: #dc2626; color: #fff; border: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px;">🔙 Geri Dön ve Düzelt</button>';
+                    echo '  </div>';
+                    echo '</div>';
+                    exit; // İşlemi burada durdur
+                } else {
+                    throw $e; // Başka bir hataysa normal şekilde göster
+                }
+            }
+            // --------------------------------------------------
+            // --- ANA ÜRÜN BAĞLAMA (PARENT GÜNCELLEME) ---
+            if (isset($_POST['parent_id'])) {
+                $pid = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : NULL;
+                if ($pid !== $id) { // Kendisini baba seçemez
+                    $db->prepare("UPDATE products SET parent_id = ? WHERE id = ?")->execute([$pid, $id]);
+                }
+            }
+            // --- GÖRSEL SİLME KODU (BURADA OLMALI) ---
+            if (isset($_POST['delete_image']) && $_POST['delete_image'] == '1') {
+                $oldImg = (string)$db->query("SELECT image FROM products WHERE id=".$id)->fetchColumn();
+                if ($oldImg) {
+                    // 1. Yeni klasörden silmeyi dene
+                    if (file_exists(__DIR__ . '/uploads/product_images/' . $oldImg)) {
+                        @unlink(__DIR__ . '/uploads/product_images/' . $oldImg);
+                    }
+                    // 2. Eski klasörden silmeyi dene (ihtimal dahilinde)
+                    if (file_exists(__DIR__ . '/' . ltrim($oldImg, '/'))) {
+                        @unlink(__DIR__ . '/' . ltrim($oldImg, '/'));
+                    }
+                    
+                    // 3. Veritabanını güncelle
+                    $db->prepare("UPDATE products SET image = NULL WHERE id = ?")->execute([$id]);
+                }
+            }
+            // ----------------------------------------
 
 
 
@@ -313,6 +365,18 @@ if ($action === 'new' || $action === 'edit') {
               <?php endforeach; ?>
 
             </select>
+            <div style="background:#f0f9ff; padding:10px; border:1px solid #bae6fd; border-radius:5px; margin-bottom:15px;">
+        <label style="color:#0369a1; font-weight:bold;">🔗 Ana Ürüne Bağla (Varyasyon Yap)</label>
+        <select name="parent_id" class="form-control" style="margin-top:5px; border:1px solid #0284c7;">
+            <option value="">-- Yok (Bu bir Ana Ürün) --</option>
+            <?php foreach($__parents as $p): ?>
+                <?php if($p['id'] == ($id ?? 0)) continue; // Kendisi listelenmesin ?>
+                <option value="<?= $p['id'] ?>" <?= (isset($row['parent_id']) && $row['parent_id'] == $p['id']) ? 'selected' : '' ?>>
+                    <?= h($p['name']) ?> [Kod: <?= h($p['sku']) ?>]
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
 
             <div class="muted"><a href="taxonomies.php?t=brands" target="_blank">Marka yönet</a></div>
 
@@ -346,7 +410,22 @@ if ($action === 'new' || $action === 'edit') {
 
         <input type="file" name="image" accept="image/*">
 
-        <?php if(!empty($row['image'])){ $img=(string)$row['image']; $src=(preg_match('~^https?://~',$img)||strpos($img,'/')===0)?$img:'/'.ltrim($img,'/'); echo '<div><img src="'.h($src).'" width="120" height="120" alt=""></div>'; } ?>
+        <?php if(!empty($row['image'])): 
+    $img = (string)$row['image']; 
+    // Yeni yol mu, eski yol mu kontrolü
+    if (file_exists(__DIR__ . '/uploads/product_images/' . $img)) {
+        $src = 'uploads/product_images/' . $img;
+    } else {
+        $src = (preg_match('~^https?://~',$img) || strpos($img,'/')===0) ? $img : '/'.ltrim($img,'/');
+    }
+?>
+    <div style="margin-top:5px; background:#f8fafc; padding:10px; border:1px solid #e2e8f0; border-radius:6px; display:inline-block;">
+        <img src="<?= h($src) ?>" width="100" height="100" style="object-fit:contain; background:#fff; border:1px solid #ddd; margin-bottom:5px; display:block;">
+        <label style="color:#dc2626; font-size:13px; font-weight:bold; cursor:pointer;">
+            <input type="checkbox" name="delete_image" value="1"> 🗑️ Resmi Sil
+        </label>
+    </div>
+<?php endif; ?>
 
       </form>
 
@@ -376,28 +455,32 @@ $offset = ($page - 1) * $perPage;
 
 
 
-if ($q !== '') {
+// --- SIRALAMA MANTIĞI (YENİ) ---
+$sort = $_GET['sort'] ?? 'id_desc';
+$orderBy = "id DESC"; // Varsayılan: Son Eklenen
 
-    $countStmt = $db->prepare("SELECT COUNT(*) FROM products WHERE name LIKE ? OR sku LIKE ?");
+switch($sort) {
+    case 'name_asc':  $orderBy = "name ASC"; break;  // A'dan Z'ye
+    case 'name_desc': $orderBy = "name DESC"; break; // Z'den A'ya
+    case 'id_asc':    $orderBy = "id ASC"; break;    // İlk Eklenen
+    default:          $orderBy = "id DESC"; break;   // Son Eklenen
+}
 
+// --- VERİ ÇEKME ---
+if ($q) {
+    $countStmt = $db->prepare("SELECT COUNT(*) FROM products WHERE parent_id IS NULL AND (name LIKE ? OR sku LIKE ?)");
     $countStmt->execute(['%'.$q.'%','%'.$q.'%']);
-
     $total = (int)$countStmt->fetchColumn();
 
-
-
-    $stmt = $db->prepare("SELECT * FROM products WHERE name LIKE ? OR sku LIKE ? ORDER BY id DESC LIMIT " . (int)$perPage . " OFFSET " . (int)$offset);
-
+    // Sorguya $orderBy değişkenini ekledik
+    $stmt = $db->prepare("SELECT * FROM products WHERE parent_id IS NULL AND (name LIKE ? OR sku LIKE ?) ORDER BY $orderBy LIMIT " . (int)$perPage . " OFFSET " . (int)$offset);
     $stmt->execute(['%'.$q.'%','%'.$q.'%']);
-
 } else {
-
-    $total = (int)$db->query("SELECT COUNT(*) FROM products")->fetchColumn();
-
-    $stmt = $db->prepare("SELECT * FROM products ORDER BY id DESC LIMIT " . (int)$perPage . " OFFSET " . (int)$offset);
-
+    $total = (int)$db->query("SELECT COUNT(*) FROM products WHERE parent_id IS NULL")->fetchColumn();
+    
+    // Sorguya $orderBy değişkenini ekledik
+    $stmt = $db->prepare("SELECT * FROM products WHERE parent_id IS NULL ORDER BY $orderBy LIMIT " . (int)$perPage . " OFFSET " . (int)$offset);
     $stmt->execute();
-
 }
 
 $totalPages = max(1, (int)ceil($total / $perPage));
@@ -424,16 +507,20 @@ $next = min($totalPages, $page+1);
 
 <div class="row mb">
 
-  <a class="btn primary" href="products.php?a=new">Yeni Ürün</a>
+  <a class="btn primary" href="products.php?a=new">➕Yeni Ürün</a>
+  <a href="products_grouper.php" class="btn" style="background: #4bf63b94; color:#fff; margin-left:10px;">🧩 Ürünleri Grupla</a>
 
-  <form class="row" method="get">
-
+  <form class="row" method="get" style="align-items:center; gap:5px;">
     <input type="hidden" name="p" value="products">
+    
+    <select name="sort" onchange="this.form.submit()" style="padding:10px; border:1px solid #ccc; border-radius:4px; cursor:pointer; background:#fff;">
+        <option value="id_desc" <?= ($sort??'')=='id_desc'?'selected':'' ?>>📅 Son Eklenen</option>
+        <option value="name_asc" <?= ($sort??'')=='name_asc'?'selected':'' ?>>abc İsim (A-Z)</option>
+        <option value="name_desc" <?= ($sort??'')=='name_desc'?'selected':'' ?>>zyx İsim (Z-A)</option>
+    </select>
 
-    <input name="q" placeholder="Ad/sku ara..." value="<?= h($q) ?>">
-
-    <button class="btn">Ara</button>
-
+    <input name="q" placeholder="Ad veya SKU ara..." value="<?= h($q) ?>" style="padding:10px; border:1px solid #ccc; border-radius:4px;">
+    <button class="btn" style="padding:10px 20px;">Ara</button>
   </form>
 
 </div>
@@ -521,51 +608,65 @@ $next = min($totalPages, $page+1);
 
       </tr>
 
-      <?php while($r = $stmt->fetch()): ?>
+      <?php while($r = $stmt->fetch()): 
+    // Bu ürünün varyasyonu var mı kontrol et
+    $vCount = (int)$db->query("SELECT COUNT(*) FROM products WHERE parent_id = " . (int)$r['id'])->fetchColumn();
+    $isMaster = ($vCount > 0);
+    
+    // Eğer varyasyonluysa bizim YENİ sayfaya gitsin, değilse eskiye
+    $editLink = $isMaster ? 'product_master_edit.php?id=' . (int)$r['id'] : 'products.php?a=edit&id=' . (int)$r['id'];
+?>
+<tr>
+    <td><?= (int)$r['id'] ?></td>
+    <td>
+        <?php 
+        $img = (string)($r['image'] ?? ''); 
+        if ($img !== '') {
+            $src = '';
+            
+            // 1. Önce YENİ yükleme klasörüne bak (Sunucu tarafında kontrol et)
+            // __DIR__ ile tam yolu garantiye alıyoruz
+            if (file_exists(__DIR__ . '/uploads/product_images/' . $img)) {
+                $src = 'uploads/product_images/' . $img;
+            }
+            // 2. Yeni yerde yoksa ESKİ mantığı olduğu gibi kullan (Eskiler geri gelir)
+            else {
+                $src = (preg_match('~^https?://~',$img) || strpos($img,'/')===0) ? $img : '/'.ltrim($img,'/');
+            }
+        ?>
+        <img src="<?= h($src) ?>" style="width: 50px; height: 50px; object-fit: contain; background: #fff; border-radius: 4px; border: 1px solid #e2e8f0; padding: 2px;">
+        <?php } ?>
+    </td>
+    <td>
+        <?= h($r['sku']) ?>
+        <?php if($isMaster): ?>
+            <div style="font-size:11px; color:#2563eb; font-weight:bold; margin-top:2px; background:#eff6ff; display:inline-block; padding:2px 6px; border-radius:4px;">
+                🧬 <?= $vCount ?> Varyasyon
+            </div>
+        <?php endif; ?>
+    </td>
+    <td>
+        <a href="<?= $editLink ?>" style="text-decoration:none; color:#333; font-weight:500;">
+            <?= h($r['name']) ?>
+        </a>
+    </td>
+    <td><?= h($r['unit']) ?></td>
+    <td class="right" style="font-family:monospace; font-size:14px;"><?= number_format((float)$r['price'], 2, ',', '.') ?></td>
+    <td class="right">
+        <a class="btn" href="<?= $editLink ?>" style="<?= $isMaster ? 'background:#dbeafe; color:#1e40af; border:1px solid #93c5fd;' : '' ?>">
+            <?= $isMaster ? '✨ Yönet' : 'Düzenle' ?>
+        </a>
 
-      <tr>
-
-        <td><?= (int)$r['id'] ?></td>
-
-        <td>
-
-          <?php $img = (string)($r['image'] ?? ''); if ($img !== '') {
-
-                $src = (preg_match('~^https?://~',$img) || strpos($img,'/')===0) ? $img : '/'.ltrim($img,'/'); ?>
-
-            <img src="<?= h($src) ?>" width="64" height="64" alt="">
-
-          <?php } ?>
-
-        </td>
-
-        <td><?= h($r['sku']) ?></td>
-
-        <td><?= h($r['name']) ?></td>
-
-        <td><?= h($r['unit']) ?></td>
-
-        <td class="right"><?= number_format((float)$r['price'], 2, ',', '.') ?></td>
-
-        <td class="right">
-
-          <a class="btn" href="products.php?a=edit&id=<?= (int)$r['id'] ?>">Düzenle</a>
-
-          <form method="post" action="products.php?a=delete" style="display:inline" onsubmit="return confirm('Silinsin mi?')">
-
+        <?php if(!$isMaster): ?>
+        <form method="post" action="products.php?a=delete" style="display:inline" onsubmit="return confirm('Silinsin mi?')">
             <?php csrf_input(); ?>
-
             <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
-
-            <button class="btn" style="background:#450a0a;border-color:#7f1d1d">Sil</button>
-
-          </form>
-
-        </td>
-
-      </tr>
-
-      <?php endwhile; ?>
+            <button class="btn" style="background:#fff1f2; color:#be123c; border-color:#fda4af;">Sil</button>
+        </form>
+        <?php endif; ?>
+    </td>
+</tr>
+<?php endwhile; ?>
 
     </table>
 
