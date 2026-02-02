@@ -4,6 +4,13 @@
 ?>
 <?php $__role = current_user()['role'] ?? ''; $__is_admin_like = in_array($__role, ['admin','sistem_yoneticisi'], true); ?>
 
+<style>
+/* Sayfa yüklenirken select'leri anında gizle (FOUC önleme) */
+select[name="product_id[]"] {
+    display: none !important;
+}
+</style>
+
 <div class="card">
   <h2><?= $mode==='edit' ? 'Sipariş Düzenle' : 'Yeni Sipariş' ?></h2>
 
@@ -184,7 +191,58 @@
             </div>
           </td>
           <td><input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu" value="<?= h($current_sku) ?>"></td>
-          <td class="urun-gorsel" style="text-align:center"><img class="urun-gorsel-img" style="max-width:64px;max-height:64px;display:none;margin:0 auto" alt=""></td>
+          <td class="urun-gorsel" style="text-align:center; vertical-align:middle;">
+            <?php 
+                // 1. Veritabanından gelen resmi al
+                $showImg = $it['image'] ?? ''; 
+                
+                // 2. Eğer resim boşsa ve product_id varsa, products listesinden ürünü bulup resmini çek
+                if (empty($showImg) && !empty($it['product_id'])) {
+                    foreach ($products as $pr) {
+                        if ((int)$pr['id'] === (int)$it['product_id']) {
+                            $showImg = $pr['image'] ?? '';
+                            break;
+                        }
+                    }
+                }
+                
+                // 3. Hala boşsa ve Parent ID varsa, babadan çek (child ürünler için)
+                if (empty($showImg) && !empty($it['parent_id'])) {
+                    foreach ($products as $pr) {
+                        if ((int)$pr['id'] === (int)$it['parent_id']) {
+                            $showImg = $pr['image'] ?? '';
+                            break;
+                        }
+                    }
+                }
+
+                // 4. Resim yolunu doğrula
+                $finalSrc = '';
+                if (!empty($showImg)) {
+                    // Uploads klasörü
+                    if (file_exists(__DIR__ . '/../uploads/product_images/' . $showImg)) {
+                        $finalSrc = 'uploads/product_images/' . $showImg;
+                    } 
+                    // Eski images klasörü
+                    else if (file_exists(__DIR__ . '/../images/' . $showImg)) {
+                        $finalSrc = 'images/' . $showImg;
+                    }
+                    // URL veya kök dizin kontrolü
+                    else {
+                        $finalSrc = (preg_match('~^https?://~',$showImg) || strpos($showImg,'/')===0) ? $showImg : '/'.ltrim($showImg,'/');
+                    }
+                }
+            ?>
+            
+            <?php if(!empty($finalSrc)): ?>
+                <a href="javascript:void(0);" onclick="openModal('<?= h($finalSrc) ?>'); return false;">
+                    <img class="urun-gorsel-img" src="<?= h($finalSrc) ?>" style="max-width:64px; max-height:64px; object-fit:contain; border-radius:4px; border:1px solid #e2e8f0; background:#fff; display:block; margin:0 auto;">
+                </a>
+            <?php else: ?>
+                <img class="urun-gorsel-img" style="max-width:64px; max-height:64px; display:none; margin:0 auto" alt="">
+                <span style="font-size:20px; color:#cbd5e1; display:block; margin-top:5px;">📦</span>
+            <?php endif; ?>
+          </td>
           <td>
             <select name="product_id[]" onchange="onPickProduct(this)">
               <option value="">—</option>
@@ -198,8 +256,9 @@
                 data-ozet="<?= h($p['urun_ozeti']) ?>"
                 data-kalan="<?= h($p['kullanim_alani']) ?>"
                 data-image="<?= h($p['image'] ?? '') ?>"
+                data-parent-id="<?= (int)($p['parent_id'] ?? 0) ?>"
                 <?= (isset($it['product_id']) && (int)$it['product_id']===(int)$p['id'])?'selected':'' ?>
-              ><?= h($p['name']) ?><?= $p['sku'] ? ' ('.h($p['sku']).')':'' ?></option>
+              ><?= h($p['display_name'] ?? $p['name']) ?><?= $p['sku'] ? ' ('.h($p['sku']).')':'' ?></option>
               <?php endforeach; ?>
             </select>
           </td>
@@ -708,7 +767,6 @@
 <script>
 function addRow(){
   const tr = document.createElement('tr');
-  // Flex yapısını div içine aldık, td normal kaldı
   tr.innerHTML = `
     <td class="drag-handle" style="cursor:move; vertical-align:middle; text-align:center; color:#9ca3af; font-size:18px; user-select:none; width:50px;">
         <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
@@ -716,7 +774,10 @@ function addRow(){
         </div>
     </td>
     <td><input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu"></td>
-    <td class="urun-gorsel" style="text-align:center"><img class="urun-gorsel-img" style="max-width:64px;max-height:64px;display:none;margin:0 auto" alt=""></td>
+    <td class="urun-gorsel" style="text-align:center; vertical-align:middle;">
+        <img class="urun-gorsel-img" style="max-width:64px; max-height:64px; display:none; margin:0 auto" alt="">
+        <span class="no-img-icon" style="font-size:20px; color:#cbd5e1; display:block; margin-top:5px;">📦</span>
+    </td>
     <td>
       <select name="product_id[]" onchange="onPickProduct(this)">
         <option value="">—</option>
@@ -730,7 +791,8 @@ function addRow(){
           data-ozet="<?= h($p['urun_ozeti']) ?>"
           data-kalan="<?= h($p['kullanim_alani']) ?>"
           data-image="<?= h($p['image'] ?? '') ?>"
-        ><?= h($p['name']) ?><?= $p['sku'] ? ' ('.h($p['sku']).')':'' ?></option>
+          data-parent-id="<?= (int)($p['parent_id'] ?? 0) ?>"
+        ><?= h($p['display_name'] ?? $p['name']) ?><?= $p['sku'] ? ' ('.h($p['sku']).')':'' ?></option>
         <?php endforeach; ?>
       </select>
     </td>
@@ -744,7 +806,10 @@ function addRow(){
   `;
   document.querySelector('#itemsTable').appendChild(tr);
   bindSkuInputs(tr);
-  renumberRows(); // Numaraları güncelle
+  renumberRows();
+  
+  // ÖNEMLİ: Yeni eklenen satır için custom dropdown oluştur
+  initAccordionDropdowns();
 }
 
 function delRow(btn){
@@ -783,7 +848,26 @@ function bindSkuInputs(scope){
         if(data && data.success){
           var tr = this.closest('tr');
           var sel = tr.querySelector('select[name="product_id[]"]');
-          if(sel){ sel.value = String(data.id); try{ sel.dispatchEvent(new Event('change', {bubbles:true})); }catch(_e){ sel.dispatchEvent(new Event('change')); } }
+          
+          if(sel){ 
+            sel.value = String(data.id); 
+            
+            // Custom dropdown'u da güncelle
+            var wrapper = sel.closest('.custom-select-wrapper');
+            if (wrapper) {
+              var trigger = wrapper.querySelector('.custom-select-trigger');
+              if (trigger && sel.selectedIndex >= 0) {
+                var opt = sel.options[sel.selectedIndex];
+                if (opt) {
+                  trigger.textContent = opt.textContent.replace(/[⊿•▼]/g, '').trim();
+                }
+              }
+            }
+            
+            // ÖNEMLİ: Görseli hemen yükle (onPickProduct'ı manuel çağır)
+            onPickProduct(sel);
+          }
+          
           // Fill fields in case user didn't choose from select
           var name = tr.querySelector('input[name="name[]"]');
           var unit = tr.querySelector('input[name="unit[]"]');
@@ -810,8 +894,13 @@ function bindSkuInputs(scope){
 }
 
 function onPickProduct(sel){
+  console.log('onPickProduct çağrıldı, sel:', sel);
   const opt = sel.options[sel.selectedIndex];
-  if(!opt) return;
+  if(!opt) {
+    console.log('Option bulunamadı!');
+    return;
+  }
+  console.log('Seçilen option:', opt);
   const tr = sel.closest('tr');
   
   // YENİ: Stok Kodu (SKU) alanını doldur
@@ -832,17 +921,66 @@ function onPickProduct(sel){
   <?php endif; ?>
   tr.querySelector('input[name="urun_ozeti[]"]').value = opt.getAttribute('data-ozet') || '';
   tr.querySelector('input[name="kullanim_alani[]"]').value = opt.getAttribute('data-kalan') || '';
+  
+  // GÖRSEL MANTĞI (order_pdf.php'deki gibi parent kontrolü ile)
   var raw = opt.getAttribute('data-image') || '';
-  if (raw && !(raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('/'))) {
-    if (raw.startsWith('uploads/')) raw = '/' + raw;
-    else if (raw.startsWith('./')) raw = raw.slice(1);
-    else raw = '/uploads/' + raw;
+  
+  console.log('Seçilen ürün ID:', opt.value);
+  console.log('data-image:', raw);
+  console.log('data-parent-id:', opt.getAttribute('data-parent-id'));
+  
+  // Eğer görsel boşsa ve parent_id varsa, parent'ın görselini kullan
+  if (!raw) {
+    var parentId = opt.getAttribute('data-parent-id') || '0';
+    console.log('Görsel yok, parent_id kontrol ediliyor:', parentId);
+    if (parentId && parentId !== '0') {
+      var parentOpt = sel.querySelector('option[value="' + parentId + '"]');
+      if (parentOpt) {
+        raw = parentOpt.getAttribute('data-image') || '';
+        console.log('Parent\'tan alınan görsel:', raw);
+      }
+    }
   }
+  
+  // --- GÖRSEL YOLU HESAPLAMA (DÜZELTİLMİŞ) ---
+  var finalImgSrc = '';
+  if (raw) {
+    // 1. Tam URL veya Kök Dizin (/) ile başlıyorsa
+    if (raw.match(/^https?:\/\//) || raw.indexOf('/') === 0) {
+      finalImgSrc = raw;
+    }
+    // 2. "uploads/" ile başlıyorsa (başında slash yoksa)
+    else if (raw.indexOf('uploads/') === 0) {
+      finalImgSrc = '/' + raw;
+    }
+    // 3. Sadece dosya adıysa (varsayılan klasöre bak)
+    else {
+      finalImgSrc = '/uploads/product_images/' + raw;
+    }
+
+    // --- KRİTİK DÜZELTME: Çift '/uploads/uploads/' Kontrolü ---
+    // Yol nasıl oluşursa oluşsun, sonucunda çift klasör varsa düzeltilir.
+    if (finalImgSrc.indexOf('/uploads/uploads/') > -1) {
+        finalImgSrc = finalImgSrc.replace('/uploads/uploads/', '/uploads/');
+    }
+  }
+  // -----------------------------------------------------------
+  
+  console.log('Final görsel yolu:', finalImgSrc);
+  
   var imgEl = tr.querySelector('.urun-gorsel-img');
+  var noImgIcon = tr.querySelector('.no-img-icon');
+  
   if (imgEl) {
-    imgEl.src = raw || '';
-    imgEl.alt = raw ? 'Ürün görseli' : '';
-    imgEl.style.display = raw ? 'block' : 'none';
+    if (finalImgSrc) {
+      imgEl.src = finalImgSrc;
+      imgEl.alt = 'Ürün görseli';
+      imgEl.style.display = 'block';
+      if (noImgIcon) noImgIcon.style.display = 'none';
+    } else {
+      imgEl.style.display = 'none';
+      if (noImgIcon) noImgIcon.style.display = 'block';
+    }
   }
 }
 
@@ -919,17 +1057,48 @@ document.addEventListener('DOMContentLoaded', function(){
            // Sadece RESİM mantığını buraya aldık.
            // Fiyat veya Özet alanlarına dokunmuyoruz.
            var raw = opt.getAttribute('data-image') || '';
-           if (raw && !(raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('/'))) {
-             if (raw.startsWith('uploads/')) raw = '/' + raw;
-             else if (raw.startsWith('./')) raw = raw.slice(1);
-             else raw = '/uploads/' + raw;
+           
+           // Eğer görsel boşsa ve parent_id varsa, parent'ın görselini kullan
+           if (!raw) {
+             var parentId = opt.getAttribute('data-parent-id') || '0';
+             if (parentId && parentId !== '0') {
+               var parentOpt = s.querySelector('option[value="' + parentId + '"]');
+               if (parentOpt) {
+                 raw = parentOpt.getAttribute('data-image') || '';
+               }
+             }
            }
+           
+           var finalImgSrc = '';
+           if (raw) {
+             if (raw.startsWith('http://') || raw.startsWith('https://')) {
+               finalImgSrc = raw;
+             } else if (raw.startsWith('/uploads/uploads/')) {
+               // Çift uploads hatası düzelt
+               finalImgSrc = raw.replace('/uploads/uploads/', '/uploads/');
+             } else if (raw.startsWith('/')) {
+               finalImgSrc = raw;
+             } else if (raw.startsWith('uploads/')) {
+               finalImgSrc = '/' + raw;
+             } else {
+               finalImgSrc = '/uploads/product_images/' + raw;
+             }
+           }
+           
            var tr = s.closest('tr');
            var imgEl = tr.querySelector('.urun-gorsel-img');
+           var noImgIcon = tr.querySelector('.no-img-icon');
+           
            if (imgEl) {
-             imgEl.src = raw || '';
-             imgEl.alt = raw ? 'Ürün görseli' : '';
-             imgEl.style.display = raw ? 'block' : 'none';
+             if (finalImgSrc) {
+               imgEl.src = finalImgSrc;
+               imgEl.alt = 'Ürün görseli';
+               imgEl.style.display = 'block';
+               if (noImgIcon) noImgIcon.style.display = 'none';
+             } else {
+               imgEl.style.display = 'none';
+               if (noImgIcon) noImgIcon.style.display = 'block';
+             }
            }
          }
        } catch(_e){}
@@ -945,6 +1114,38 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   });
 });
+
+// Görsel modal fonksiyonu
+function openModal(imageSrc) {
+  // Modal zaten varsa kaldır
+  var existingModal = document.getElementById('image-modal');
+  if (existingModal) existingModal.remove();
+  
+  // Yeni modal oluştur
+  var modal = document.createElement('div');
+  modal.id = 'image-modal';
+  modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:999999; display:flex; align-items:center; justify-content:center; cursor:pointer;';
+  
+  var img = document.createElement('img');
+  img.src = imageSrc;
+  img.style.cssText = 'max-width:90%; max-height:90%; object-fit:contain; border-radius:8px; box-shadow:0 10px 40px rgba(0,0,0,0.5);';
+  
+  modal.appendChild(img);
+  document.body.appendChild(modal);
+  
+  // Modal'a tıklayınca kapat
+  modal.addEventListener('click', function() {
+    modal.remove();
+  });
+  
+  // ESC tuşuyla kapat
+  document.addEventListener('keydown', function escHandler(e) {
+    if (e.key === 'Escape') {
+      modal.remove();
+      document.removeEventListener('keydown', escHandler);
+    }
+  });
+}
 </script>
 <!-- Sortable.js for drag-drop -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -1278,4 +1479,282 @@ tr.active-editing td {
   });
 
 })();
+</script>
+<style>
+  /* Sayfa yüklenirken select'leri gizle */
+    select[name="product_id[]"] {
+        display: none !important;
+    }
+    
+    /* CUSTOM SELECT-DROPDOWN STİLLERİ */
+    .custom-select-wrapper {
+        position: relative;
+        display: block;
+        width: 100%;
+    }
+    
+    .custom-select-trigger {
+        position: relative; 
+        padding: 8px 12px; 
+        background: #fff; 
+        border: 1px solid #cbd5e1;
+        border-radius: 6px; 
+        cursor: pointer; 
+        min-height: 38px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between;
+        color: #334155;
+        transition: all 0.2s;
+        user-select: none;
+    }
+    .custom-select-trigger:hover { border-color: #64748b; background: #f8fafc; }
+    
+    /* AÇILIR LİSTE (BODY'YE TAŞINACAK) */
+    .custom-options {
+        display: none; /* Varsayılan gizli */
+        position: absolute; /* Sayfaya yapışık */
+        background: #fff;
+        border: 1px solid #94a3b8; 
+        border-radius: 8px; 
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3); /* Derin gölge */
+        z-index: 99999999; /* En üst katman */
+        max-height: 400px; 
+        overflow-y: auto; 
+        min-width: 500px; /* Genişlik garantisi */
+    }
+
+    .custom-options.open { display: block; }
+
+    /* SATIRLAR */
+    .custom-option {
+        padding: 12px 15px; /* Daha rahat tıklama alanı */
+        border-bottom: 1px solid #e2e8f0; 
+        cursor: pointer;
+        display: flex; 
+        align-items: center; 
+        transition: background 0.1s;
+        color: #475569;
+        font-size: 13px;
+    }
+    
+    /* NET HOVER EFEKTİ (İstediğin gibi belirgin) */
+    .custom-option:hover { 
+        background: #0ea5e9; /* Canlı mavi */
+        color: #fff;         /* Beyaz yazı */
+    }
+    
+    /* 🔴 ANA ÜRÜN STİLİ */
+    .option-parent { 
+        font-weight: 700; 
+        color: #1e293b; 
+        background: #f1f5f9;
+    }
+    /* Ana ürün hover olunca */
+    .option-parent:hover { background: #0284c7; color:#fff; }
+    
+    /* SOLDAKİ OK BUTONU */
+    .toggle-btn {
+        display: inline-flex;
+        align-items: center; justify-content: center;
+        width: 26px; height: 26px;
+        margin-right: 12px;
+        border-radius: 4px; 
+        background: #fff; 
+        border: 1px solid #cbd5e1;
+        color: #64748b;
+        font-size: 10px; 
+        font-weight: bold;
+        transition: 0.2s;
+    }
+    .toggle-btn:hover { background: #e2e8f0; color: #000; transform: scale(1.1); }
+    /* Parent hover olunca buton rengini koru veya uydur */
+    .option-parent:hover .toggle-btn { color: #000; }
+
+    .toggle-btn.expanded { background: #f59e0b; color: #fff; border-color:#d97706; transform: rotate(180deg); } 
+
+    /* 🟡 ÇOCUK ÜRÜN (VARYASYON) */
+    .option-child { 
+        display: none; 
+        background: #fffbeb; 
+        padding-left: 50px; 
+        color: #b45309; 
+        border-left: 5px solid #fcd34d;
+    }
+    .option-child.visible { display: flex; } 
+    /* Çocuk hover */
+    .option-child:hover { background: #0ea5e9; color:#fff; border-left-color: #0284c7; }
+
+</style>
+
+<script>
+// Sayfa yüklenirken select'leri hemen gizle
+document.querySelectorAll('select[name="product_id[]"]').forEach(s => s.style.display = 'none');
+
+document.addEventListener('DOMContentLoaded', function() {
+    initAccordionDropdowns();
+    
+    // Dinamik satır ekleme takibi
+    const observer = new MutationObserver(function(mutations) {
+        if (mutations.some(m => m.addedNodes.length)) initAccordionDropdowns();
+    });
+    const tbody = document.querySelector('table tbody'); 
+    if(tbody) observer.observe(tbody, { childList: true });
+
+    // Pencere boyutu değişirse her şeyi kapat (kaymayı önlemek için)
+    window.addEventListener('resize', closeAllDropdowns);
+    // Dışarı tıklayınca kapat
+    document.addEventListener('click', function(e) {
+        if(!e.target.closest('.custom-options') && !e.target.closest('.custom-select-trigger')) {
+            closeAllDropdowns();
+        }
+    });
+});
+
+function closeAllDropdowns() {
+    document.querySelectorAll('.custom-options.open').forEach(el => {
+        el.classList.remove('open');
+        // Listeyi ait olduğu satıra (wrapper'a) geri gönder! (Temizlik)
+        if (el._originalWrapper) {
+            el._originalWrapper.appendChild(el);
+        }
+    });
+}
+
+function initAccordionDropdowns() {
+    const selects = document.querySelectorAll('select[name="product_id[]"]:not(.enhanced)');
+    
+    selects.forEach(select => {
+        select.classList.add('enhanced'); 
+        select.style.display = 'none';    
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'custom-select-wrapper';
+        
+        const trigger = document.createElement('div');
+        trigger.className = 'custom-select-trigger';
+        
+        let rawText = select.options[select.selectedIndex].textContent || 'Ürün Seçiniz...';
+        trigger.textContent = rawText.replace(/[⊿•▼]/g, '').trim();
+        
+        const optionsList = document.createElement('div');
+        optionsList.className = 'custom-options';
+        optionsList._originalWrapper = wrapper; // Sahibini unutma
+        
+        Array.from(select.options).forEach(opt => {
+            // Boş option'ı atla
+            if (!opt.value) return;
+            
+            const div = document.createElement('div');
+            div.className = 'custom-option';
+            div.dataset.value = opt.value;
+            let text = opt.textContent;
+
+            // --- ANA ÜRÜN ---
+            if (text.includes('⊿')) {
+                div.classList.add('option-parent');
+                let cleanName = text.replace('⊿', '').replace('▼', '').trim();
+                
+                if (text.includes('▼')) {
+                    const btn = document.createElement('span');
+                    btn.className = 'toggle-btn';
+                    btn.innerText = '▼';
+                    
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        btn.classList.toggle('expanded');
+                        
+                        // Kardeş kontrolü
+                        let sibling = div.nextElementSibling;
+                        while(sibling && sibling.classList.contains('option-child')) {
+                            sibling.classList.toggle('visible');
+                            sibling = sibling.nextElementSibling;
+                        }
+                    };
+                    div.appendChild(btn);
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.innerText = cleanName;
+                    div.appendChild(nameSpan);
+                } else {
+                    div.innerHTML = `<span style="margin-left:38px">${cleanName}</span>`; 
+                }
+            } 
+            // --- ÇOCUK ÜRÜN ---
+            else if (text.includes('•')) {
+                div.classList.add('option-child'); 
+                div.innerText = text.replace('•', '').trim();
+            } 
+            // --- NORMAL ---
+            else {
+                div.innerText = text;
+            }
+            
+            // Seçim
+            div.addEventListener('click', function(e) {
+                // Toggle butona tıklandıysa seçim yapma
+                if(e.target.classList.contains('toggle-btn')) return;
+                
+                select.value = this.dataset.value;
+                // Trigger'daki metni güncelle (temiz, sadece ürün adı)
+                let displayText = this.textContent.replace(/[⊿•▼]/g, '').trim();
+                trigger.textContent = displayText;
+                
+                closeAllDropdowns();
+                
+                // Change event'ini tetikle (onPickProduct çalışsın)
+                select.dispatchEvent(new Event('change', {bubbles: true}));
+            });
+            
+            optionsList.appendChild(div);
+        });
+        
+        select.parentNode.insertBefore(wrapper, select);
+        wrapper.appendChild(select);
+        wrapper.appendChild(trigger);
+        wrapper.appendChild(optionsList); // Şimdilik burada dursun
+        
+        // --- AÇMA TETİKLEYİCİSİ (TELEPORT MANTIĞI) ---
+        trigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Zaten açıksa kapat
+            if (optionsList.classList.contains('open')) {
+                closeAllDropdowns();
+                return;
+            }
+
+            closeAllDropdowns(); // Diğerlerini kapat
+            
+            // 1. LİSTEYİ BODY'YE TAŞI (Tablodan Kurtar)
+            document.body.appendChild(optionsList);
+            
+            // 2. KONUMU HESAPLA (Sayfa bazlı absolute)
+            const rect = trigger.getBoundingClientRect();
+            const scrollX = window.scrollX || window.pageXOffset;
+            const scrollY = window.scrollY || window.pageYOffset;
+
+            // Genişlik: En az 500px, ama tetikleyici daha genişse ona uy
+            optionsList.style.width = Math.max(rect.width, 500) + 'px';
+            optionsList.style.left = (rect.left + scrollX) + 'px';
+            
+            // Yer kontrolü (Aşağıda yer var mı?)
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const listHeight = 400; // Max yükseklik
+            
+            if (spaceBelow < listHeight && rect.top > listHeight) {
+                // Yukarı Aç (Tetikleyicinin üstüne)
+                optionsList.style.top = (rect.top + scrollY - listHeight - 2) + 'px';
+                optionsList.style.bottom = 'auto';
+            } else {
+                // Aşağı Aç
+                optionsList.style.top = (rect.bottom + scrollY + 2) + 'px';
+                optionsList.style.bottom = 'auto';
+            }
+
+            optionsList.classList.add('open');
+        });
+    });
+}
 </script>
