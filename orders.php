@@ -855,7 +855,7 @@ $offset = ($page - 1) * $per_page;
 
 $params = [];
 // Ürün araması (oi.name) eklendi
-$sql = "SELECT DISTINCT o.*, c.name AS customer_name, c.email AS customer_email FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id WHERE 1=1";
+$sql = "SELECT DISTINCT o.*, c.name AS customer_name, c.email AS customer_email FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id LEFT JOIN products p ON oi.product_id=p.id WHERE 1=1";
 // --- GİZLİLİK FİLTRESİ (DÜZELTİLDİ) ---
 if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
     $sql .= " AND o.status != 'taslak_gizli'";
@@ -863,11 +863,12 @@ if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
 // -------------------------------------
 
 if ($q !== '') {
-    $sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ? OR oi.name LIKE ?)";
+    $sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ? OR oi.name LIKE ? OR p.sku LIKE ?)";
     $params[] = '%'.$q.'%';
     $params[] = '%'.$q.'%';
     $params[] = '%'.$q.'%';
     $params[] = '%'.$q.'%';
+    $params[] = '%'.$q.'%'; // SKU için yeni parametre
 }
 if ($status !== '') {
     $sql .= " AND o.status = ?";
@@ -894,7 +895,7 @@ $status_labels = [
 ];
 $__cnt_params = [];
 // Ürün araması eklendi ve COUNT(DISTINCT o.id) yapıldı
-$__cnt_sql = "SELECT o.status, COUNT(DISTINCT o.id) AS cnt FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id WHERE 1=1";
+$__cnt_sql = "SELECT o.status, COUNT(DISTINCT o.id) AS cnt FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id LEFT JOIN products p ON oi.product_id=p.id WHERE 1=1";
 // --- GİZLİLİK FİLTRESİ (DÜZELTİLDİ) ---
 // Sadece yetkisiz kullanıcılardan gizle. Adminler hepsini görsün.
 if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
@@ -902,11 +903,12 @@ if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
 }
 // -------------------------------------
 if ($q !== '') {
-    $__cnt_sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ? OR oi.name LIKE ?)";
+    $__cnt_sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ? OR oi.name LIKE ? OR p.sku LIKE ?)";
     $__cnt_params[] = '%'.$q.'%';
     $__cnt_params[] = '%'.$q.'%';
     $__cnt_params[] = '%'.$q.'%';
     $__cnt_params[] = '%'.$q.'%';
+    $__cnt_params[] = '%'.$q.'%'; // SKU parametresi
 }
 $__cnt_sql .= " GROUP BY o.status";
 $__cnt_stmt = $db->prepare($__cnt_sql);
@@ -1002,19 +1004,20 @@ $stmt->execute($params);
   // Sadece arama (q) kapsamına göre adetler; status filtreye dahil edilmez
   $__cnt_params = [];
   // Ürün araması eklendi ve COUNT(DISTINCT o.id) yapıldı
-  $__cnt_sql = "SELECT o.status, COUNT(DISTINCT o.id) AS cnt FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id WHERE 1=1";
+  $__cnt_sql = "SELECT o.status, COUNT(DISTINCT o.id) AS cnt FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id LEFT JOIN products p ON oi.product_id=p.id WHERE 1=1";
 // --- GİZLİLİK FİLTRESİ (DÜZELTİLDİ) ---
 if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
     $__cnt_sql .= " AND o.status != 'taslak_gizli'";
 }
 // -------------------------------------
   if ($q !== '') {
-    $__cnt_sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ? OR oi.name LIKE ?)";
+    $__cnt_sql .= " AND (o.order_code LIKE ? OR c.name LIKE ? OR o.proje_adi LIKE ? OR oi.name LIKE ? OR p.sku LIKE ?)";
     $__cnt_params[] = '%'.$q.'%';
     $__cnt_params[] = '%'.$q.'%';
     $__cnt_params[] = '%'.$q.'%';
     $__cnt_params[] = '%'.$q.'%';
-  }
+    $__cnt_params[] = '%'.$q.'%'; // SKU parametresi
+}
   $__cnt_sql .= " GROUP BY o.status";
   $__cnt_stmt = $db->prepare($__cnt_sql);
   $__cnt_stmt->execute($__cnt_params);
