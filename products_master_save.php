@@ -44,9 +44,15 @@ try {
         foreach ($_POST['delete_v_ids'] as $del_id) $stmtDel->execute([$del_id, $id]);
     }
 
+    // VARYASYON AYIRMA (GÜÇLENDİRİLMİŞ)
     if (!empty($_POST['unlink_v_ids'])) {
-        $stmtUnlink = $db->prepare("UPDATE products SET parent_id = NULL WHERE id = ? AND parent_id = ?");
-        foreach ($_POST['unlink_v_ids'] as $u_id) $stmtUnlink->execute([$u_id, $id]);
+        // Sadece parent_id'yi silmek yetmez, SKU boş metin ('') ise onu da NULL yapalım ki çakışmasın.
+        // NULLIF(sku, '') komutu: Eğer sku boş tırnaksa NULL yapar, değilse olduğu gibi bırakır.
+        $stmtUnlink = $db->prepare("UPDATE products SET parent_id = NULL, sku = NULLIF(sku, '') WHERE id = ? AND parent_id = ?");
+        
+        foreach ($_POST['unlink_v_ids'] as $u_id) {
+            $stmtUnlink->execute([$u_id, $id]);
+        }
     }
 
     if (!empty($_POST['transfer_v_ids']) && is_array($_POST['transfer_v_ids'])) {
