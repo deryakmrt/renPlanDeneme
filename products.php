@@ -57,6 +57,31 @@ try {
 
 
 $action = $_GET['a'] ?? 'list';
+// --- ARAMA SABİTLEME MANTIĞI (BAŞLANGIÇ) ---
+$search_lock = $_SESSION['product_search_lock'] ?? false;
+
+// 1. Kilit Açma/Kapama İsteği (Linkten gelen)
+if (isset($_GET['toggle_lock'])) {
+    $search_lock = !$search_lock;
+    $_SESSION['product_search_lock'] = $search_lock;
+    
+    // Sayfayı temiz URL ile yenile (mevcut aramayı koruyarak)
+    $redirQ = $_GET['q'] ?? ($_SESSION['product_last_q'] ?? '');
+    redirect('products.php?q='.urlencode($redirQ));
+}
+
+// 2. Arama Terimini Belirle
+$q_in_url = isset($_GET['q']); // URL'de q parametresi var mı?
+$q = trim($_GET['q'] ?? '');
+
+if ($q_in_url) {
+    // Kullanıcı elle bir şey arattıysa (veya boş aratıp temizlediyse)
+    $_SESSION['product_last_q'] = $q; // Hafızayı güncelle
+} elseif ($search_lock && !empty($_SESSION['product_last_q'])) {
+    // URL'de arama yok ama KİLİT AÇIK -> Hafızadan geri yükle
+    $q = $_SESSION['product_last_q'];
+}
+// --- ARAMA SABİTLEME MANTIĞI (BİTİŞ) ---
 
 
 
@@ -485,7 +510,7 @@ if ($action === 'new' || $action === 'edit') {
 
 // Liste/Arama
 
-$q = trim($_GET['q'] ?? '');
+
 
 $perPage = 20;
 
@@ -560,6 +585,18 @@ $next = min($totalPages, $page+1);
         <option value="name_asc" <?= ($sort??'')=='name_asc'?'selected':'' ?>>abc İsim (A-Z)</option>
         <option value="name_desc" <?= ($sort??'')=='name_desc'?'selected':'' ?>>zyx İsim (Z-A)</option>
     </select>
+
+    <?php 
+       $isLocked = $_SESSION['product_search_lock'] ?? false;
+       $lockIcon = $isLocked ? '🔒' : '🔓';
+       $lockStyle = $isLocked 
+           ? 'background:#dcfce7; color:#166534; border:1px solid #86efac;' // Yeşil (Aktif)
+           : 'background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;'; // Gri (Pasif)
+       $lockTitle = $isLocked ? 'Arama Sabitlendi (Kaldırmak için tıkla)' : 'Aramayı Sabitle (Her girişte hatırla)';
+    ?>
+    <a href="products.php?toggle_lock=1&q=<?= urlencode($q) ?>" class="btn" title="<?= $lockTitle ?>" style="padding:10px; text-decoration:none; <?= $lockStyle ?>">
+        <?= $lockIcon ?>
+    </a>
 
     <input name="q" placeholder="Ad veya SKU ara..." value="<?= h($q) ?>" style="padding:10px; border:1px solid #ccc; border-radius:4px;">
     <button class="btn" style="padding:10px 20px;">Ara</button>
