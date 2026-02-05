@@ -138,39 +138,39 @@ $lastOrders = $db->query('
 ')->fetchAll(PDO::FETCH_ASSOC);
 
 
-// Dynamic tasks: prefer order_notes table, fallback to orders.notes
+// Dynamic tasks: Son değiştirilen siparişlerin notlarını göster
 $tasks = [];
 try {
-  // Try order_notes first
+  // En son değiştirilen siparişleri audit_log'dan bul
   $rows = [];
   try {
+    // Önce audit_log'dan en son değiştirilen siparişleri bul
     $st = $db->query("
-      SELECT n.id, n.order_id, n.user_id, n.note, n.created_at,
-             o.order_code, o.customer_id,
+      SELECT o.id, o.order_code, o.customer_id, o.notes AS note, al.ts AS last_modified,
              c.name AS customer_name
-      FROM order_notes n
-      LEFT JOIN orders o   ON o.id = n.order_id
+      FROM orders o
       LEFT JOIN customers c ON c.id = o.customer_id
-      WHERE n.deleted_at IS NULL
-        AND n.note IS NOT NULL AND TRIM(n.note) <> ''
-      ORDER BY n.created_at DESC, n.id DESC
-      LIMIT 5
+      LEFT JOIN (
+        SELECT object_id, MAX(ts) AS ts
+        FROM audit_log
+        WHERE object_type = 'orders'
+        GROUP BY object_id
+      ) al ON al.object_id = o.id
+      WHERE o.notes IS NOT NULL AND TRIM(o.notes) <> ''
+      ORDER BY COALESCE(al.ts, o.created_at) DESC
+      LIMIT 10
     ");
     $rows = $st->fetchAll(PDO::FETCH_ASSOC);
   } catch (Throwable $e1) {
-    $rows = [];
-  }
-
-  if (!$rows) {
-    // Fallback to orders.notes
+    // Fallback: audit_log yoksa sadece orders.notes'a bak
     $st2 = $db->query("
-      SELECT o.id, o.order_code, o.customer_id, o.notes AS note, o.created_at,
+      SELECT o.id, o.order_code, o.customer_id, o.notes AS note, o.created_at AS last_modified,
              c.name AS customer_name
       FROM orders o
       LEFT JOIN customers c ON c.id = o.customer_id
       WHERE o.notes IS NOT NULL AND TRIM(o.notes) <> ''
-      ORDER BY o.created_at DESC, o.id DESC
-      LIMIT 5
+      ORDER BY o.id DESC
+      LIMIT 10
     ");
     $rows = $st2->fetchAll(PDO::FETCH_ASSOC);
   }
@@ -179,26 +179,61 @@ try {
     $tasks = [['title' => 'Henüz not bulunamadı', 'badge' => '', 'url' => '#']];
   } else {
     foreach ($rows as $r) {
-      $note = (string)($r['note'] ?? '');
-      $note = preg_replace('/\s+/', ' ', $note);
-      $note = trim($note);
-
+      // orders.notes formatı: "kullanici | tarih saat: not\r\nkullanici2 | tarih2: not2"
+      $fullNotes = (string)($r['note'] ?? '');
+      
+      // En son notu bul (satırları ayır ve en sonuncuyu al)
+      $noteLines = preg_split('/[\r\n]+/', $fullNotes);
+      $noteLines = array_filter(array_map('trim', $noteLines)); // Boşları temizle
+      $lastNoteLine = end($noteLines); // Son satır
+      
+      if (!$lastNoteLine) {
+        continue; // Boşsa atla
+      }
+      
+      // Format: "derya | 05.02.2026 12:47: deneme"
+      $userName = '';
+      $noteText = $lastNoteLine;
+      $noteDate = '';
+      
+      // Parse et
+      if (preg_match('/^([^|]+)\s*\|\s*([^:]+):\s*(.+)$/u', $lastNoteLine, $matches)) {
+        $userName = trim($matches[1]);
+        $noteDate = trim($matches[2]);
+        $noteText = trim($matches[3]);
+      }
+      
+      // Özet oluştur
+      $noteText = preg_replace('/\s+/', ' ', $noteText);
       if (function_exists('mb_strimwidth')) {
-        $summary = mb_strimwidth($note, 0, 90, '…', 'UTF-8');
+        $summary = mb_strimwidth($noteText, 0, 90, '…', 'UTF-8');
       } else {
-        $summary = substr($note, 0, 90) . (strlen($note) > 90 ? '…' : '');
+        $summary = substr($noteText, 0, 90) . (strlen($noteText) > 90 ? '…' : '');
       }
 
       $prefixParts = [];
       if (!empty($r['order_code'])) $prefixParts[] = '#' . $r['order_code'];
-      else if (!empty($r['order_id'])) $prefixParts[] = 'Sipariş #' . (int)$r['order_id'];
       else if (!empty($r['id'])) $prefixParts[] = 'Sipariş #' . (int)$r['id'];
+      
+      // Kullanıcı adı ekle
+      if ($userName) {
+        $prefixParts[] = $userName;
+      }
+      
       $prefixParts[] = !empty($r['customer_name']) ? $r['customer_name'] : ('Müşteri #' . (int)($r['customer_id'] ?? 0));
       $prefix = implode(' · ', array_filter($prefixParts));
 
-      // badge
+      // badge - en son değiştirilme zamanından hesapla
       $badge = '';
-      $ts = !empty($r['created_at']) ? strtotime($r['created_at']) : 0;
+      
+      // Önce noteDate'i parse etmeyi dene (05.02.2026 12:47 formatı)
+      if ($noteDate && preg_match('/(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})/', $noteDate, $dm)) {
+        $ts = mktime((int)$dm[4], (int)$dm[5], 0, (int)$dm[2], (int)$dm[1], (int)$dm[3]);
+      } else {
+        // Fallback: last_modified kullan
+        $ts = !empty($r['last_modified']) ? strtotime($r['last_modified']) : 0;
+      }
+      
       if ($ts) {
         $diff = time() - $ts;
         if     ($diff < 60)   $badge = 'Az önce';
@@ -207,8 +242,8 @@ try {
         else                   $badge = date('d.m.Y', $ts);
       }
 
-      $orderId = !empty($r['order_id']) ? (int)$r['order_id'] : (int)($r['id'] ?? 0);
-      $url = $orderId ? ('order_view.php?id=' . $orderId) : '#';
+      $orderId = (int)($r['id'] ?? 0);
+      $url = $orderId ? ('order_edit.php?id=' . $orderId) : '#';
 
       $tasks[] = ['title' => $summary . ' — ' . $prefix, 'badge' => $badge, 'url' => $url];
     }
