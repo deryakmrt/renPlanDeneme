@@ -309,11 +309,11 @@ if ($action === 'new' || $action === 'edit') {
         <div class="row mt" style="gap:12px">
 
           <div style="flex:1">
-
             <label>Birim</label>
-
-            <input name="unit" value="<?= h($row['unit']) ?>">
-
+            <select name="unit" style="width:100%; height:40px; border:1px solid #ccc; border-radius:4px; padding:0 10px;">
+                <option value="Adet" <?= (strtolower($row['unit'] ?? '') == 'adet') ? 'selected' : '' ?>>Adet</option>
+                <option value="Metre" <?= (strtolower($row['unit'] ?? '') == 'metre') ? 'selected' : '' ?>>Metre</option>
+            </select>
           </div>
 
           <div style="flex:1">
