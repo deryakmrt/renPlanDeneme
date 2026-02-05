@@ -188,6 +188,11 @@ if (($action === 'new' || $action === 'edit') && method('POST')) {
                 $pid = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : NULL;
                 if ($pid !== $id) { // Kendisini baba seçemez
                     $db->prepare("UPDATE products SET parent_id = ? WHERE id = ?")->execute([$pid, $id]);
+                    
+                    // --- HAFIZA ÖZELLİĞİ: Son seçileni hatırla ---
+                    if ($pid) {
+                        $_SESSION['last_selected_parent_id'] = $pid;
+                    }
                 }
             }
             // --- GÖRSEL SİLME KODU (BURADA OLMALI) ---
@@ -367,15 +372,52 @@ if ($action === 'new' || $action === 'edit') {
             </select>
             <div style="background:#f0f9ff; padding:10px; border:1px solid #bae6fd; border-radius:5px; margin-bottom:15px;">
         <label style="color:#0369a1; font-weight:bold;">🔗 Ana Ürüne Bağla (Varyasyon Yap)</label>
-        <select name="parent_id" class="form-control" style="margin-top:5px; border:1px solid #0284c7;">
+        
+        <input type="text" id="parentSearchBox" placeholder="🔍 Listede ara..." 
+               style="width:100%; margin-top:5px; padding:6px; border:1px solid #bae6fd; border-radius:4px; font-size:13px;" 
+               onkeyup="filterParentOptions()">
+
+        <select name="parent_id" id="parentSelectBox" class="form-control" style="margin-top:5px; border:1px solid #0284c7; width:100%;">
             <option value="">-- Yok (Bu bir Ana Ürün) --</option>
+            <?php 
+                // ÖNCELİK MANTIĞI:
+                // 1. Ürünün zaten bir veritabanı kaydı varsa onu kullan.
+                // 2. Yoksa (veya boşsa) ve hafızada (session) bir seçim varsa onu kullan.
+                $currentParentId = $row['parent_id'] ?? null;
+                if (!$currentParentId && isset($_SESSION['last_selected_parent_id'])) {
+                    $currentParentId = $_SESSION['last_selected_parent_id'];
+                }
+            ?>
             <?php foreach($__parents as $p): ?>
                 <?php if($p['id'] == ($id ?? 0)) continue; // Kendisi listelenmesin ?>
-                <option value="<?= $p['id'] ?>" <?= (isset($row['parent_id']) && $row['parent_id'] == $p['id']) ? 'selected' : '' ?>>
+                <option value="<?= $p['id'] ?>" <?= ($currentParentId == $p['id']) ? 'selected' : '' ?>>
                     <?= h($p['name']) ?> [Kod: <?= h($p['sku']) ?>]
                 </option>
             <?php endforeach; ?>
         </select>
+        
+        <script>
+        function filterParentOptions() {
+            var input, filter, select, options, i, txtValue;
+            input = document.getElementById("parentSearchBox");
+            filter = input.value.toUpperCase();
+            select = document.getElementById("parentSelectBox");
+            options = select.getElementsByTagName("option");
+
+            // Seçenekleri döngüye al
+            for (i = 0; i < options.length; i++) {
+                // İlk seçenek (--Yok--) her zaman görünsün
+                if (i === 0) continue;
+                
+                txtValue = options[i].textContent || options[i].innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    options[i].style.display = "";
+                } else {
+                    options[i].style.display = "none";
+                }
+            }
+        }
+        </script>
     </div>
 
             <div class="muted"><a href="taxonomies.php?t=brands" target="_blank">Marka yönet</a></div>
