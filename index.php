@@ -176,7 +176,7 @@ try {
   }
 
   if (!$rows) {
-    $tasks = [['title' => 'Henüz not bulunamadı', 'badge' => '', 'url' => '#']];
+    $tasks = [['prefix' => '', 'summary' => 'Henüz not bulunamadı', 'badge' => '', 'url' => '#']];
   } else {
     foreach ($rows as $r) {
       // orders.notes formatı: "kullanici | tarih saat: not\r\nkullanici2 | tarih2: not2"
@@ -195,13 +195,23 @@ try {
       $userName = '';
       $noteText = $lastNoteLine;
       $noteDate = '';
+      $noteTime = '';
       
-      // Parse et
+      // Parse et - önce kullanıcı ve tarihi ayır
       if (preg_match('/^([^|]+)\s*\|\s*([^:]+):\s*(.+)$/u', $lastNoteLine, $matches)) {
         $userName = trim($matches[1]);
-        $noteDate = trim($matches[2]);
+        $dateTimePart = trim($matches[2]); // "05.02.2026 12:47"
         $noteText = trim($matches[3]);
+        
+        // Tarih ve saati parse et
+        if (preg_match('/(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2})/', $dateTimePart, $dtMatch)) {
+          $noteDate = $dtMatch[1]; // 05.02.2026
+          $noteTime = $dtMatch[2]; // 12:47
+        }
       }
+      
+      // Notun başında kalan saat bilgisini temizle (örn: "04: MÜŞTERİ...")
+      $noteText = preg_replace('/^\d{1,2}:\s*/', '', $noteText);
       
       // Özet oluştur
       $noteText = preg_replace('/\s+/', ' ', $noteText);
@@ -220,36 +230,50 @@ try {
         $prefixParts[] = $userName;
       }
       
+      // Not zamanını prefix'e ekle
+      if ($noteTime) {
+        $prefixParts[] = $noteTime;
+      }
+      
       $prefixParts[] = !empty($r['customer_name']) ? $r['customer_name'] : ('Müşteri #' . (int)($r['customer_id'] ?? 0));
       $prefix = implode(' · ', array_filter($prefixParts));
 
-      // badge - en son değiştirilme zamanından hesapla
+      // badge - notun yazıldığı zamandan şimdiye kadar geçen süre
       $badge = '';
       
-      // Önce noteDate'i parse etmeyi dene (05.02.2026 12:47 formatı)
-      if ($noteDate && preg_match('/(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})/', $noteDate, $dm)) {
-        $ts = mktime((int)$dm[4], (int)$dm[5], 0, (int)$dm[2], (int)$dm[1], (int)$dm[3]);
+      // noteDate ve noteTime'dan timestamp oluştur (05.02.2026 12:47 formatı)
+      if ($noteDate && $noteTime && preg_match('/(\d{2})\.(\d{2})\.(\d{4})/', $noteDate, $dm) && preg_match('/(\d{2}):(\d{2})/', $noteTime, $tm)) {
+        $ts = mktime((int)$tm[1], (int)$tm[2], 0, (int)$dm[2], (int)$dm[1], (int)$dm[3]);
       } else {
         // Fallback: last_modified kullan
         $ts = !empty($r['last_modified']) ? strtotime($r['last_modified']) : 0;
       }
       
       if ($ts) {
-        $diff = time() - $ts;
-        if     ($diff < 60)   $badge = 'Az önce';
-        elseif ($diff < 3600) $badge = floor($diff/60) . ' dk';
-        elseif ($diff < 86400)$badge = floor($diff/3600) . ' sa';
-        else                   $badge = date('d.m.Y', $ts);
+        // Bugünün başlangıcı (00:00:00)
+        $todayStart = strtotime('today');
+        
+        // Notun tarihi bugünse "Bugün", değilse tarih göster
+        if ($ts >= $todayStart) {
+          $badge = 'Bugün';
+        } else {
+          $badge = date('d.m.Y', $ts);
+        }
       }
 
       $orderId = (int)($r['id'] ?? 0);
       $url = $orderId ? ('order_edit.php?id=' . $orderId) : '#';
 
-      $tasks[] = ['title' => $summary . ' — ' . $prefix, 'badge' => $badge, 'url' => $url];
+      $tasks[] = [
+        'prefix' => $prefix,        // #sipariş kodu • yazar • proje ismi
+        'summary' => $summary,      // Notun kendisi
+        'badge' => $badge,          // 2 sa
+        'url' => $url
+      ];
     }
   }
 } catch (Throwable $e) {
-  $tasks = [['title' => 'Notlar okunamadı', 'badge' => '', 'url' => '#']];
+  $tasks = [['prefix' => '', 'summary' => 'Notlar okunamadı', 'badge' => '', 'url' => '#']];
 }
 
 
@@ -288,8 +312,11 @@ $upcoming = $db->query("
     <ul class="list">
       <?php foreach ($tasks as $t): ?>
         <li>
-          <a href="<?= htmlspecialchars($t['url'] ?? '#') ?>" class="row-link"><?= htmlspecialchars($t['title']) ?></a>
-          <span class="badge"><?= htmlspecialchars($t['badge']) ?></span>
+          <a href="<?= htmlspecialchars($t['url'] ?? '#') ?>" class="row-link" style="max-width:calc(100% - 80px)">
+            <div style="color:#64748b;font-size:11px;margin-bottom:2px"><?= htmlspecialchars($t['prefix'] ?? '') ?></div>
+            <div style="color:#0f172a;font-weight:500"><?= htmlspecialchars($t['summary'] ?? '') ?></div>
+          </a>
+          <span class="badge"><?= htmlspecialchars($t['badge'] ?? '') ?></span>
         </li>
       <?php endforeach; ?>
     </ul>
