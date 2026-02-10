@@ -9,26 +9,6 @@
 select[name="product_id[]"] {
     display: none !important;
 }
-
-/* ZIRH: Admin olmayan kullanıcılar için fiyat kolonunu ZORLA gizle */
-<?php if (!$__is_admin_like): ?>
-/* Fiyat input'larını gizle (her ihtimale karşı) */
-input[name="price[]"],
-input[name^="price["] {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    position: absolute !important;
-    left: -9999px !important;
-}
-
-/* Fiyat th başlığını gizle (eğer yanlışlıkla render edildiyse) */
-#itemsTable th:has(+ th):nth-last-child(3),
-#itemsTable th:contains("Birim Fiyat"),
-#itemsTable th:contains("Fiyat") {
-    display: none !important;
-}
-<?php endif; ?>
 </style>
 
 <div class="card">
@@ -39,7 +19,7 @@ input[name^="price["] {
       <a class="btn" href="order_view.php?id=<?= (int)$order['id'] ?>">Görüntüle</a>
       <?php if ($__is_admin_like): ?>
       <a class="btn primary" href="order_pdf.php?id=<?= (int)$order['id'] ?>">STF</a>
-      <?php endif; ?>
+<?php endif; ?>
       <button type="button" class="btn primary" onclick="this.closest('.card').querySelector('form').requestSubmit()">Güncelle</button>
       <a class="btn" href="orders.php">Vazgeç</a>
     </div>
@@ -47,6 +27,7 @@ input[name^="price["] {
 
   <form method="post">
     <?php csrf_input(); ?>
+    <!-- 4'lü gridler (temiz ve tekil) -->
     <div class="grid g4 mt" style="gap:12px">
       <div>
         <label>Durum</label>
@@ -168,28 +149,23 @@ input[name^="price["] {
 
     <h3 class="mt">Kalemler</h3>
     <div id="items">
-      <?php if ($__is_admin_like): ?>
       <div class="row mb">
         <button type="button" class="btn" onclick="addRow()">+ Satır Ekle</button>
       </div>
-      <?php endif; ?>
       <table id="itemsTable">
-        <thead>
-            <tr>
-              <?php if ($__is_admin_like): ?><th style="width:40px">⋮⋮</th><?php endif; ?>
-              <th style="width:12%">Stok Kodu</th>
-              <th style="width:10%">Ürün Görseli</th>
-              <th style="width:22%">Ürün</th>
-              <th>Ad</th>
-              <th style="width:8%">Birim</th>
-              <th style="width:8%">Miktar</th>
-              <?php if ($__is_admin_like): ?><th style="width:12%">Birim Fiyat</th><?php endif; ?>
-              <th>Ürün Özeti</th>
-              <th>Kullanım Alanı</th>
-              <?php if ($__is_admin_like): ?><th class="right" style="width:8%">Sil</th><?php endif; ?>
-            </tr>
-        </thead>
-        <tbody>
+        <tr>
+          <th style="width:40px">⋮⋮</th>
+          <th style="width:12%">Stok Kodu</th>
+          <th style="width:10%">Ürün Görseli</th>
+          <th style="width:22%">Ürün</th>
+          <th>Ad</th>
+          <th style="width:8%">Birim</th>
+          <th style="width:8%">Miktar</th>
+          <?php if ($__is_admin_like): ?><th style="width:12%">Birim Fiyat</th><?php endif; ?>
+          <th>Ürün Özeti</th>
+          <th>Kullanım Alanı</th>
+          <?php if ($__is_admin_like): ?><th class="right" style="width:8%">Sil</th><?php endif; ?>
+        </tr>
         <?php if (!$items) { $items = [[]]; } ?>
         <?php 
           $rn = 0; 
@@ -209,18 +185,12 @@ input[name^="price["] {
           // -----------------------------------------
         ?>
         <tr>
-          <?php if ($__is_admin_like): ?>
           <td class="drag-handle" style="cursor:move; vertical-align:middle; text-align:center; color:#9ca3af; font-size:18px; user-select:none; width:50px;">
             <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
                 <span class="row-index"><?= $rn ?></span> ⋮⋮
             </div>
           </td>
-          <?php endif; ?>
-          
-          <td>
-            <input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu" value="<?= h($current_sku) ?>" <?= $__is_admin_like ? '' : 'readonly style="background-color: #f9fafb; cursor: not-allowed;"' ?>>
-          </td>
-
+          <td><input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu" value="<?= h($current_sku) ?>"></td>
           <td class="urun-gorsel" style="text-align:center; vertical-align:middle;">
             <?php 
                 // 1. Veritabanından gelen resmi al
@@ -274,65 +244,39 @@ input[name^="price["] {
             <?php endif; ?>
           </td>
           <td>
-            <?php if ($__is_admin_like): ?>
-              <select name="product_id[]" onchange="onPickProduct(this)">
-                <option value="">—</option>
-                <?php foreach($products as $p): ?>
-                <option
-                  value="<?= (int)$p['id'] ?>"
-                  data-sku="<?= h($p['sku'] ?? '') ?>" 
-                  data-name="<?= h($p['name']) ?>"
-                  data-unit="<?= h($p['unit']) ?>"
-                  data-price="<?= h($p['price']) ?>"
-                  data-ozet="<?= h($p['urun_ozeti']) ?>"
-                  data-kalan="<?= h($p['kullanim_alani']) ?>"
-                  data-image="<?= h($p['image'] ?? '') ?>"
-                  data-parent-id="<?= (int)($p['parent_id'] ?? 0) ?>"
-                  <?= (isset($it['product_id']) && (int)$it['product_id']===(int)$p['id'])?'selected':'' ?>
-                ><?= h($p['display_name'] ?? $p['name']) ?><?= $p['sku'] ? ' ('.h($p['sku']).')':'' ?></option>
-                <?php endforeach; ?>
-              </select>
-            <?php else: ?>
-              <?php
-                $selectedProductName = '—';
-                if (!empty($it['product_id'])) {
-                  foreach($products as $p) {
-                    if ((int)$p['id'] === (int)$it['product_id']) {
-                        // Sembolleri Temizle (⊿, •, ▼)
-                        $cleanName = str_replace(['⊿', '•', '▼'], '', ($p['display_name'] ?? $p['name']));
-                        $cleanName = trim($cleanName);
-                        $selectedProductName = $cleanName . ($p['sku'] ? ' ('.h($p['sku']).')' : '');
-                        break;
-                    }
-                  }
-                }
-              ?>
-              <input type="text" value="<?= h($selectedProductName) ?>" readonly style="background-color: #f9fafb; cursor: not-allowed; color: #6b7280; border: 1px solid #e5e7eb;">
-              <input type="hidden" name="product_id[]" value="<?= (int)($it['product_id'] ?? 0) ?>">
-            <?php endif; ?>
+            <select name="product_id[]" onchange="onPickProduct(this)">
+              <option value="">—</option>
+              <?php foreach($products as $p): ?>
+              <option
+                value="<?= (int)$p['id'] ?>"
+                data-sku="<?= h($p['sku'] ?? '') ?>" 
+                data-name="<?= h($p['name']) ?>"
+                data-unit="<?= h($p['unit']) ?>"
+                data-price="<?= h($p['price']) ?>"
+                data-ozet="<?= h($p['urun_ozeti']) ?>"
+                data-kalan="<?= h($p['kullanim_alani']) ?>"
+                data-image="<?= h($p['image'] ?? '') ?>"
+                data-parent-id="<?= (int)($p['parent_id'] ?? 0) ?>"
+                <?= (isset($it['product_id']) && (int)$it['product_id']===(int)$p['id'])?'selected':'' ?>
+              ><?= h($p['display_name'] ?? $p['name']) ?><?= $p['sku'] ? ' ('.h($p['sku']).')':'' ?></option>
+              <?php endforeach; ?>
+            </select>
           </td>
-          <td><input name="name[]" value="<?= h($it['name'] ?? '') ?>" <?= $__is_admin_like ? 'required' : 'readonly style="background-color: #f9fafb; cursor: not-allowed;"' ?>></td>
-          <td><input name="unit[]" value="<?= h($it['unit'] ?? 'Adet') ?>" <?= $__is_admin_like ? '' : 'readonly style="background-color: #f9fafb; cursor: not-allowed;"' ?>></td>
-          <td><input name="qty[]" type="text" class="formatted-number" value="<?= number_format((float)($it['qty'] ?? 1), 2, ',', '.') ?>" <?= $__is_admin_like ? '' : 'readonly title="Yetkisiz Erişim!" style="cursor: not-allowed; background-color: #f9fafb;"' ?>></td>
-          
-          <?php if ($__is_admin_like): ?>
-            <td><input name="price[]" type="text" class="formatted-number" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '.') ?>"></td>
-          <?php else: ?>
-            <!-- ZIRH: Admin olmayan için fiyat hidden + display:none ile zorla gizli -->
-            <input type="hidden" name="price[]" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '.') ?>" style="display:none !important;">
-          <?php endif; ?>
-          
-          <td><input name="urun_ozeti[]" value="<?= h($it['urun_ozeti'] ?? '') ?>" <?= $__is_admin_like ? '' : 'readonly style="background-color: #f9fafb; cursor: not-allowed;"' ?>></td>
-          <td><input name="kullanim_alani[]" value="<?= h($it['kullanim_alani'] ?? '') ?>" <?= $__is_admin_like ? '' : 'readonly style="background-color: #f9fafb; cursor: not-allowed;"' ?>></td>
+          <td><input name="name[]" value="<?= h($it['name'] ?? '') ?>" required></td>
+          <td><input name="unit[]" value="<?= h($it['unit'] ?? 'Adet') ?>"></td>
+          <td><input name="qty[]" type="text" class="formatted-number" value="<?= number_format((float)($it['qty'] ?? 1), 2, ',', '.') ?>"></td>
+          <?php if ($__is_admin_like): ?><td><input name="price[]" type="text" class="formatted-number" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '.') ?>"></td><?php endif; ?>
+          <td><input name="urun_ozeti[]" value="<?= h($it['urun_ozeti'] ?? '') ?>"></td>
+          <td><input name="kullanim_alani[]" value="<?= h($it['kullanim_alani'] ?? '') ?>"></td>
           <?php if ($__is_admin_like): ?><td class="right"><button type="button" class="btn" onclick="delRow(this)">Sil</button></td><?php endif; ?>
         </tr>
         <?php endforeach; ?>
-        </tbody>
       </table>
     </div>
 	    <div class="grid g3 mt" style="gap:12px">
       <div><label class="mt">Notlar</label>
     
+<!-- Chat-style Notes Block START -->
 <?php
   // Kullanıcı adını header.php ile aynı kaynaktan al: $_SESSION['uname']
   $__user_name = $_SESSION['uname'] ?? '';
@@ -666,6 +610,7 @@ input[name^="price["] {
 })();
 </script>
 
+<!-- Chat-style Notes Block END -->
 </div>
       <div class="notes-col notes-col-activity">
   <h4>Hareketler</h4>
@@ -728,7 +673,7 @@ input[name^="price["] {
       
       <?php if (($order['status'] ?? '') === 'taslak_gizli' && $mode === 'edit'): ?>
           <button type="submit" name="yayinla_butonu" value="1" class="btn" style="background-color:#cd94ff; color:#fff; font-weight:bold; margin-left:5px;">
-              🚀 SİPARİŞİ YAYINLA
+             🚀 SİPARİŞİ YAYINLA
           </button>
       <?php endif; ?>
 
@@ -823,16 +768,12 @@ input[name^="price["] {
 function addRow(){
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <?php if ($__is_admin_like): ?>
     <td class="drag-handle" style="cursor:move; vertical-align:middle; text-align:center; color:#9ca3af; font-size:18px; user-select:none; width:50px;">
         <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
             <span class="row-index"></span> ⋮⋮
         </div>
     </td>
-    <?php endif; ?>
-    <td>
-        <input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu">
-    </td>
+    <td><input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu"></td>
     <td class="urun-gorsel" style="text-align:center; vertical-align:middle;">
         <img class="urun-gorsel-img" style="max-width:64px; max-height:64px; display:none; margin:0 auto" alt="">
         <span class="no-img-icon" style="font-size:20px; color:#cbd5e1; display:block; margin-top:5px;">📦</span>
@@ -858,11 +799,7 @@ function addRow(){
     <td><input name="name[]" required></td>
     <td><input name="unit[]" value="Adet"></td>
     <td><input name="qty[]" type="text" class="formatted-number" value="1,00"></td>
-    <?php if ($__is_admin_like): ?>
-      <td><input name="price[]" type="text" class="formatted-number" value="0,00"></td>
-    <?php else: ?>
-      <input type="hidden" name="price[]" value="0,00" style="display:none !important;">
-    <?php endif; ?>
+    <?php if ($__is_admin_like): ?><td><input name="price[]" type="text" class="formatted-number" value="0,00"></td><?php endif; ?>
     <td><input name="urun_ozeti[]"></td>
     <td><input name="kullanim_alani[]"></td>
     <?php if ($__is_admin_like): ?><td class="right"><button type="button" class="btn" onclick="delRow(this)">Sil</button></td><?php endif; ?>
@@ -1093,8 +1030,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }, true); // true: Event capture, daha öncelikli çalışmasını sağlar
   }
   // --- GÜVENLİK KODU SONU --- 
-  // Sortable.js - Drag & Drop (Sadece admin kullanıcılar için)
-  <?php if ($__is_admin_like): ?>
+  // Sortable.js - Drag & Drop
   var tbody = document.querySelector('#itemsTable tbody');
   if (!tbody) tbody = document.querySelector('#itemsTable');
   if (tbody && typeof Sortable !== 'undefined') {
@@ -1109,7 +1045,6 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     });
   }
-  <?php endif; ?>
   
   // stok kodu inputlarına dinleyici bağla
   try { bindSkuInputs(); } catch(_e){}
@@ -1212,6 +1147,7 @@ function openModal(imageSrc) {
   });
 }
 </script>
+<!-- Sortable.js for drag-drop -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <style>
