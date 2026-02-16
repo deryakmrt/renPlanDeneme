@@ -144,8 +144,13 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
     $uo = trim((string)($ozet[$i] ?? ''));
     $ka = trim((string)($kalan[$i] ?? ''));
 
-    // Skip completely empty rows
-    if ($pid === 0 && $n === '' && $qty == 0 && $price == 0 && $uo === '' && $ka === '') continue;
+    // [GÜVENLİK FİLTRESİ] Hayalet Satırları Engelle
+    // Eğer Ürün Seçilmemişse (ID=0 veya NULL) VE Ürün Adı da (Name) Boşsa bu satırı görmezden gel.
+    // (Fiyat veya Miktar dolu olsa bile, kimliksiz satır veritabanına girmemeli)
+    if (empty($pid) && trim($n) === '') continue;
+
+    // Eğer ürün seçilmemişse (ID=0) ama Adı varsa (Manuel giriş yapılmışsa), ID'yi NULL yap
+    if ($pid === 0) $pid = null;
 
     // If name is empty but product lookup exists in $products at render time, we still persist what we have.
     $insIt->execute([$id, $pid, $n, $unit, $qty, $price, $uo, $ka]);
@@ -503,72 +508,74 @@ document.addEventListener('DOMContentLoaded', function(){
     echo json_encode($___json_items, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_UNESCAPED_UNICODE);
   ?>;
 
-  function toTR(n){ try{return Number(n).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});}catch(e){return String(n);} }
-  function isZeroOrEmpty(s){ s=(s==null?'':String(s)).trim(); return (s===''||s==='0'||s==='0,00'||s==='0.00'); }
-  function trToDotDecimal(str){ if(str==null) return ''; var s=String(str).trim(); if(!s) return ''; s=s.replace(/\s/g,'').replace(/\./g,'').replace(',', '.'); return s; }
-
-  // Seçici grupları (Miktar alanlarını da ekledik)
+  // --- YENİ SADE SİSTEM: BİNLİK AYRACI YOK ---
+  
   var selPrice = [
     'input[name="qty[]"]','input[name^="qty["]',
     'input[name="price[]"]','input[name^="price["]','input[name="price"]',
-    'input[name="birim_fiyat[]"]','input[name^="birim_fiyat["]','input[name="birim_fiyat"]',
-    'input[aria-label*="Birim Fiyat" i]','input[placeholder*="Birim Fiyat" i]'
+    'input[name="birim_fiyat[]"]','input[name^="birim_fiyat["]'
   ];
-  var selOzet  = ['input[name="urun_ozeti[]"]','input[name^="urun_ozeti["]','textarea[name="urun_ozeti[]"]','textarea[name^="urun_ozeti["]'];
-  var selKA    = ['input[name="kullanim_alani[]"]','input[name^="kullanim_alani["]','textarea[name="kullanim_alani[]"]','textarea[name^="kullanim_alani["]'];
 
   function qAll(list){
-    var out=[]; list.forEach(function(sel){ document.querySelectorAll(sel).forEach(function(el){ if(out.indexOf(el)<0) out.push(el); }); });
+    var out=[]; 
+    list.forEach(function(sel){ 
+        document.querySelectorAll(sel).forEach(function(el){ 
+            if(out.indexOf(el)<0) out.push(el); 
+        }); 
+    });
     return out;
   }
 
-  // type=number ise virgül kabul etmeyebilir → text yap
-  qAll(selPrice).forEach(function(el){
-    try{ el.setAttribute('type','text'); el.setAttribute('inputmode','decimal'); el.removeAttribute('step'); el.removeAttribute('pattern'); }catch(e){}
+  // 1. NOKTA GİRİŞİNİ ENGELLE & VİRGÜL ZORLA
+  document.body.addEventListener('keydown', function(e){
+    if (e.target.matches(selPrice.join(','))) {
+        // Noktaya basarsa engelle veya virgüle çevir
+        if (e.key === '.') {
+            e.preventDefault();
+            // İstersen otomatik virgül koydurabilirsin:
+            var start = e.target.selectionStart;
+            var end = e.target.selectionEnd;
+            var val = e.target.value;
+            e.target.value = val.substring(0, start) + ',' + val.substring(end);
+            e.target.selectionStart = e.target.selectionEnd = start + 1;
+        }
+    }
   });
 
-  // Sadece bir kez, boş/0 olan alanları doldur (yazarken asla dokunma)
-  var inputsP = qAll(selPrice);
-  var inputsO = qAll(selOzet);
-  var inputsK = qAll(selKA);
+  // 2. KOPYALA YAPIŞTIRDA NOKTAYI VİRGÜL YAP
+  document.body.addEventListener('input', function(e){
+      if (e.target.matches(selPrice.join(','))) {
+          if (e.target.value.includes('.')) {
+              var pos = e.target.selectionStart;
+              e.target.value = e.target.value.replace(/\./g, ','); // Noktaları virgüle çevir
+              e.target.setSelectionRange(pos, pos);
+          }
+      }
+  });
 
-  for (var i=0;i<_itemsFromPHP.length;i++){ 
-    var it = _itemsFromPHP[i]||{};
-    if (inputsP[i] && isZeroOrEmpty(inputsP[i].value)){ 
-      var pv = (it.price ?? it.birim_fiyat ?? it.unit_price ?? 0);
-      if (pv!==undefined && pv!==null) inputsP[i].value = toTR(pv);
-    }
-    if (inputsO[i] && isZeroOrEmpty(inputsO[i].value)){ 
-      var ov = (it.urun_ozeti ?? '');
-      inputsO[i].value = ov;
-    }
-    if (inputsK[i] && isZeroOrEmpty(inputsK[i].value)){ 
-      var kv = (it.kullanim_alani ?? '');
-      inputsK[i].value = kv;
-    }
-  }
-
-  // Submit'te fiyatları noktalı-ondalık yap (ör: 235.99), özet/KA'ya dokunma
+  // 3. KAYDEDERKEN (SUBMIT) VİRGÜLÜ NOKTAYA ÇEVİR (DATABASE İÇİN)
+  // Bu işlem "1234,56"yı "1234.56" yapar ve gizli inputla gönderir.
   document.querySelectorAll('form').forEach(function(form){
-    form.addEventListener('submit', function(){
+    form.addEventListener('submit', function(e){
       qAll(selPrice).forEach(function(inp){
-        // 1. Mevcut (virgüllü) değeri hafızaya al
-        var originalVal = inp.value; 
+        var val = inp.value.trim();
+        if(!val) return;
+
+        // Virgülü noktaya çevir (1234,56 -> 1234.56)
+        // Binlik ayracı olmadığı için sadece virgülü değiştirmek yeterli.
+        var cleanVal = val.replace(',', '.');
         
-        // 2. Gönderim için noktaya çevir
-        var raw = trToDotDecimal(inp.value);
-        var num = Number(raw);
-        if (isFinite(num)) {
-            inp.value = num.toFixed(2);
+        // Eğer sayı geçerliyse
+        if (!isNaN(Number(cleanVal))) {
+            // Gizli input oluştur ve gönder
+            var hid = document.createElement('input');
+            hid.type = 'hidden';
+            hid.name = inp.name;
+            hid.value = cleanVal;
             
-            // 3. EMNİYET KİLİDİ: 
-            // Form verisi paketlendikten hemen sonra (10ms), kutudaki görüntüyü
-            // tekrar eski haline (virgüllü) döndür. 
-            // Böylece sayfa yenilenmezse bile kutuda "8.00" kalmaz, "8,00" geri gelir.
-            // Bu sayede bir sonraki kayıtta "800" olma riski biter.
-            setTimeout(function(){
-                inp.value = originalVal;
-            }, 10);
+            // Orijinal inputu devre dışı bırak (sunucuya gitmesin)
+            inp.name = inp.name + '_display';
+            form.appendChild(hid);
         }
       });
     }, true);

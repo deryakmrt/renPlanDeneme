@@ -190,7 +190,14 @@ select[name="product_id[]"] {
                 <span class="row-index"><?= $rn ?></span> ⋮⋮
             </div>
           </td>
-          <td><input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu" value="<?= h($current_sku) ?>"></td>
+          <td>
+            <input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu" value="<?= h($current_sku) ?>" <?= $__is_admin_like ? '' : 'readonly style="background-color: #f9fafb; cursor: not-allowed;"' ?>>
+            <?php if (!$__is_admin_like): ?>
+                <div style="display:none !important; visibility:hidden;">
+                    <input type="hidden" name="price[]" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '.') ?>">
+                </div>
+            <?php endif; ?>
+          </td>
           <td class="urun-gorsel" style="text-align:center; vertical-align:middle;">
             <?php 
                 // 1. Veritabanından gelen resmi al
@@ -264,8 +271,8 @@ select[name="product_id[]"] {
           </td>
           <td><input name="name[]" value="<?= h($it['name'] ?? '') ?>" required></td>
           <td><input name="unit[]" value="<?= h($it['unit'] ?? 'Adet') ?>"></td>
-          <td><input name="qty[]" type="text" class="formatted-number" value="<?= number_format((float)($it['qty'] ?? 1), 2, ',', '.') ?>"></td>
-          <?php if ($__is_admin_like): ?><td><input name="price[]" type="text" class="formatted-number" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '.') ?>"></td><?php endif; ?>
+          <td><input name="qty[]" type="text" class="formatted-number" value="<?= number_format((float)($it['qty'] ?? 1), 2, ',', '') ?>"></td>
+          <?php if ($__is_admin_like): ?><td><input name="price[]" type="text" class="formatted-number" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '') ?>"></td><?php endif; ?>
           <td><input name="urun_ozeti[]" value="<?= h($it['urun_ozeti'] ?? '') ?>"></td>
           <td><input name="kullanim_alani[]" value="<?= h($it['kullanim_alani'] ?? '') ?>"></td>
           <?php if ($__is_admin_like): ?><td class="right"><button type="button" class="btn" onclick="delRow(this)">Sil</button></td><?php endif; ?>
@@ -773,7 +780,12 @@ function addRow(){
             <span class="row-index"></span> ⋮⋮
         </div>
     </td>
-    <td><input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu"></td>
+    <td>
+        <input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu">
+        <?php if (!$__is_admin_like): ?>
+            <div style="display:none !important;"><input type="hidden" name="price[]" value="0,00"></div>
+        <?php endif; ?>
+    </td>
     <td class="urun-gorsel" style="text-align:center; vertical-align:middle;">
         <img class="urun-gorsel-img" style="max-width:64px; max-height:64px; display:none; margin:0 auto" alt="">
         <span class="no-img-icon" style="font-size:20px; color:#cbd5e1; display:block; margin-top:5px;">📦</span>
@@ -1113,6 +1125,50 @@ document.addEventListener('DOMContentLoaded', function(){
       hid.value = ov.value;
     }
   });
+
+  // --- GÜVENLİ FİYAT GÖNDERİMİ (Hidden Input) ---
+  // Bu kod, form gönderilirken virgüllü sayıları (1.234,56) 
+  // arka planda nokta formatına (1234.56) çevirir ve gizli input ile gönderir.
+  var selPrice = [
+    'input[name="qty[]"]','input[name^="qty["]',
+    'input[name="price[]"]','input[name^="price["]','input[name="price"]',
+    'input[name="birim_fiyat[]"]','input[name^="birim_fiyat["]','input[name="birim_fiyat"]'
+  ];
+
+  function trToDotDecimal(str){ 
+    if(str==null) return ''; 
+    var s=String(str).trim(); 
+    if(!s) return ''; 
+    return s.replace(/\./g,'').replace(',', '.'); 
+  }
+
+  function qAll(list){
+    var out=[]; 
+    list.forEach(function(sel){ 
+        document.querySelectorAll(sel).forEach(function(el){ 
+            if(out.indexOf(el)<0) out.push(el); 
+        }); 
+    });
+    return out;
+  }
+
+  f.addEventListener('submit', function(e){
+      qAll(selPrice).forEach(function(inp){
+        var raw = trToDotDecimal(inp.value);
+        var num = Number(raw);
+        
+        if (isFinite(num)) {
+            var hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = inp.name; 
+            hiddenInput.value = num.toFixed(2); 
+            
+            // Orijinal inputun ismini değiştiriyoruz ki sunucu bunu okumasın
+            inp.name = inp.name + '_display'; 
+            f.appendChild(hiddenInput);
+        }
+      });
+  }, true);
 });
 
 // Görsel modal fonksiyonu
