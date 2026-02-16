@@ -161,9 +161,9 @@ select[name="product_id[]"] {
           <th>Ad</th>
           <th style="width:8%">Birim</th>
           <th style="width:8%">Miktar</th>
-          <?php if ($__is_admin_like): ?><th style="width:12%">Birim Fiyat</th><?php endif; ?>
+          <?php if ($__is_admin_like): ?><th style="width:90px">Birim Fiyat</th><?php endif; ?>
           <th>Ürün Özeti</th>
-          <th>Kullanım Alanı</th>
+          <th style="width:12%">Kullanım Alanı</th>
           <?php if ($__is_admin_like): ?><th class="right" style="width:8%">Sil</th><?php endif; ?>
         </tr>
         <?php if (!$items) { $items = [[]]; } ?>
