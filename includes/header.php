@@ -355,7 +355,7 @@ require_once __DIR__ . '/helpers.php';
             <a href="#" class="dropdown-toggle">Sipariş Yönetimi<span class="caret"></span></a>
             <div class="menu">
               <a href="orders.php">Siparişler</a>
-              <a href="calendar.php?a=new">Sipariş Takvimi</a>
+              <a href="lazer_kesim.php">Lazer Kesim</a> <a href="calendar.php?a=new">Sipariş Takvimi</a>
             </div>
           </div>
           <div class="dropdown">
