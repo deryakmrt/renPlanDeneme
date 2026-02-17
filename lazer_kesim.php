@@ -231,6 +231,33 @@ function render_lazer_status_animated($status){
   
   /* TASLAK ZORLAYICI RENK (Diğer tüm renkleri ezer) */
   tr.is-taslak td { background-color: #fffbeb !important; color: #92400e; }
+
+  /* 4'LÜ İŞLEM GRİDİ */
+  .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr; /* 2 Kolon */
+      gap: 3px;
+      width: 84px; /* Grid genişliği */
+      margin-left: auto; /* Sağa yasla */
+  }
+  .act-btn {
+      display: flex; align-items: center; justify-content: center;
+      height: 28px; border-radius: 20px; border: 1px solid #cbd5e1;
+      font-size: 11px; font-weight: bold; color: #475569;
+      text-decoration: none; transition: all 0.2s; background: #fff;
+  }
+  .act-btn:hover { border-color: #94a3b8; background: #f8fafc; color: #0f172a; }
+  
+  /* Özel Butonlar */
+  .act-btn.edit { border-color: #cbd5e1; color: #334155; }
+  .act-btn.del  { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
+  .act-btn.del:hover { background: #fee2e2; }
+  
+  /* Pasif Butonlar (STF, ÜSTF) */
+  .act-btn.disabled { 
+      opacity: 0.5; cursor: not-allowed; background: #f1f5f9; border-color: #e2e8f0; color: #94a3b8; 
+      font-size: 10px; /* Sığması için biraz küçülttük */
+  }
 </style>
 
 <div class="dashboard-control-bar">
@@ -316,15 +343,22 @@ function render_lazer_status_animated($status){
                     <td><?= ($lo['end_date'] && $lo['end_date'] != '0000-00-00') ? date('d.m.Y', strtotime($lo['end_date'])) : '-' ?></td>
                     <td><?= ($lo['delivery_date'] && $lo['delivery_date'] != '0000-00-00') ? date('d.m.Y', strtotime($lo['delivery_date'])) : '-' ?></td>
                     
-                    <td style="text-align:right; white-space:nowrap;">
-                        <a href="lazer_kesim_duzenle.php?id=<?= $lo['id'] ?>" class="btn btn-sm" style="border:1px solid #cbd5e1; background:#fff;">✏️ Düzenle</a>
-                        
-                        <?php if ($can_see_drafts): // Sadece Admin ve Yöneticiler görebilir ?>
-                            <a href="lazer_kesim.php?sil_id=<?= $lo['id'] ?>" 
-                               onclick="return confirm('Bu siparişi kalıcı olarak silmek istediğinize emin misiniz?');" 
-                               class="btn btn-sm" 
-                               style="border:1px solid #fecaca; background:#fff; color:#dc2626; margin-left:5px;">🗑️ Sil</a>
-                        <?php endif; ?>
+                    <td style="padding: 4px;">
+                        <div class="action-grid">
+                            <a href="lazer_kesim_duzenle.php?id=<?= $lo['id'] ?>" class="act-btn edit" title="Düzenle">✏️</a>
+                            
+                            <?php if ($can_see_drafts): ?>
+                                <a href="lazer_kesim.php?sil_id=<?= $lo['id'] ?>" 
+                                   onclick="return confirm('Bu siparişi kalıcı olarak silmek istediğinize emin misiniz?');" 
+                                   class="act-btn del" title="Sil">🗑️</a>
+                            <?php else: ?>
+                                <span class="act-btn disabled" title="Yetkisiz">🚫</span>
+                            <?php endif; ?>
+
+                            <span class="act-btn disabled" title="Yakında: Sevk Talep Formu">STF</span>
+                            
+                            <span class="act-btn disabled" title="Yakında: Üretim Sonu Teslim Formu">ÜSTF</span>
+                        </div>
                     </td>
                 </tr>
                 <?php endforeach; ?>
