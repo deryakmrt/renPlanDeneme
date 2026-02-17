@@ -171,7 +171,10 @@ function render_lazer_status_animated($status){
       background: linear-gradient(110deg, #fbe4c5ff 10%, #fff5f0 50%, #ffe3e4ff 100%);
       border: 1px solid #ffdcb3; border-left: 6px solid #ff6b00;
       width: 98% !important; max-width: 98% !important; margin: 15px auto !important;
-      border-radius: 10px; box-shadow: 0 10px 15px -3px rgba(255, 107, 0, 0.08);
+      border-radius: 10px; box-shadow: 0 10px 15px -3px rgba(255, 107, 0, 0.08);  
+      /* GÖRSELİN KENARLARA YAPIŞMASI İÇİN GEREKLİ: */
+      position: relative; 
+      overflow: hidden; 
   }
   .dashboard-left { display: flex; align-items: center; gap: 12px; flex: 1; }
   
@@ -232,7 +235,10 @@ function render_lazer_status_animated($status){
 
 <div class="dashboard-control-bar">
   <div class="dashboard-left">
-      <a class="btn-dashboard-neon" href="lazer_kesim_ekle.php"><span>➕</span> YENİ LAZER KESİM</a>
+      
+      <?php if ($can_see_drafts): // Sadece Yetkililer Görebilir ?>
+          <a class="btn-dashboard-neon" href="lazer_kesim_ekle.php"><span>➕</span> YENİ LAZER KESİM</a>
+      <?php endif; ?>
 
       <form method="get" style="display:flex; gap:8px; align-items:center; margin:0;">
           <?php if($filter_status): ?><input type="hidden" name="status" value="<?= htmlspecialchars($filter_status) ?>"><?php endif; ?>
@@ -243,6 +249,20 @@ function render_lazer_status_animated($status){
           <?php endif; ?>
       </form>
   </div>
+    <!-- Sağdaki lazer görseli --> 
+  <div style="
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 165px; /* Görsel Genişliği */
+      background-image: url('assets/laser.png');
+      background-size: cover;
+      background-position: center;
+      /* Görselin sol tarafına yumuşak geçiş efekti (Opsiyonel, şık durur) */
+      mask-image: linear-gradient(to right, transparent, black 15%);
+      -webkit-mask-image: linear-gradient(to right, transparent, black 15%);
+  "></div>
 </div>
 
 <div class="card" style="width: 98% !important; max-width: 98% !important; margin: 0 auto;">
