@@ -302,6 +302,7 @@ require_once __DIR__ . '/helpers.php';
             <a href="#" class="dropdown-toggle">Siparişler<span class="caret"></span></a>
             <div class="menu">
               <a href="orders.php">Siparişler</a>
+              <a href="lazer_kesim.php">Lazer Kesim</a>
               <a href="calendar.php?a=new">Sipariş Takvimi</a>
               <?php if (has_role('admin')): ?>
                 <a href="report_orders.php">Satış Raporları</a>
