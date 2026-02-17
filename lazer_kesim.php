@@ -1,8 +1,22 @@
 <?php
 // lazer_kesim.php
-require_once __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/helpers.php'; // Önce fonksiyonları yükle
 require_login();
 $db = pdo();
+
+// SİLME İŞLEMİ (Header yüklenmeden önce yapılmalı)
+if (isset($_GET['sil_id'])) {
+    $u = current_user();
+    // Sadece Admin ve Sistem Yöneticisi silebilir
+    if (in_array($u['role'] ?? '', ['admin', 'sistem_yoneticisi'])) {
+        $del = $db->prepare("DELETE FROM lazer_orders WHERE id = ?");
+        $del->execute([$_GET['sil_id']]);
+        header('Location: lazer_kesim.php?msg=silindi');
+        exit;
+    }
+}
+
+require_once __DIR__ . '/includes/header.php'; // HTML çıktısı şimdi başlıyor
 
 // YETKİ KONTROLÜ
 $u = current_user();
@@ -165,17 +179,17 @@ function render_lazer_status_animated($status){
       display: inline-flex; align-items: center; justify-content: center; gap: 6px;
       background: linear-gradient(135deg, #ff9f43 0%, #ff6b00 100%);
       color: #fff !important; font-weight: 700; font-size: 13px; padding: 8px 16px;
-      border-radius: 8px; text-decoration: none; box-shadow: 0 4px 10px rgba(255, 107, 0, 0.3);
+      border-radius: 20px; text-decoration: none; box-shadow: 0 4px 10px rgba(255, 107, 0, 0.3);
       border: 1px solid #e65100; text-transform: uppercase; letter-spacing: 0.5px;
   }
   .btn-dashboard-neon:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(255, 107, 0, 0.5); }
 
-  .input-dashboard { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; width: 220px; }
-  .btn-dashboard-filter { padding: 8px 14px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; color: #475569; font-weight: 600; }
+  .input-dashboard { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 15px; width: 220px; }
+  .btn-dashboard-filter { padding: 8px 14px; background: #fff; border: 1px solid #cbd5e1; border-radius: 15px; cursor: pointer; color: #475569; font-weight: 600; }
 
   /* Tablar */
   .status-tabs { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; margin: 10px 0 15px 0; padding: 0 10px; font-size: 13px; font-weight:500; }
-  .status-tab-link { text-decoration: none; color: #64748b; padding: 6px 12px; border-radius: 6px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+  .status-tab-link { text-decoration: none; color: #64748b; padding: 6px 12px; border-radius: 10px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
   .status-tab-link:hover { background: #f1f5f9; color: #0f172a; }
   .status-tab-link.active { background: #fff7ed; color: #ea580c; font-weight: 700; border: 1px solid #fdba74; }
   .status-count { font-size: 10px; opacity: 0.8; background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px; }
@@ -282,8 +296,15 @@ function render_lazer_status_animated($status){
                     <td><?= ($lo['end_date'] && $lo['end_date'] != '0000-00-00') ? date('d.m.Y', strtotime($lo['end_date'])) : '-' ?></td>
                     <td><?= ($lo['delivery_date'] && $lo['delivery_date'] != '0000-00-00') ? date('d.m.Y', strtotime($lo['delivery_date'])) : '-' ?></td>
                     
-                    <td style="text-align:right;">
+                    <td style="text-align:right; white-space:nowrap;">
                         <a href="lazer_kesim_duzenle.php?id=<?= $lo['id'] ?>" class="btn btn-sm" style="border:1px solid #cbd5e1; background:#fff;">✏️ Düzenle</a>
+                        
+                        <?php if ($can_see_drafts): // Sadece Admin ve Yöneticiler görebilir ?>
+                            <a href="lazer_kesim.php?sil_id=<?= $lo['id'] ?>" 
+                               onclick="return confirm('Bu siparişi kalıcı olarak silmek istediğinize emin misiniz?');" 
+                               class="btn btn-sm" 
+                               style="border:1px solid #fecaca; background:#fff; color:#dc2626; margin-left:5px;">🗑️ Sil</a>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

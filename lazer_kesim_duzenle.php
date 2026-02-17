@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 3. VERİTABANINA GÜNCELLE
     $sql = "UPDATE lazer_orders SET 
             customer_id=?, project_name=?, order_code=?, status=?, 
-            order_date=?, deadline_date=?, start_date=?, end_date=?, delivery_date=? 
+            order_date=?, deadline_date=?, start_date=?, end_date=?, delivery_date=?, notes=? 
             WHERE id=?";
     $stmt = $db->prepare($sql);
     $stmt->execute([
@@ -45,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $start_date,
         $end_date,
         $delivery_date,
+        $_POST['notes'] ?? null, // Not verisi
         $id
     ]);
     header('Location: lazer_kesim.php');
@@ -93,7 +94,7 @@ function safe_date($d) { return ($d && $d !== '0000-00-00') ? $d : ''; }
                     <select name="status" style="width:100%">
                         <?php 
                         $statuses = [
-                            'taslak' => 'Taslak', 
+                            'taslak' => '🔒Taslak', 
                             'tedarik' => 'Tedarik', 
                             'kesimde' => 'Kesim', 
                             'sevkiyat' => 'Sevkiyat', 
@@ -123,6 +124,11 @@ function safe_date($d) { return ($d && $d !== '0000-00-00') ? $d : ''; }
             
             <div><label>Bitiş Tarihi</label><input type="date" name="end_date" value="<?= safe_date($order['end_date']) ?>" style="width:100%"></div>
             <div><label>Teslim Tarihi</label><input type="date" name="delivery_date" value="<?= safe_date($order['delivery_date']) ?>" style="width:100%"></div>
+            
+            <div style="grid-column: span 2;">
+                <label>Sipariş Notları</label>
+                <textarea name="notes" rows="5" style="width:100%; border:1px solid #cbd5e1; border-radius:6px; padding:10px;" placeholder="Üretim notları, malzeme detayları vb..."><?= htmlspecialchars($order['notes'] ?? '') ?></textarea>
+            </div>
         </div>
 
         <div class="row" style="justify-content:flex-end; gap:10px; margin-top:20px; align-items:center;">
