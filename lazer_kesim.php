@@ -263,8 +263,11 @@ function render_lazer_status_animated($status){
 <div class="dashboard-control-bar">
   <div class="dashboard-left">
       
-      <?php if ($can_see_drafts): // Sadece Yetkililer Görebilir ?>
+      <?php if ($can_see_drafts): ?>
           <a class="btn-dashboard-neon" href="lazer_kesim_ekle.php"><span>➕</span> YENİ LAZER KESİM</a>
+          <button onclick="document.getElementById('settingsModal').style.display='flex'" class="btn-dashboard-neon" style="background: linear-gradient(135deg, #475569 0%, #1e293b 100%); border-color:#334155;">
+            ⚙️ Parametreler
+          </button>
       <?php endif; ?>
 
       <form method="get" style="display:flex; gap:8px; align-items:center; margin:0;">
@@ -385,4 +388,67 @@ function render_lazer_status_animated($status){
     </div>
     <?php endif; ?>
 </div>
+<?php
+// Ayar Kaydetme İşlemi
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
+    if (!$can_see_drafts) die('Yetkisiz işlem');
+    
+    // Sacları Güncelle
+    if (isset($_POST['materials'])) {
+        foreach($_POST['materials'] as $mid => $mdata) {
+            $db->prepare("UPDATE lazer_settings_materials SET density=?, price_per_kg=? WHERE id=?")->execute([$mdata['d'], $mdata['p'], $mid]);
+        }
+    }
+    // Gazları Güncelle
+    if (isset($_POST['gases'])) {
+        foreach($_POST['gases'] as $gid => $gdata) {
+            $db->prepare("UPDATE lazer_settings_gases SET hourly_rate=? WHERE id=?")->execute([$gdata['h'], $gid]);
+        }
+    }
+    header("Location: lazer_kesim.php?msg=settings_updated");
+    exit;
+}
+
+// Verileri Çek
+$materials = $db->query("SELECT * FROM lazer_settings_materials")->fetchAll(PDO::FETCH_ASSOC);
+$gases = $db->query("SELECT * FROM lazer_settings_gases")->fetchAll(PDO::FETCH_ASSOC);
+?>
+
+<div id="settingsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+    <div class="card" style="width:500px; max-width:95%; max-height:90vh; overflow-y:auto; position:relative;">
+        <span onclick="document.getElementById('settingsModal').style.display='none'" style="position:absolute; right:15px; top:10px; cursor:pointer; font-size:20px;">✖</span>
+        <h3>⚙️ Maliyet Parametreleri</h3>
+        <form method="post">
+            <input type="hidden" name="update_settings" value="1">
+            
+            <h4 style="margin-top:20px; border-bottom:1px solid #eee;">Sac Bilgileri (Excel)</h4>
+            <table class="table" style="font-size:12px;">
+                <tr><th>Tür</th><th>Yoğunluk</th><th>Birim Maliyet (TL/kg)</th></tr>
+                <?php foreach($materials as $m): ?>
+                <tr>
+                    <td><?= $m['name'] ?></td>
+                    <td><input type="text" name="materials[<?= $m['id'] ?>][d]" value="<?= $m['density'] ?>" style="width:60px;"></td>
+                    <td><input type="text" name="materials[<?= $m['id'] ?>][p]" value="<?= $m['price_per_kg'] ?>" style="width:80px;"></td>
+                </tr>
+                <?php endforeach; ?>
+            </table>
+
+            <h4 style="margin-top:20px; border-bottom:1px solid #eee;">Gaz/Kesim Türleri</h4>
+            <table class="table" style="font-size:12px;">
+                <tr><th>Tür</th><th>Saatlik Maliyet (TL)</th></tr>
+                <?php foreach($gases as $g): ?>
+                <tr>
+                    <td><?= $g['name'] ?></td>
+                    <td><input type="text" name="gases[<?= $g['id'] ?>][h]" value="<?= $g['hourly_rate'] ?>" style="width:100px;"></td>
+                </tr>
+                <?php endforeach; ?>
+            </table>
+            
+            <div style="margin-top:20px; text-align:right;">
+                <button type="submit" class="btn primary">💾 Ayarları Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
