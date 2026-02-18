@@ -358,9 +358,13 @@ function render_lazer_status_animated($status){
                                 <span class="act-btn disabled" title="Yetkisiz">🚫</span>
                             <?php endif; ?>
 
-                            <span class="act-btn disabled" title="Yakında: Sevk Talep Formu">STF</span>
-                            
-                            <span class="act-btn disabled" title="Yakında: Üretim Sonu Teslim Formu">ÜSTF</span>
+                            <?php if ($can_see_drafts): ?>
+                                <a href="lazer_stf.php?id=<?= $lo['id'] ?>" target="_blank" class="act-btn" style="color:#0ea5e9; border-color:#bae6fd; background:#f0f9ff;" title="Sipariş Takip Formu">STF</a>
+                            <?php else: ?>
+                                <span class="act-btn disabled" title="Yetkisiz">🚫</span>
+                            <?php endif; ?>
+
+                            <a href="lazer_ustf.php?id=<?= $lo['id'] ?>" target="_blank" class="act-btn" style="color:#ea580c; border-color:#fed7aa; background:#fff7ed;" title="Üretim Sipariş Formu">ÜSTF</a>
                         </div>
                     </td>
                 </tr>
