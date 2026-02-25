@@ -9,6 +9,25 @@
 select[name="product_id[]"] {
     display: none !important;
 }
+
+/* ZIRH: Admin olmayan kullanıcılar için fiyat kolonunu ZORLA gizle */
+<?php if (!$__is_admin_like): ?>
+input[name="price[]"],
+input[name^="price["] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+}
+
+/* Fiyat th başlığını gizle */
+#itemsTable th:has(+ th):nth-last-child(3),
+#itemsTable th:contains("Birim Fiyat"),
+#itemsTable th:contains("Fiyat") {
+    display: none !important;
+}
+<?php endif; ?>
 </style>
 
 <div class="card">
@@ -19,7 +38,7 @@ select[name="product_id[]"] {
       <a class="btn" href="order_view.php?id=<?= (int)$order['id'] ?>">Görüntüle</a>
       <?php if ($__is_admin_like): ?>
       <a class="btn primary" href="order_pdf.php?id=<?= (int)$order['id'] ?>">STF</a>
-<?php endif; ?>
+      <?php endif; ?>
       <button type="button" class="btn primary" onclick="this.closest('.card').querySelector('form').requestSubmit()">Güncelle</button>
       <a class="btn" href="orders.php">Vazgeç</a>
     </div>
@@ -27,7 +46,6 @@ select[name="product_id[]"] {
 
   <form method="post">
     <?php csrf_input(); ?>
-    <!-- 4'lü gridler (temiz ve tekil) -->
     <div class="grid g4 mt" style="gap:12px">
       <div>
         <label>Durum</label>
@@ -149,12 +167,15 @@ select[name="product_id[]"] {
 
     <h3 class="mt">Kalemler</h3>
     <div id="items">
+      <?php if ($__is_admin_like): ?>
       <div class="row mb">
         <button type="button" class="btn" onclick="addRow()">+ Satır Ekle</button>
       </div>
+      <?php endif; ?>
       <table id="itemsTable">
+        <thead>
         <tr>
-          <th style="width:40px">⋮⋮</th>
+          <?php if ($__is_admin_like): ?><th style="width:40px">⋮⋮</th><?php endif; ?>
           <th style="width:12%">Stok Kodu</th>
           <th style="width:10%">Ürün Görseli</th>
           <th style="width:22%">Ürün</th>
@@ -166,6 +187,8 @@ select[name="product_id[]"] {
           <th style="width:12%">Kullanım Alanı</th>
           <?php if ($__is_admin_like): ?><th class="right" style="width:8%">Sil</th><?php endif; ?>
         </tr>
+        </thead>
+        <tbody>
         <?php if (!$items) { $items = [[]]; } ?>
         <?php 
           $rn = 0; 
@@ -185,57 +208,43 @@ select[name="product_id[]"] {
           // -----------------------------------------
         ?>
         <tr>
+          <?php if ($__is_admin_like): ?>
           <td class="drag-handle" style="cursor:move; vertical-align:middle; text-align:center; color:#9ca3af; font-size:18px; user-select:none; width:50px;">
             <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
                 <span class="row-index"><?= $rn ?></span> ⋮⋮
             </div>
           </td>
+          <?php endif; ?>
+
           <td>
             <input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu" value="<?= h($current_sku) ?>" <?= $__is_admin_like ? '' : 'readonly style="background-color: #f9fafb; cursor: not-allowed;"' ?>>
-            <?php if (!$__is_admin_like): ?>
-                <div style="display:none !important; visibility:hidden;">
-                    <input type="hidden" name="price[]" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '.') ?>">
-                </div>
-            <?php endif; ?>
           </td>
+          
           <td class="urun-gorsel" style="text-align:center; vertical-align:middle;">
             <?php 
-                // 1. Veritabanından gelen resmi al
                 $showImg = $it['image'] ?? ''; 
-                
-                // 2. Eğer resim boşsa ve product_id varsa, products listesinden ürünü bulup resmini çek
                 if (empty($showImg) && !empty($it['product_id'])) {
                     foreach ($products as $pr) {
                         if ((int)$pr['id'] === (int)$it['product_id']) {
-                            $showImg = $pr['image'] ?? '';
-                            break;
+                            $showImg = $pr['image'] ?? ''; break;
                         }
                     }
                 }
-                
-                // 3. Hala boşsa ve Parent ID varsa, babadan çek (child ürünler için)
                 if (empty($showImg) && !empty($it['parent_id'])) {
                     foreach ($products as $pr) {
                         if ((int)$pr['id'] === (int)$it['parent_id']) {
-                            $showImg = $pr['image'] ?? '';
-                            break;
+                            $showImg = $pr['image'] ?? ''; break;
                         }
                     }
                 }
 
-                // 4. Resim yolunu doğrula
                 $finalSrc = '';
                 if (!empty($showImg)) {
-                    // Uploads klasörü
                     if (file_exists(__DIR__ . '/../uploads/product_images/' . $showImg)) {
                         $finalSrc = 'uploads/product_images/' . $showImg;
-                    } 
-                    // Eski images klasörü
-                    else if (file_exists(__DIR__ . '/../images/' . $showImg)) {
+                    } else if (file_exists(__DIR__ . '/../images/' . $showImg)) {
                         $finalSrc = 'images/' . $showImg;
-                    }
-                    // URL veya kök dizin kontrolü
-                    else {
+                    } else {
                         $finalSrc = (preg_match('~^https?://~',$showImg) || strpos($showImg,'/')===0) ? $showImg : '/'.ltrim($showImg,'/');
                     }
                 }
@@ -247,43 +256,69 @@ select[name="product_id[]"] {
                 </a>
             <?php else: ?>
                 <img class="urun-gorsel-img" style="max-width:64px; max-height:64px; display:none; margin:0 auto" alt="">
-                <span style="font-size:20px; color:#cbd5e1; display:block; margin-top:5px;">📦</span>
+                <span class="no-img-icon" style="font-size:20px; color:#cbd5e1; display:block; margin-top:5px;">📦</span>
             <?php endif; ?>
           </td>
+          
           <td>
-            <select name="product_id[]" onchange="onPickProduct(this)">
-              <option value="">—</option>
-              <?php foreach($products as $p): ?>
-              <option
-                value="<?= (int)$p['id'] ?>"
-                data-sku="<?= h($p['sku'] ?? '') ?>" 
-                data-name="<?= h($p['name']) ?>"
-                data-unit="<?= h($p['unit']) ?>"
-                data-price="<?= h($p['price']) ?>"
-                data-ozet="<?= h($p['urun_ozeti']) ?>"
-                data-kalan="<?= h($p['kullanim_alani']) ?>"
-                data-image="<?= h($p['image'] ?? '') ?>"
-                data-parent-id="<?= (int)($p['parent_id'] ?? 0) ?>"
-                <?= (isset($it['product_id']) && (int)$it['product_id']===(int)$p['id'])?'selected':'' ?>
-              ><?= h($p['display_name'] ?? $p['name']) ?><?= $p['sku'] ? ' ('.h($p['sku']).')':'' ?></option>
-              <?php endforeach; ?>
-            </select>
+            <?php if ($__is_admin_like): ?>
+              <select name="product_id[]" onchange="onPickProduct(this)">
+                <option value="">—</option>
+                <?php foreach($products as $p): ?>
+                <option
+                  value="<?= (int)$p['id'] ?>"
+                  data-sku="<?= h($p['sku'] ?? '') ?>" 
+                  data-name="<?= h($p['name']) ?>"
+                  data-unit="<?= h($p['unit']) ?>"
+                  data-price="<?= h($p['price']) ?>"
+                  data-ozet="<?= h($p['urun_ozeti']) ?>"
+                  data-kalan="<?= h($p['kullanim_alani']) ?>"
+                  data-image="<?= h($p['image'] ?? '') ?>"
+                  data-parent-id="<?= (int)($p['parent_id'] ?? 0) ?>"
+                  <?= (isset($it['product_id']) && (int)$it['product_id']===(int)$p['id'])?'selected':'' ?>
+                ><?= h($p['display_name'] ?? $p['name']) ?><?= $p['sku'] ? ' ('.h($p['sku']).')':'' ?></option>
+                <?php endforeach; ?>
+              </select>
+            <?php else: ?>
+              <?php
+                $selectedProductName = '—';
+                if (!empty($it['product_id'])) {
+                  foreach($products as $p) {
+                    if ((int)$p['id'] === (int)$it['product_id']) {
+                        $cleanName = str_replace(['⊿', '•', '▼'], '', ($p['display_name'] ?? $p['name']));
+                        $cleanName = trim($cleanName);
+                        $selectedProductName = $cleanName . ($p['sku'] ? ' ('.h($p['sku']).')' : '');
+                        break;
+                    }
+                  }
+                }
+              ?>
+              <input type="text" value="<?= h($selectedProductName) ?>" readonly style="background-color: #f9fafb; cursor: not-allowed; color: #6b7280; border: 1px solid #e5e7eb;">
+              <input type="hidden" name="product_id[]" value="<?= (int)($it['product_id'] ?? 0) ?>">
+            <?php endif; ?>
           </td>
-          <td><input name="name[]" value="<?= h($it['name'] ?? '') ?>" required></td>
-          <td><input name="unit[]" value="<?= h($it['unit'] ?? 'Adet') ?>"></td>
-          <td><input name="qty[]" type="text" class="formatted-number" value="<?= number_format((float)($it['qty'] ?? 1), 2, ',', '') ?>"></td>
-          <?php if ($__is_admin_like): ?><td><input name="price[]" type="text" class="formatted-number" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '') ?>"></td><?php endif; ?>
-          <td><input name="urun_ozeti[]" value="<?= h($it['urun_ozeti'] ?? '') ?>"></td>
-          <td><input name="kullanim_alani[]" value="<?= h($it['kullanim_alani'] ?? '') ?>"></td>
+          
+          <td><input name="name[]" value="<?= h($it['name'] ?? '') ?>" <?= $__is_admin_like ? 'required' : 'readonly style="background-color: #f9fafb; cursor: not-allowed;"' ?>></td>
+          <td><input name="unit[]" value="<?= h($it['unit'] ?? 'Adet') ?>" <?= $__is_admin_like ? '' : 'readonly style="background-color: #f9fafb; cursor: not-allowed;"' ?>></td>
+          <td><input name="qty[]" type="text" class="formatted-number" value="<?= number_format((float)($it['qty'] ?? 1), 2, ',', '') ?>" <?= $__is_admin_like ? '' : 'readonly title="Yetkisiz Erişim!" style="cursor: not-allowed; background-color: #f9fafb;"' ?>></td>
+          
+          <?php if ($__is_admin_like): ?>
+            <td><input name="price[]" type="text" class="formatted-number" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '') ?>"></td>
+          <?php else: ?>
+            <input type="hidden" name="price[]" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '') ?>">
+          <?php endif; ?>
+          
+          <td><input name="urun_ozeti[]" value="<?= h($it['urun_ozeti'] ?? '') ?>" <?= $__is_admin_like ? '' : 'readonly style="background-color: #f9fafb; cursor: not-allowed;"' ?>></td>
+          <td><input name="kullanim_alani[]" value="<?= h($it['kullanim_alani'] ?? '') ?>" <?= $__is_admin_like ? '' : 'readonly style="background-color: #f9fafb; cursor: not-allowed;"' ?>></td>
           <?php if ($__is_admin_like): ?><td class="right"><button type="button" class="btn" onclick="delRow(this)">Sil</button></td><?php endif; ?>
         </tr>
         <?php endforeach; ?>
+        </tbody>
       </table>
     </div>
 	    <div class="grid g3 mt" style="gap:12px">
       <div><label class="mt">Notlar</label>
     
-<!-- Chat-style Notes Block START -->
 <?php
   // Kullanıcı adını header.php ile aynı kaynaktan al: $_SESSION['uname']
   $__user_name = $_SESSION['uname'] ?? '';
@@ -414,7 +449,6 @@ select[name="product_id[]"] {
       listWrapper.scrollTop = listWrapper.scrollHeight; // En alta kaydır
 
       // B) GİZLİ TEXTAREA'YA EKLE (Veritabanı için)
-      // Mevcut ghost içeriğini al, yeni satırı ekle
       var currentGhost = ghost.value.replace(/\s+$/,''); // Sondaki boşlukları temizle
       if(currentGhost) currentGhost += "\n";
       ghost.value = currentGhost + fullLine;
@@ -451,7 +485,7 @@ select[name="product_id[]"] {
       if(orig && orig.trim()){
         lines.push(orig.trim());
       } else {
-        // Fallback: DOM'dan toparla
+        // Fallback
         var meta = items[i].querySelector('.note-meta');
         var text = items[i].querySelector('.note-text');
         if(meta && text){
@@ -470,7 +504,7 @@ select[name="product_id[]"] {
   }
 
   // Sil ve 10s geri al
-  var undoState = null; // {index, original, toast, interval}
+  var undoState = null;
   function showUndoToast(message, onUndo){
     var toast = document.getElementById('note-undo-toast');
     if(!toast){
@@ -545,7 +579,6 @@ select[name="product_id[]"] {
     item.parentNode.removeChild(item);
     rebuildGhost();
 
-    // Eski undo varsa kapat
     if(undoState && undoState.toast){
       try { undoState.toast.parentNode && undoState.toast.parentNode.removeChild(undoState.toast); } catch(e){}
       try { clearInterval(undoState.interval); } catch(e){}
@@ -553,7 +586,6 @@ select[name="product_id[]"] {
     }
 
     var res = showUndoToast('Not silindi.', function(){
-      // Geri al
       var list = container.querySelector('.notes-wrapper');
       var wrapper = document.createElement('div');
       wrapper.innerHTML = '<div class="note-item" data-original=""></div>';
@@ -616,8 +648,6 @@ select[name="product_id[]"] {
   });
 })();
 </script>
-
-<!-- Chat-style Notes Block END -->
 </div>
       <div class="notes-col notes-col-activity">
   <h4>Hareketler</h4>
@@ -775,16 +805,15 @@ select[name="product_id[]"] {
 function addRow(){
   const tr = document.createElement('tr');
   tr.innerHTML = `
+    <?php if ($__is_admin_like): ?>
     <td class="drag-handle" style="cursor:move; vertical-align:middle; text-align:center; color:#9ca3af; font-size:18px; user-select:none; width:50px;">
         <div style="display:flex; align-items:center; justify-content:center; gap:2px;">
             <span class="row-index"></span> ⋮⋮
         </div>
     </td>
+    <?php endif; ?>
     <td>
         <input name="stok_kodu[]" class="stok-kodu" placeholder="Stok Kodu">
-        <?php if (!$__is_admin_like): ?>
-            <div style="display:none !important;"><input type="hidden" name="price[]" value="0,00"></div>
-        <?php endif; ?>
     </td>
     <td class="urun-gorsel" style="text-align:center; vertical-align:middle;">
         <img class="urun-gorsel-img" style="max-width:64px; max-height:64px; display:none; margin:0 auto" alt="">
@@ -811,12 +840,16 @@ function addRow(){
     <td><input name="name[]" required></td>
     <td><input name="unit[]" value="Adet"></td>
     <td><input name="qty[]" type="text" class="formatted-number" value="1,00"></td>
-    <?php if ($__is_admin_like): ?><td><input name="price[]" type="text" class="formatted-number" value="0,00"></td><?php endif; ?>
+    <?php if ($__is_admin_like): ?>
+      <td><input name="price[]" type="text" class="formatted-number" value="0,00"></td>
+    <?php else: ?>
+      <input type="hidden" name="price[]" value="0,00">
+    <?php endif; ?>
     <td><input name="urun_ozeti[]"></td>
     <td><input name="kullanim_alani[]"></td>
     <?php if ($__is_admin_like): ?><td class="right"><button type="button" class="btn" onclick="delRow(this)">Sil</button></td><?php endif; ?>
   `;
-  document.querySelector('#itemsTable').appendChild(tr);
+  document.querySelector('#itemsTable tbody').appendChild(tr);
   bindSkuInputs(tr);
   renumberRows();
   
@@ -833,7 +866,7 @@ function delRow(btn){
 
 // YENİ: Satırları numaralandırma fonksiyonu
 function renumberRows() {
-    const rows = document.querySelectorAll('#itemsTable tr');
+    const rows = document.querySelectorAll('#itemsTable tbody tr');
     let count = 0;
     rows.forEach((tr) => {
         // Başlık satırını (th) atla, içinde td olanları say
@@ -1004,7 +1037,7 @@ document.addEventListener('DOMContentLoaded', function(){
   if(mainForm) {
       mainForm.addEventListener('submit', function(e){
           // Tablodaki tüm satırları gez
-          var rows = document.querySelectorAll('#itemsTable tr');
+          var rows = document.querySelectorAll('#itemsTable tbody tr');
           
           for(var i=0; i<rows.length; i++){
               var row = rows[i];
@@ -1017,7 +1050,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
               // Fiyat değerini parse et (1.000,50 -> 1000.50)
               var priceVal = 0;
-              if(priceInp && priceInp.value) {
+              if(priceInp && priceInp.value && priceInp.type !== 'hidden') {
                   var cleanVal = priceInp.value.toString().replace(/\./g, '').replace(',', '.');
                   priceVal = parseFloat(cleanVal);
               }
@@ -1042,7 +1075,9 @@ document.addEventListener('DOMContentLoaded', function(){
       }, true); // true: Event capture, daha öncelikli çalışmasını sağlar
   }
   // --- GÜVENLİK KODU SONU --- 
+  
   // Sortable.js - Drag & Drop
+  <?php if ($__is_admin_like): ?>
   var tbody = document.querySelector('#itemsTable tbody');
   if (!tbody) tbody = document.querySelector('#itemsTable');
   if (tbody && typeof Sortable !== 'undefined') {
@@ -1057,6 +1092,7 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     });
   }
+  <?php endif; ?>
   
   // stok kodu inputlarına dinleyici bağla
   try { bindSkuInputs(); } catch(_e){}
@@ -1203,7 +1239,6 @@ function openModal(imageSrc) {
   });
 }
 </script>
-<!-- Sortable.js for drag-drop -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <style>
