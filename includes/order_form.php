@@ -160,7 +160,16 @@ input[name^="price["] {
 
     <div class="grid g4 mt" style="gap:12px">
       <div><label>Nakliye Türü</label><input name="nakliye_turu" value="<?= h($order['nakliye_turu'] ?? '') ?>"></div>
-      <div></div>
+      <div>
+        <label>KDV Oranı</label>
+        <?php $secili_kdv = isset($order['kdv_orani']) ? (int)$order['kdv_orani'] : 20; ?>
+        <select name="kdv_orani">
+          <option value="20" <?= $secili_kdv === 20 ? 'selected' : '' ?>>%20</option>
+          <option value="10" <?= $secili_kdv === 10 ? 'selected' : '' ?>>%10</option>
+          <option value="1" <?= $secili_kdv === 1 ? 'selected' : '' ?>>%1</option>
+          <option value="0" <?= $secili_kdv === 0 ? 'selected' : '' ?>>%0</option>
+        </select>
+      </div>
       <div></div>
       <div></div>
     </div>

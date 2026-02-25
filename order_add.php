@@ -25,7 +25,8 @@ $order = [
     'revizyon_no' => '',
     'nakliye_turu' => '',
     'odeme_kosulu' => '',
-    'odeme_para_birimi' => ''
+    'odeme_para_birimi' => '',
+    'kdv_orani' => 20
 ];
 
 if (method('POST')) {
@@ -62,7 +63,8 @@ if (method('POST')) {
         'revizyon_no',
         'nakliye_turu',
         'odeme_kosulu',
-        'odeme_para_birimi'
+        'odeme_para_birimi',
+        'kdv_orani'
     ];
     foreach ($fields as $f) {
         $order[$f] = $_POST[$f] ?? $order[$f];
@@ -79,8 +81,8 @@ if (method('POST')) {
             $order['order_code'] = next_order_code();
 
             $ins = $db->prepare("INSERT INTO orders (order_code, customer_id, status, currency, termin_tarihi, baslangic_tarihi, bitis_tarihi, teslim_tarihi, notes,
-                              siparis_veren, siparisi_alan, siparisi_giren, siparis_tarihi, fatura_para_birimi, proje_adi, revizyon_no, nakliye_turu, odeme_kosulu, odeme_para_birimi)
-                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                              siparis_veren, siparisi_alan, siparisi_giren, siparis_tarihi, fatura_para_birimi, proje_adi, revizyon_no, nakliye_turu, odeme_kosulu, odeme_para_birimi, kdv_orani)
+                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $ins->execute([
                 $order['order_code'],
                 $order['customer_id'],
@@ -100,7 +102,8 @@ if (method('POST')) {
                 $order['revizyon_no'],
                 $order['nakliye_turu'],
                 $order['odeme_kosulu'],
-                $order['odeme_para_birimi']
+                $order['odeme_para_birimi'],
+                $order['kdv_orani']
             ]);
             $order_id = (int)$db->lastInsertId();
             break;  // Başarılı, döngüden çık

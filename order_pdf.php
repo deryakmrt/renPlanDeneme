@@ -296,10 +296,16 @@ ob_start();
   </tbody>
 </table>
 
-<?php $kdv_orani = 0.20; $kdv = $ara * $kdv_orani; $genel = $ara + $kdv; ?>
+<?php 
+// Siparişin içindeki kdv oranını al, yoksa varsayılan 20 kullan
+$kdv_yuzde = isset($o['kdv_orani']) && is_numeric($o['kdv_orani']) ? (float)$o['kdv_orani'] : 20;
+$kdv_orani = $kdv_yuzde / 100;
+$kdv = $ara * $kdv_orani; 
+$genel = $ara + $kdv; 
+?>
 <table class="totals">
   <tr><td class="label">Ara Toplam</td><td class="value"><?= $fmt($ara) ?> <?= h($currencySymbol) ?></td></tr>
-  <tr><td class="label">KDV %20</td><td class="value"><?= $fmt($kdv) ?> <?= h($currencySymbol) ?></td></tr>
+  <tr><td class="label">KDV %<?= $kdv_yuzde ?></td><td class="value"><?= $fmt($kdv) ?> <?= h($currencySymbol) ?></td></tr>
   <tr><td class="label">Genel Toplam</td><td class="value"><?= $fmt($genel) ?> <?= h($currencySymbol) ?></td></tr>
 </table>
 
