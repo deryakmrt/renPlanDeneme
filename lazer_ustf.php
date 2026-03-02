@@ -181,10 +181,11 @@ ob_start();
   <colgroup>
     <col style="width:10.0mm">
     <col style="width:20.0mm">
-    <col style="width:55.0mm">
-    <col style="width:30.0mm">
-    <col style="width:20.0mm">
-    <col style="width:20.0mm">
+    <col style="width:45.0mm">
+    <col style="width:25.0mm">
+    <col style="width:18.0mm">
+    <col style="width:18.0mm">
+    <col style="width:18.0mm">
     <col style="width:20.0mm">
     <col style="width:15.0mm">
   </colgroup>
@@ -196,6 +197,7 @@ ob_start();
       <th>Sac Türü</th>
       <th>Kalınlık</th>
       <th>Ağırlık</th>
+      <th>Adet</th>
       <th>Kesim Türü</th>
       <th>Süre</th>
     </tr>
@@ -235,6 +237,7 @@ ob_start();
       <td class="center"><?= h($it['mat_name'] ?? '') ?></td>
       <td class="center"><?= h($it['thickness'] ?? '') ?> mm</td>
       <td class="num"><?= isset($it['weight']) ? number_format((float)$it['weight'],2,',','.') : '0,00' ?> kg</td>
+      <td class="center" style="font-weight:normal;"><?= h($it['qty'] ?? '1') ?></td>
       <td class="center"><?= h($it['gas_name'] ?? '') ?></td>
       <td class="center"><?= h($it['time_hours'] ?? '0') ?>s <?= h($it['time_minutes'] ?? '0') ?>dk</td>
     </tr>

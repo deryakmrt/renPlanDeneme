@@ -330,7 +330,7 @@ function render_lazer_status_animated($status){
         <tbody>
             <?php if ($lazer_orders): ?>
                 <?php foreach ($lazer_orders as $lo): ?>
-                <tr class="<?= $lo['status'] === 'taslak' ? 'is-taslak' : '' ?>">
+                <tr class="<?= $lo['status'] === 'taslak' ? 'is-taslak' : '' ?>" onclick="window.location='lazer_kesim_duzenle.php?id=<?= $lo['id'] ?>'">
                     <td><span style="font-family:monospace; color:#64748b;">#<?= $lo['id'] ?></span></td>
                     <td style="font-weight:600; color:#334155;"><?= htmlspecialchars($lo['customer_name'] ?? '-') ?></td>
                     <td><?= htmlspecialchars($lo['project_name']) ?></td>
@@ -346,7 +346,7 @@ function render_lazer_status_animated($status){
                     <td><?= ($lo['end_date'] && $lo['end_date'] != '0000-00-00') ? date('d.m.Y', strtotime($lo['end_date'])) : '-' ?></td>
                     <td><?= ($lo['delivery_date'] && $lo['delivery_date'] != '0000-00-00') ? date('d.m.Y', strtotime($lo['delivery_date'])) : '-' ?></td>
                     
-                    <td style="padding: 4px;">
+                    <td style="padding: 4px;" onclick="event.stopPropagation();">
                         <div class="action-grid">
                             <a href="lazer_kesim_duzenle.php?id=<?= $lo['id'] ?>" class="act-btn edit" title="Düzenle">✏️</a>
                             

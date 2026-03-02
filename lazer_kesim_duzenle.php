@@ -55,13 +55,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['add_item']) || isset
             $extra_param = $img_path;
         }
 
-        $sql = "UPDATE lazer_order_items SET product_name=?, material_id=?, thickness=?, weight=?, gas_id=?, time_hours=?, time_minutes=?, calculated_cost=? $img_sql WHERE id=?";
+        $sql = "UPDATE lazer_order_items SET product_name=?, material_id=?, thickness=?, weight=?, qty=?, gas_id=?, time_hours=?, time_minutes=?, calculated_cost=? $img_sql WHERE id=?";
         
         $params = [
             $_POST['product_name'],
             $_POST['material_id'],
             $_POST['thickness'],
             $_POST['weight'],
+            $_POST['qty'],
             $_POST['gas_id'],
             $_POST['time_hours'],
             $_POST['time_minutes'],
@@ -75,13 +76,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['add_item']) || isset
     } 
     // --- EKLEME İŞLEMİ ---
     else {
-        $stmt = $db->prepare("INSERT INTO lazer_order_items (order_id, product_name, material_id, thickness, weight, gas_id, time_hours, time_minutes, calculated_cost, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt = $db->prepare("INSERT INTO lazer_order_items (order_id, product_name, material_id, thickness, weight, qty, gas_id, time_hours, time_minutes, calculated_cost, image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $id,
             $_POST['product_name'],
             $_POST['material_id'],
             $_POST['thickness'],
             $_POST['weight'],
+            $_POST['qty'],
             $_POST['gas_id'],
             $_POST['time_hours'],
             $_POST['time_minutes'],
@@ -246,6 +248,7 @@ function safe_date($d) { return ($d && $d !== '0000-00-00') ? $d : ''; }
                     <th>Ürün Adı</th>
                     <th>Sac / Kalınlık</th>
                     <th>Ağırlık</th>
+                    <th>Adet</th>
                     <th>Kesim</th>
                     <?php if ($can_see_drafts): ?>
                         <th style="text-align:right;">Maliyet</th>
@@ -271,6 +274,7 @@ function safe_date($d) { return ($d && $d !== '0000-00-00') ? $d : ''; }
                     <td><strong><?= htmlspecialchars($item['product_name']) ?></strong></td>
                     <td><?= $item['mat_name'] ?> <span style="color:#666; font-size:11px;">(<?= $item['thickness'] ?>mm)</span></td>
                     <td><?= $item['weight'] ?> kg</td>
+                    <td style="font-weight:bold; color:#1e293b;"><?= $item['qty'] ?> Adet</td>
                     <td><?= $item['gas_name'] ?> <span style="color:#666; font-size:11px;">(<?= $item['time_hours'] ?>s <?= $item['time_minutes'] ?>dk)</span></td>
                     <?php if ($can_see_drafts): ?>
                         <td style="text-align:right; font-weight:bold; color:#16a34a;"><?= number_format($item['calculated_cost'], 2) ?> TL</td>
@@ -284,7 +288,7 @@ function safe_date($d) { return ($d && $d !== '0000-00-00') ? $d : ''; }
                 
                 <?php if ($can_see_drafts): ?>
                 <tr style="background:#fff; border-top:2px solid #e2e8f0;">
-                    <td colspan="6" style="text-align:right; font-weight:bold;">TOPLAM TAHMİNİ MALİYET:</td>
+                    <td colspan="7" style="text-align:right; font-weight:bold;">TOPLAM TAHMİNİ MALİYET:</td>
                     <td style="text-align:right; color:#ea580c; font-size:18px; font-weight:bold;"><?= number_format($total_cost, 2) ?> TL</td>
                     <td></td>
                 </tr>
@@ -337,7 +341,10 @@ function safe_date($d) { return ($d && $d !== '0000-00-00') ? $d : ''; }
                     <label>Ağırlık (kg)</label>
                     <input type="text" inputmode="decimal" name="weight" id="weight" required style="width:100%" placeholder="0.00">
                 </div>
-
+                <div>
+                    <label>Adet</label>
+                    <input type="number" name="qty" id="qty" value="1" min="1" oninput="calcCost()" required style="width:100%">
+                </div>
                 <div>
                     <label>Kesim Türü</label>
                     <select name="gas_id" id="gas_id" onchange="calcCost()" required style="width:100%">
@@ -392,6 +399,7 @@ document.getElementById('weight').addEventListener('input', function() {
 });
 
 // Maliyet Hesaplama
+// Maliyet Hesaplama
 function calcCost() {
     let matID = document.getElementById('mat_id').value;
     let weightVal = document.getElementById('weight').value;
@@ -413,6 +421,7 @@ function editItem(data) {
     document.getElementById('mat_id').value = data.material_id;
     document.getElementById('thick').value = data.thickness;
     document.getElementById('weight').value = data.weight;
+    document.getElementById('qty').value = data.qty;
     document.getElementById('gas_id').value = data.gas_id;
     document.getElementById('th').value = data.time_hours;
     document.getElementById('tm').value = data.time_minutes;
