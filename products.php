@@ -330,7 +330,24 @@ if ($action === 'new' || $action === 'edit') {
 
         <label>SKU</label>
 
-        <input name="sku" value="<?= h($row['sku']) ?>" placeholder="Opsiyonel">
+        <input name="sku" id="sku_input" value="<?= h($row['sku']) ?>" placeholder="Opsiyonel" <?= $row['id'] ? 'oninput="showSkuWarning()"' : '' ?>>
+        
+        <?php if($row['id']): ?>
+        <div id="sku_warning" style="display:none; font-size:11px; color:#ea580c; background:#fff7ed; padding:6px 10px; border-radius:4px; margin-top:4px; border:1px solid #fdba74;">
+            💡 <strong>Bilgi:</strong> Ürün kodunu değiştiriyorsunuz. Bu değişiklik, bu ürünü içeren geçmiş siparişlerdeki belgelerde (STF) yeni kodun görünmesine sebep olacaktır. Sipariş bağlantıları bozulmaz.
+        </div>
+        <script>
+            let originalSku = "<?= h($row['sku']) ?>";
+            function showSkuWarning() {
+                let currentSku = document.getElementById('sku_input').value;
+                if (currentSku !== originalSku) {
+                    document.getElementById('sku_warning').style.display = 'block';
+                } else {
+                    document.getElementById('sku_warning').style.display = 'none';
+                }
+            }
+        </script>
+        <?php endif; ?>
 
         <label class="mt">Ad</label>
 
@@ -535,12 +552,20 @@ switch($sort) {
 
 // --- VERİ ÇEKME ---
 if ($q) {
-    $countStmt = $db->prepare("SELECT COUNT(*) FROM products WHERE parent_id IS NULL AND (name LIKE ? OR sku LIKE ?)");
+    // Arama hem ana ürünlerde hem de varyasyonlarda yapılsın
+    $countStmt = $db->prepare("SELECT COUNT(*) FROM products WHERE (name LIKE ? OR sku LIKE ?)");
     $countStmt->execute(['%'.$q.'%','%'.$q.'%']);
     $total = (int)$countStmt->fetchColumn();
 
-    // Sorguya $orderBy değişkenini ekledik
-    $stmt = $db->prepare("SELECT * FROM products WHERE parent_id IS NULL AND (name LIKE ? OR sku LIKE ?) ORDER BY $orderBy LIMIT " . (int)$perPage . " OFFSET " . (int)$offset);
+    // Ana ürün adını getirebilmek için tabloyu kendisiyle left join yapıyoruz
+    $stmt = $db->prepare("
+                SELECT p.*, parent.name AS master_name 
+                FROM products p 
+                LEFT JOIN products parent ON p.parent_id = parent.id 
+                WHERE (p.name LIKE ? OR p.sku LIKE ?) 
+                ORDER BY p.{$orderBy} 
+                LIMIT " . (int)$perPage . " OFFSET " . (int)$offset
+            );
     $stmt->execute(['%'.$q.'%','%'.$q.'%']);
 } else {
     $total = (int)$db->query("SELECT COUNT(*) FROM products WHERE parent_id IS NULL")->fetchColumn();
@@ -687,22 +712,23 @@ $next = min($totalPages, $page+1);
 
       </tr>
 
-      <?php while($r = $stmt->fetch()): 
+      <?php while($r = $stmt->fetch()):
     // Bu ürünün varyasyonu var mı kontrol et
     $vCount = (int)$db->query("SELECT COUNT(*) FROM products WHERE parent_id = " . (int)$r['id'])->fetchColumn();
     $isMaster = ($vCount > 0);
-    
+    $isChild = !empty($r['parent_id']); // Yeni satır (ürün varyasyon mu kontrolü)
+
     // Eğer varyasyonluysa bizim YENİ sayfaya gitsin, değilse eskiye
     $editLink = $isMaster ? 'product_master_edit.php?id=' . (int)$r['id'] : 'products.php?a=edit&id=' . (int)$r['id'];
 ?>
 <tr>
     <td><?= (int)$r['id'] ?></td>
     <td>
-        <?php 
-        $img = (string)($r['image'] ?? ''); 
+        <?php
+        $img = (string)($r['image'] ?? '');
         if ($img !== '') {
             $src = '';
-            
+
             // 1. Önce YENİ yükleme klasörüne bak (Sunucu tarafında kontrol et)
             // __DIR__ ile tam yolu garantiye alıyoruz
             if (file_exists(__DIR__ . '/uploads/product_images/' . $img)) {
@@ -723,11 +749,21 @@ $next = min($totalPages, $page+1);
                 🧬 <?= $vCount ?> Varyasyon
             </div>
         <?php endif; ?>
+        <?php if($isChild): ?>
+            <div style="font-size:11px; color:#ea580c; font-weight:bold; margin-top:2px; background:#fff7ed; display:inline-block; padding:2px 6px; border-radius:4px; border:1px solid #fdba74;">
+                ↳ Varyasyon
+            </div>
+        <?php endif; ?>
     </td>
     <td>
         <a href="<?= $editLink ?>" style="text-decoration:none; color:#333; font-weight:500;">
             <?= h($r['name']) ?>
         </a>
+        <?php if($isChild && !empty($r['master_name'])): ?>
+            <div style="font-size:12px; color:#64748b; margin-top:4px;">
+                🔗 Ana Ürün: <strong><?= h($r['master_name']) ?></strong>
+            </div>
+        <?php endif; ?>
     </td>
     <td><?= h($r['unit']) ?></td>
     <td class="right" style="font-family:monospace; font-size:14px;"><?= number_format((float)$r['price'], 2, ',', '.') ?></td>
