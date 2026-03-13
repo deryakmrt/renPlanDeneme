@@ -304,204 +304,177 @@ if ($action === 'new' || $action === 'edit') {
 
     ?>
 
-    <div class="card">
+    <div class="card" style="max-width:1000px; margin:20px auto; padding:30px;">
+      <h2 style="margin-top:0; border-bottom:2px solid #e2e8f0; padding-bottom:15px; margin-bottom:25px; color:#1e293b;">
+          <?= $row['id'] ? '✏️ Ürün Düzenle: ' . h($row['name']) : '➕ Yeni Ürün Ekle' ?>
+      </h2>
 
-      <h2><?= $row['id'] ? 'Ürün Düzenle' : 'Yeni Ürün' ?></h2>
+      <?php if (!empty($error)): ?><div class="alert alert-danger" style="margin-bottom:20px;"><?= h($error) ?></div><?php endif; ?>
 
-      <?php if (!empty($error)): ?><div class="alert mb"><?= h($error) ?></div><?php endif; ?>
-
-      <form method="post" enctype="multipart/form-data">
-
+      <form method="post" enctype="multipart/form-data" id="productForm">
         <?php csrf_input(); ?>
-
         <input type="hidden" name="id" value="<?= (int)$row['id'] ?>">
 
-        <label>SKU</label>
-
-        <input name="sku" id="sku_input" value="<?= h($row['sku']) ?>" placeholder="Opsiyonel" <?= $row['id'] ? 'oninput="showSkuWarning()"' : '' ?>>
-        
-        <?php if($row['id']): ?>
-        <div id="sku_warning" style="display:none; font-size:11px; color:#ea580c; background:#fff7ed; padding:6px 10px; border-radius:4px; margin-top:4px; border:1px solid #fdba74;">
-            💡 <strong>Bilgi:</strong> Ürün kodunu değiştiriyorsunuz. Bu değişiklik, bu ürünü içeren geçmiş siparişlerdeki belgelerde (STF) yeni kodun görünmesine sebep olacaktır. Sipariş bağlantıları bozulmaz.
-        </div>
-        <script>
-            let originalSku = "<?= h($row['sku']) ?>";
-            function showSkuWarning() {
-                let currentSku = document.getElementById('sku_input').value;
-                if (currentSku !== originalSku) {
-                    document.getElementById('sku_warning').style.display = 'block';
-                } else {
-                    document.getElementById('sku_warning').style.display = 'none';
-                }
-            }
-        </script>
-        <?php endif; ?>
-
-        <label class="mt">Ad</label>
-
-        <input name="name" value="<?= h($row['name']) ?>" required>
-
-        <div class="row mt" style="gap:12px">
-
-          <div style="flex:1">
-            <label>Birim</label>
-            <select name="unit" style="width:100%; height:40px; border:1px solid #ccc; border-radius:4px; padding:0 10px;">
-                <option value="Adet" <?= (strtolower($row['unit'] ?? '') == 'adet') ? 'selected' : '' ?>>Adet</option>
-                <option value="Metre" <?= (strtolower($row['unit'] ?? '') == 'metre') ? 'selected' : '' ?>>Metre</option>
-            </select>
-          </div>
-
-          <div style="flex:1">
-
-            <label>Fiyat</label>
-
-            <input name="price" type="number" step="0.01" value="<?= h($row['price']) ?>">
-
-          </div>
-
-        </div>
-
-
-
-        <div class="row mt" style="gap:12px">
-
-          <div style="flex:1">
-
-            <label>Kategori</label>
-
-            <select name="category_id">
-
-              <option value="">— Seçiniz —</option>
-
-              <?php foreach($__cats as $c): $sel = ((int)($row['category_id'] ?? 0) === (int)$c['id']) ? 'selected' : ''; ?>
-
-                <option value="<?= (int)$c['id'] ?>" <?= $sel ?>><?= h($c['name']) ?></option>
-
-              <?php endforeach; ?>
-
-            </select>
-
-            <div class="muted"><a href="taxonomies.php?t=categories" target="_blank">Kategori yönet</a></div>
-
-          </div>
-
-          <div style="flex:1">
-
-            <label>Marka</label>
-
-            <select name="brand_id">
-
-              <option value="">— Seçiniz —</option>
-
-              <?php foreach($__brands as $b): $sel = ((int)($row['brand_id'] ?? 0) === (int)$b['id']) ? 'selected' : ''; ?>
-
-                <option value="<?= (int)$b['id'] ?>" <?= $sel ?>><?= h($b['name']) ?></option>
-
-              <?php endforeach; ?>
-
-            </select>
-            <div style="background:#f0f9ff; padding:10px; border:1px solid #bae6fd; border-radius:5px; margin-bottom:15px;">
-        <label style="color:#0369a1; font-weight:bold;">🔗 Ana Ürüne Bağla (Varyasyon Yap)</label>
-        
-        <input type="text" id="parentSearchBox" placeholder="🔍 Listede ara..." 
-               style="width:100%; margin-top:5px; padding:6px; border:1px solid #bae6fd; border-radius:4px; font-size:13px;" 
-               onkeyup="filterParentOptions()">
-
-        <select name="parent_id" id="parentSelectBox" class="form-control" style="margin-top:5px; border:1px solid #0284c7; width:100%;">
-            <option value="">-- Yok (Bu bir Ana Ürün) --</option>
-            <?php 
-                // ÖNCELİK MANTIĞI:
-                // 1. Ürünün zaten bir veritabanı kaydı varsa onu kullan.
-                // 2. Yoksa (veya boşsa) ve hafızada (session) bir seçim varsa onu kullan.
-                $currentParentId = $row['parent_id'] ?? null;
-                if (!$currentParentId && isset($_SESSION['last_selected_parent_id'])) {
-                    $currentParentId = $_SESSION['last_selected_parent_id'];
-                }
-            ?>
-            <?php foreach($__parents as $p): ?>
-                <?php if($p['id'] == ($id ?? 0)) continue; // Kendisi listelenmesin ?>
-                <option value="<?= $p['id'] ?>" <?= ($currentParentId == $p['id']) ? 'selected' : '' ?>>
-                    <?= h($p['name']) ?> [Kod: <?= h($p['sku']) ?>]
-                </option>
-            <?php endforeach; ?>
-        </select>
-        
-        <script>
-        function filterParentOptions() {
-            var input, filter, select, options, i, txtValue;
-            input = document.getElementById("parentSearchBox");
-            filter = input.value.toUpperCase();
-            select = document.getElementById("parentSelectBox");
-            options = select.getElementsByTagName("option");
-
-            // Seçenekleri döngüye al
-            for (i = 0; i < options.length; i++) {
-                // İlk seçenek (--Yok--) her zaman görünsün
-                if (i === 0) continue;
+        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:30px;">
+            
+            <div style="display:flex; flex-direction:column; gap:15px;">
                 
-                txtValue = options[i].textContent || options[i].innerText;
-                if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                    options[i].style.display = "";
-                } else {
-                    options[i].style.display = "none";
-                }
-            }
-        }
-        </script>
-    </div>
+                <div class="row" style="gap:15px;">
+                    <div style="flex:1.3;">
+                        <label style="font-weight:600; color:#475569;">Ürün Adı <span style="color:#ef4444;">*</span></label>
+                        <input name="name" value="<?= h($row['name']) ?>" required style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px;">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-weight:600; color:#475569;">SKU Kodu</label>
+                        <input name="sku" id="sku_input" value="<?= h($row['sku']) ?>" placeholder="İsteğe bağlı" oninput="checkSku()" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px;">
+                        
+                        <div id="sku_empty_warning" style="display:<?= empty($row['sku']) && $row['id'] ? 'block' : 'none' ?>; font-size:11px; color:#b91c1c; margin-top:4px;">
+                            ⚠️ SKU kodu boş bırakıldı!
+                        </div>
+                        <?php if($row['id']): ?>
+                        <div id="sku_warning" style="display:none; font-size:11px; color:#ea580c; background:#fff7ed; padding:6px; border-radius:4px; margin-top:4px; border:1px solid #fdba74;">
+                            💡 Kod değiştirildi. STF'ler güncellenir.
+                        </div>
+                        <script>
+                            let originalSku = "<?= h($row['sku']) ?>";
+                            function checkSku() {
+                                let currentSku = document.getElementById('sku_input').value.trim();
+                                // Değişim uyarısı
+                                document.getElementById('sku_warning').style.display = (currentSku !== originalSku) ? 'block' : 'none';
+                                // Boşluk uyarısı
+                                document.getElementById('sku_empty_warning').style.display = (currentSku === '') ? 'block' : 'none';
+                            }
+                        </script>
+                        <?php endif; ?>
+                    </div>
+                </div>
 
-            <div class="muted"><a href="taxonomies.php?t=brands" target="_blank">Marka yönet</a></div>
+                <div class="row" style="gap:15px; background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #e2e8f0;">
+                    <div style="flex:1;">
+                        <label style="font-weight:600; color:#475569;">Birim</label>
+                        <select name="unit" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; background:#fff;">
+                            <option value="Adet" <?= (strtolower($row['unit'] ?? '') == 'adet') ? 'selected' : '' ?>>Adet</option>
+                            <option value="Metre" <?= (strtolower($row['unit'] ?? '') == 'metre') ? 'selected' : '' ?>>Metre</option>
+                        </select>
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-weight:600; color:#475569;">Fiyat</label>
+                        <div style="display:flex; align-items:center; position:relative;">
+                            <input name="price" type="number" step="0.01" value="<?= h($row['price']) ?>" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px;">
+                            <span style="position:absolute; right:10px; color:#64748b; font-weight:bold;">TL</span>
+                        </div>
+                    </div>
+                </div>
 
-          </div>
+                <div class="row" style="gap:15px;">
+                    <div style="flex:1;">
+                        <label style="font-weight:600; color:#475569; display:flex; justify-content:space-between;">
+                            Kategori <a href="taxonomies.php?t=categories" target="_blank" style="font-size:11px; font-weight:normal; color:#3b82f6;">Yönet</a>
+                        </label>
+                        <select name="category_id" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px;">
+                            <option value="">— Seçiniz —</option>
+                            <?php foreach($__cats as $c): $sel = ((int)($row['category_id'] ?? 0) === (int)$c['id']) ? 'selected' : ''; ?>
+                                <option value="<?= (int)$c['id'] ?>" <?= $sel ?>><?= h($c['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-weight:600; color:#475569; display:flex; justify-content:space-between;">
+                            Marka <a href="taxonomies.php?t=brands" target="_blank" style="font-size:11px; font-weight:normal; color:#3b82f6;">Yönet</a>
+                        </label>
+                        <select name="brand_id" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px;">
+                            <option value="">— Seçiniz —</option>
+                            <?php foreach($__brands as $b): $sel = ((int)($row['brand_id'] ?? 0) === (int)$b['id']) ? 'selected' : ''; ?>
+                                <option value="<?= (int)$b['id'] ?>" <?= $sel ?>><?= h($b['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
 
+                <div style="background:#f0fdf4; padding:15px; border:1px solid #86efac; border-radius:8px;">
+                    <label style="color:#166534; font-weight:bold; display:block; margin-bottom:10px;">🔗 Ana Ürüne Bağla (Varyasyon Yap)</label>
+                    <input type="text" id="parentSearchBox" placeholder="🔍 Listede ara..." style="width:100%; padding:8px; border:1px solid #bbf7d0; border-radius:4px; margin-bottom:8px;" onkeyup="filterParentOptions()">
+                    
+                    <select name="parent_id" id="parentSelectBox" style="width:100%; padding:8px; border:1px solid #22c55e; border-radius:4px; background:#fff;">
+                        <option value="">-- Yok (Bu bir Ana Ürün) --</option>
+                        <?php
+                            $currentParentId = $row['parent_id'] ?? ($_SESSION['last_selected_parent_id'] ?? null);
+                            foreach($__parents as $p): 
+                                if($p['id'] == ($id ?? 0)) continue;
+                        ?>
+                            <option value="<?= $p['id'] ?>" <?= ($currentParentId == $p['id']) ? 'selected' : '' ?>><?= h($p['name']) ?> [Kod: <?= h($p['sku']) ?>]</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-weight:600; color:#475569;">Ürün Özeti</label>
+                    <textarea name="urun_ozeti" rows="2" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; resize:vertical;"><?= h($row['urun_ozeti']) ?></textarea>
+                </div>
+                <div>
+                    <label style="font-weight:600; color:#475569;">Kullanım Alanı</label>
+                    <textarea name="kullanim_alani" rows="2" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px; resize:vertical;"><?= h($row['kullanim_alani']) ?></textarea>
+                </div>
+
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:20px;">
+                
+                <div style="background:#f8fafc; padding:20px; border-radius:8px; border:1px solid #e2e8f0; text-align:center;">
+                    <label style="font-weight:bold; color:#475569; display:block; margin-bottom:15px; font-size:16px;">🖼️ Ürün Görseli</label>
+                    
+                    <?php 
+                    $src = '';
+                    if(!empty($row['image'])){
+                        $img = (string)$row['image'];
+                        if (file_exists(__DIR__ . '/uploads/product_images/' . $img)) { $src = 'uploads/product_images/' . $img; } 
+                        else { $src = (preg_match('~^https?://~',$img) || strpos($img,'/')===0) ? $img : '/'.ltrim($img,'/'); }
+                    }
+                    ?>
+                    
+                    <div style="width:100%; height:200px; background:#fff; border:2px dashed #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:15px; overflow:hidden; position:relative;">
+                        <?php if($src): ?>
+                            <img src="<?= h($src) ?>" style="max-width:100%; max-height:100%; object-fit:contain;">
+                        <?php else: ?>
+                            <span style="color:#94a3b8; font-size:40px;">📷</span>
+                        <?php endif; ?>
+                    </div>
+
+                    <input type="file" name="image" accept="image/*" style="width:100%; padding:8px; background:#fff; border:1px solid #cbd5e1; border-radius:4px; margin-bottom:10px;">
+                    
+                    <?php if($src): ?>
+                    <label style="color:#ef4444; font-size:13px; font-weight:bold; cursor:pointer; display:inline-block; padding:8px 15px; background:#fef2f2; border:1px solid #fecaca; border-radius:4px;">
+                        <input type="checkbox" name="delete_image" value="1" style="vertical-align:middle;"> 🗑️ Mevcut Resmi Sil
+                    </label>
+                    <?php endif; ?>
+                </div>
+
+                <div style="background:#fff; padding:20px; border-radius:8px; border:1px solid #e2e8f0; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05); position:sticky; top:20px;">
+                    <button type="submit" class="btn primary" style="width:100%; padding:15px; font-size:16px; font-weight:bold; margin-bottom:10px; background-color:#2563eb;">
+                        <?= $row['id'] ? '💾 Değişiklikleri Güncelle' : '➕ Ürünü Kaydet' ?>
+                    </button>
+                    <a class="btn" href="products.php" style="width:100%; text-align:center; padding:10px; background:#f1f5f9; color:#475569; border-color:#cbd5e1;">
+                        ❌ Vazgeç ve Geri Dön
+                    </a>
+                </div>
+
+            </div>
         </div>
-
-
-
-        <label class="mt">Ürün Özeti</label>
-
-        <textarea name="urun_ozeti" rows="3"><?= h($row['urun_ozeti']) ?></textarea>
-
-        <label class="mt">Kullanım Alanı</label>
-
-        <textarea name="kullanim_alani" rows="3"><?= h($row['kullanim_alani']) ?></textarea>
-
-
-
-        <div class="row mt">
-
-          <button class="btn primary"><?= $row['id'] ? 'Güncelle' : 'Kaydet' ?></button>
-
-          <a class="btn" href="products.php">Vazgeç</a>
-
-        </div>
-
-
-
-        <label class="mt">Ürün Görseli</label>
-
-        <input type="file" name="image" accept="image/*">
-
-        <?php if(!empty($row['image'])): 
-    $img = (string)$row['image']; 
-    // Yeni yol mu, eski yol mu kontrolü
-    if (file_exists(__DIR__ . '/uploads/product_images/' . $img)) {
-        $src = 'uploads/product_images/' . $img;
-    } else {
-        $src = (preg_match('~^https?://~',$img) || strpos($img,'/')===0) ? $img : '/'.ltrim($img,'/');
-    }
-?>
-    <div style="margin-top:5px; background:#f8fafc; padding:10px; border:1px solid #e2e8f0; border-radius:6px; display:inline-block;">
-        <img src="<?= h($src) ?>" width="100" height="100" style="object-fit:contain; background:#fff; border:1px solid #ddd; margin-bottom:5px; display:block;">
-        <label style="color:#dc2626; font-size:13px; font-weight:bold; cursor:pointer;">
-            <input type="checkbox" name="delete_image" value="1"> 🗑️ Resmi Sil
-        </label>
-    </div>
-<?php endif; ?>
-
       </form>
-
     </div>
+
+    <script>
+    function filterParentOptions() {
+        var input = document.getElementById("parentSearchBox");
+        var filter = input.value.toUpperCase();
+        var select = document.getElementById("parentSelectBox");
+        var options = select.getElementsByTagName("option");
+        for (var i = 1; i < options.length; i++) {
+            var txtValue = options[i].textContent || options[i].innerText;
+            options[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+        }
+    }
+    </script>
 
     <?php
     include __DIR__ . '/includes/footer.php'; exit;
