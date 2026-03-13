@@ -3,25 +3,13 @@
 ini_set('display_errors', 1);
 
 error_reporting(E_ALL);
-
-
-
 require_once __DIR__ . '/includes/helpers.php';
-
 require_once __DIR__ . '/includes/image_upload.php';
-
-
-
-require_once __DIR__ . '/products_variations_addon.inc.php';
-
 require_login();
-
-
 
 $db = pdo();
 
 // -- Taxonomy columns bootstrap (category_id, brand_id)
-
 try {
 
     $colExists = function($table,$col) use ($db){
@@ -516,11 +504,7 @@ if ($action === 'new' || $action === 'edit') {
     </div>
 
     <?php
-
-    require __DIR__ . '/products_variations_ui.inc.php';
-
     include __DIR__ . '/includes/footer.php'; exit;
-
 }
 
 
