@@ -350,7 +350,36 @@ include __DIR__ . '/includes/header.php';
 .container-card{background:#fff;border:1px solid #e8eef6;border-radius:14px;margin:16px;padding:16px;box-shadow:0 8px 20px rgba(0,0,0,.06)}
 .topgrid{display:grid;grid-template-columns: minmax(520px, 1fr) 420px; gap:16px; align-items:start}
 @media (max-width:1200px){.topgrid{grid-template-columns:1fr}}
-.filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+/* Filtre Ana Kutusu */
+.filters {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px 20px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.filters label.label {
+    font-size: 12px;
+    color: #475569;
+    font-weight: 600;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.filters .input {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 8px 12px;
+    transition: all 0.2s;
+    font-size: 13px;
+}
+.filters .input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+}
 @media (max-width:1100px){.filters{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:720px){.filters{grid-template-columns:repeat(1,minmax(0,1fr))}}
 .label{color:#102a43;font-size:12px;margin-bottom:6px;display:block}
@@ -387,8 +416,18 @@ include __DIR__ . '/includes/header.php';
 .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef2ff;font-weight:700}
 </style>
 <style>
-/* Üretim Durumu çoklu seçim 5 sütun grid */
-.prod-status-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px 12px;align-items:stretch}
+/* Üretim Durumu çoklu seçim */
+.prod-status-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.prod-status-grid .status-chip {
+    padding: 6px 12px;
+    min-height: auto;
+    font-size: 12px;
+    border-radius: 20px;
+}
 @media (max-width:1200px){.prod-status-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (max-width:900px){.prod-status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:640px){.prod-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -599,18 +638,20 @@ document.addEventListener('DOMContentLoaded', function(){
 
   <div class="topgrid">
     <form method="get" id="reportFilters" class="filters">
-<div>
-        <label class="label">Tarih (Başlangıç)</label>
-        <input type="date" name="date_from" value="<?=h($filters['date_from'])?>" class="input" placeholder="gg.aa.yyyy">
+      
+      <div>
+        <label class="label">🗓️ Başlangıç Tarihi</label>
+        <input type="date" name="date_from" value="<?=h($filters['date_from'])?>" class="input">
       </div>
-<div>
-        <label class="label">Tarih (Bitiş)</label>
-        <input type="date" name="date_to" value="<?=h($filters['date_to'])?>" class="input" placeholder="gg.aa.yyyy">
+      <div>
+        <label class="label">🗓️ Bitiş Tarihi</label>
+        <input type="date" name="date_to" value="<?=h($filters['date_to'])?>" class="input">
       </div>
-<div>
-        <label class="label">Müşteri</label>
+      
+      <div>
+        <label class="label">👤 Müşteri</label>
         <select name="customer_id" class="input">
-          <option value="">— Hepsi —</option>
+          <option value="">— Tüm Müşteriler —</option>
           <?php
           try { $cs=$db->query("SELECT id, name FROM customers ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); }
           catch (Throwable $e) { try { $cs=$db->query("SELECT id, customer_name AS name FROM customers ORDER BY customer_name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch(Throwable $e2){ $cs=[]; } }
@@ -621,75 +662,61 @@ document.addEventListener('DOMContentLoaded', function(){
           <?php endforeach; ?>
         </select>
       </div>
-<div>
-        <label class="label">Proje</label>
-        <input type="text" name="project_query" placeholder="Proje adı" value="<?=h($filters['project_query'])?>" class="input">
+      <div>
+        <label class="label">📁 Proje Adı</label>
+        <input type="text" name="project_query" placeholder="Proje adı ile ara..." value="<?=h($filters['project_query'])?>" class="input">
       </div>
-<div>
-        <label class="label">Ürün (Ad/SKU)</label>
+
+      <div>
+        <label class="label">📦 Ürün (Ad veya SKU)</label>
         <input type="text" name="product_query" placeholder="Örn: Wallwasher, 12345" value="<?=h($filters['product_query'])?>" class="input">
       </div>
-<div>
-        <label class="label">Para Birimi</label>
+      <div>
+        <label class="label">💱 Para Birimi</label>
         <select name="currency" class="input">
-          <option value="">— Hepsi —</option>
+          <option value="">— Tümü —</option>
           <?php foreach (['TRY','USD','EUR'] as $cur): $sel = ($filters['currency'] && normalize_currency($filters['currency'])===$cur)?'selected':''; ?>
             <option value="<?=$cur?>" <?=$sel?>><?=$cur?></option>
           <?php endforeach; ?>
         </select>
       </div>
-<div>
-        <label class="label">Birim Fiyat (min)</label>
-        <input type="text" name="min_unit" placeholder="Örn: 100,00" value="<?=h($filters['min_unit'])?>" class="input">
+      <div>
+        <label class="label">💰 Min Fiyat</label>
+        <input type="text" name="min_unit" placeholder="Alt limit (Örn: 100)" value="<?=h($filters['min_unit'])?>" class="input">
       </div>
-<div>
-        <label class="label">Birim Fiyat (max)</label>
-        <input type="text" name="max_unit" placeholder="Örn: 5000,00" value="<?=h($filters['max_unit'])?>" class="input">
+      <div>
+        <label class="label">💰 Max Fiyat</label>
+        <input type="text" name="max_unit" placeholder="Üst limit (Örn: 5000)" value="<?=h($filters['max_unit'])?>" class="input">
       </div>
-<form method="get" id="reportFilters" class="filters">
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
 
-
-
-      <div class="wide6">
-  <label class="label">Üretim Durumu (çoklu)</label>
-  <div class="prod-status-grid compact">
-  <?php
-    $statusFixed = [
-      'tedarik'         => 'Tedarik',
-      'sac lazer'       => 'Sac Lazer',
-      'boru lazer'      => 'Boru Lazer',
-      'kaynak'          => 'Kaynak',
-      'boya'            => 'Boya',
-      'elektrik montaj' => 'Elektrik Montaj',
-      'test'            => 'Test',
-      'paketleme'       => 'Paketleme',
-      'sevkiyat'        => 'Sevkiyat',
-      'teslim edildi'   => 'Teslim Edildi',
-    ];
-    foreach($statusFixed as $val => $label){
-      $checked = in_array($val, $filters['prod_status']??[]) ? ' checked' : '';
-      ?>
-      <label class="status-chip">
-        <input type="checkbox" name="prod_status[]" form="reportFilters" value="<?=h($val)?>"<?=$checked?>>
-        <span><?=h($label)?></span>
-      </label>
-      <?php
-    }
-  ?>
-  </div>
-</div>
+      <div style="grid-column: 1 / -1; padding-top: 10px; border-top: 1px dashed #cbd5e1; margin-top: 5px;">
+        <label class="label" style="display:block; margin-bottom:10px;">⚙️ Üretim Aşamaları (Çoklu Seçim)</label>
+        <div class="prod-status-grid">
+        <?php
+          $statusFixed = [
+            'tedarik'         => 'Tedarik',
+            'sac lazer'       => 'Sac Lazer',
+            'boru lazer'      => 'Boru Lazer',
+            'kaynak'          => 'Kaynak',
+            'boya'            => 'Boya',
+            'elektrik montaj' => 'Elektrik Montaj',
+            'test'            => 'Test',
+            'paketleme'       => 'Paketleme',
+            'sevkiyat'        => 'Sevkiyat',
+            'teslim edildi'   => 'Teslim Edildi',
+          ];
+          foreach($statusFixed as $val => $label){
+            $checked = in_array($val, $filters['prod_status']??[]) ? ' checked' : '';
+            ?>
+            <label class="status-chip" style="cursor:pointer;">
+              <input type="checkbox" name="prod_status[]" value="<?=h($val)?>"<?=$checked?>>
+              <span><?=h($label)?></span>
+            </label>
+            <?php
+          }
+        ?>
+        </div>
+      </div>
 <div style="grid-column:1 / -1" class="actions">
         <button class="btn" type="submit">Filtrele</button>
         <a class="btn" href="<?=h(basename(__FILE__))?>">Sıfırla</a>
