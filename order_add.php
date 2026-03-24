@@ -21,6 +21,7 @@ $order = [
     'siparisi_giren' => '',
     'siparis_tarihi' => null,
     'fatura_para_birimi' => '',
+    'kalem_para_birimi' => 'TL',
     'proje_adi' => '',
     'revizyon_no' => '',
     'nakliye_turu' => '',
@@ -59,6 +60,7 @@ if (method('POST')) {
         'siparisi_giren',
         'siparis_tarihi',
         'fatura_para_birimi',
+        'kalem_para_birimi',
         'proje_adi',
         'revizyon_no',
         'nakliye_turu',
@@ -81,8 +83,8 @@ if (method('POST')) {
             $order['order_code'] = next_order_code();
 
             $ins = $db->prepare("INSERT INTO orders (order_code, customer_id, status, currency, termin_tarihi, baslangic_tarihi, bitis_tarihi, teslim_tarihi, notes,
-                              siparis_veren, siparisi_alan, siparisi_giren, siparis_tarihi, fatura_para_birimi, proje_adi, revizyon_no, nakliye_turu, odeme_kosulu, odeme_para_birimi, kdv_orani)
-                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                              siparis_veren, siparisi_alan, siparisi_giren, siparis_tarihi, fatura_para_birimi, kalem_para_birimi, proje_adi, revizyon_no, nakliye_turu, odeme_kosulu, odeme_para_birimi, kdv_orani)
+                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $ins->execute([
                 $order['order_code'],
                 $order['customer_id'],
@@ -98,6 +100,7 @@ if (method('POST')) {
                 $order['siparisi_giren'],
                 $order['siparis_tarihi'],
                 $order['fatura_para_birimi'],
+                $order['kalem_para_birimi'],
                 $order['proje_adi'],
                 $order['revizyon_no'],
                 $order['nakliye_turu'],

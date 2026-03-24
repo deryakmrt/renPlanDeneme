@@ -228,16 +228,17 @@ ob_start();
     /* --- NOTLAR BÖLÜMÜ --- */
     .notes-container {
         margin-top: 5mm;
-        border: 0.3mm solid #000;
+        border: 0.8mm solid #000; /* Çerçeve kalınlaştırıldı */
         padding: 2mm;
         page-break-inside: avoid; /* Sayfa ortasında bölünmesin */
     }
     .notes-title {
         font-weight: 700;
-        font-size: 11px;
-        border-bottom: 0.3mm solid #ccc;
+        font-size: 12px;
+        border-bottom: 0.5mm solid #d32f2f;
         margin-bottom: 2mm;
         padding-bottom: 1mm;
+        color: #d32f2f; /* Başlık kırmızı yapıldı */
     }
     .note-row {
         margin-bottom: 2mm;
@@ -251,12 +252,13 @@ ob_start();
     .note-meta {
         font-size: 9px;
         font-weight: 700;
-        color: #444;
+        color: #b02a37; /* Tarih/Yazar koyu kırmızı */
         margin-bottom: 1px;
     }
     .note-body {
-        font-size: 10px;
-        color: #000;
+        font-size: 11px;
+        color: #000; /* Yazılar kırmızı yapıldı */
+        font-weight: bold; /* Daha dikkat çekici olması için bold eklendi */
     }
   </style>
 </head>

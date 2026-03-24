@@ -41,15 +41,14 @@ $logo_src = $CUSTOM_LOGO;
 
 $fmt = function($n) { return number_format((float)$n, 2, ',', '.'); };
 
-// --- Para birimi sembolü haritalama ---
-$fpb = strtoupper(trim((string)($o['fatura_para_birimi'] ?? $o['currency'] ?? '')));
-switch ($fpb) {
-  case 'TL': case 'TRY': $currencySymbol = '₺'; break;
-  case 'USD': $currencySymbol = '$'; break;
-  case 'EUR': case 'EURO': $currencySymbol = '€'; break;
-  default: $currencySymbol = $fpb ?: '₺';
+// --- ORTAK SEMBOL (Kalemler ve Alt Toplamlar İçin) ---
+$kpb = strtoupper(trim((string)($o['kalem_para_birimi'] ?? $o['fatura_para_birimi'] ?? $o['currency'] ?? 'TL')));
+switch ($kpb) {
+  case 'TL': case 'TRY': $itemSymbol = '₺'; break;
+  case 'USD': $itemSymbol = '$'; break;
+  case 'EUR': case 'EURO': $itemSymbol = '€'; break;
+  default: $itemSymbol = $kpb ?: '₺';
 }
-
 function fmt_date($val, $with_time=false) {
   // Normalize and guard against empty/invalid dates
   if (!isset($val)) return '-';
@@ -289,8 +288,8 @@ ob_start();
       <td class="num"><?= isset($it['qty']) ? number_format((float)$it['qty'],2,',','.') : '' ?></td>
       <td class="center"><?= h($it['unit'] ?? '') ?></td>
       <td class="center"><?= fmt_date($it['termin_tarihi'] ?? ($o['termin_tarihi'] ?? '')) ?></td>
-      <td class="num"><?= $fmt($it['price'] ?? 0) ?> <?= h($currencySymbol) ?></td>
-      <td class="num"><?= $fmt($satirTop) ?> <?= h($currencySymbol) ?></td>
+      <td class="num"><?= $fmt($it['price'] ?? 0) ?> <?= h($itemSymbol) ?></td>
+      <td class="num"><?= $fmt($satirTop) ?> <?= h($itemSymbol) ?></td>
     </tr>
   <?php endforeach; ?>
   </tbody>
@@ -304,9 +303,9 @@ $kdv = $ara * $kdv_orani;
 $genel = $ara + $kdv; 
 ?>
 <table class="totals">
-  <tr><td class="label">Ara Toplam</td><td class="value"><?= $fmt($ara) ?> <?= h($currencySymbol) ?></td></tr>
-  <tr><td class="label">KDV %<?= $kdv_yuzde ?></td><td class="value"><?= $fmt($kdv) ?> <?= h($currencySymbol) ?></td></tr>
-  <tr><td class="label">Genel Toplam</td><td class="value"><?= $fmt($genel) ?> <?= h($currencySymbol) ?></td></tr>
+  <tr><td class="label">Ara Toplam</td><td class="value"><?= $fmt($ara) ?> <?= h($itemSymbol) ?></td></tr>
+  <tr><td class="label">KDV %<?= $kdv_yuzde ?></td><td class="value"><?= $fmt($kdv) ?> <?= h($itemSymbol) ?></td></tr>
+  <tr><td class="label">Genel Toplam</td><td class="value"><?= $fmt($genel) ?> <?= h($itemSymbol) ?></td></tr>
 </table>
 
 <?php

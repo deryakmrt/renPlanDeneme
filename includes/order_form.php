@@ -125,12 +125,24 @@ input[name^="price["] {
       <div><label>Proje Adı</label><input name="proje_adi" value="<?= h($order['proje_adi'] ?? '') ?>"></div>
       <div><label>Revizyon No</label><input name="revizyon_no" value="<?= h($order['revizyon_no'] ?? '') ?>"></div>
       <div>
-        <label>Fatura Para Birimi</label>
-        <select name="fatura_para_birimi">
-          <?php $val = $order['fatura_para_birimi'] ?? ''; ?>
+        <label>Kalem Para Birimi</label>
+        <select name="kalem_para_birimi">
+          <?php $val = $order['kalem_para_birimi'] ?? $order['fatura_para_birimi'] ?? 'TL'; ?>
           <option value="TL"  <?= $val==='TL'  ?'selected':'' ?>>TL</option>
           <option value="EUR" <?= $val==='EUR' ?'selected':'' ?>>Euro</option>
           <option value="USD" <?= $val==='USD' ?'selected':'' ?>>USD</option>
+        </select>
+      </div>
+      <div></div> </div>
+
+    <div class="grid g4 mt" style="gap:12px">
+      <div>
+        <label>Fatura Para Birimi</label>
+        <select name="fatura_para_birimi">
+          <?php $val2f = $order['fatura_para_birimi'] ?? 'TL'; ?>
+          <option value="TL"  <?= $val2f==='TL'  ?'selected':'' ?>>TL</option>
+          <option value="EUR" <?= $val2f==='EUR' ?'selected':'' ?>>Euro</option>
+          <option value="USD" <?= $val2f==='USD' ?'selected':'' ?>>USD</option>
         </select>
       </div>
       <div>
