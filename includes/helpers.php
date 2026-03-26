@@ -80,7 +80,7 @@ function csrf_check($action = null, $onFailRedirect = null) {
 }
 
 // --- ROLLER ---
-function valid_roles(){ return ['admin','sistem_yoneticisi','musteri','plasiyer', 'uretim']; }
+function valid_roles(){ return ['admin','sistem_yoneticisi','musteri','plasiyer', 'uretim', 'muhasebe']; }
 function role_label($role){
     $map = [
         'admin'             => 'Yönetici (Tam Yetki)',
@@ -88,6 +88,7 @@ function role_label($role){
         'musteri'           => 'Müşteri',
         'plasiyer'          => 'Plasiyer',
         'uretim'            => 'Üretim',
+        'muhasebe'          => 'Muhasebe',
     ];
     return $map[$role] ?? $role;
 }
@@ -144,6 +145,11 @@ function role_caps(){
         ],
         'uretim' => [
             'orders.view'   => true,
+            'products.view' => true,
+        ],
+        'muhasebe' => [
+            'orders.view'   => true,
+            'orders.edit'   => true, // Fatura durumu vs. değiştirebilsin diye
             'products.view' => true,
         ],
     ];

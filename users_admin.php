@@ -49,14 +49,14 @@ function fetch_roles(PDO $db): array {
       foreach ($rs->fetchAll(PDO::FETCH_ASSOC) as $r) { $out[] = (string)$r['role']; }
     }
     // Ensure required roles are present regardless of DB contents
-    $defaults = ['admin','sistem_yoneticisi','musteri','plasiyer','uretim'];
+    $defaults = ['admin','sistem_yoneticisi','musteri','plasiyer','uretim','muhasebe'];
     $out = array_values(array_unique(array_merge($defaults, $out)));
     return $out;
   } catch (Throwable $e) {
-    echo "<pre style='background:#2b2b2b;color:#ffd479;padding:10px;border-radius:6px'>ROLES ERROR: "
+    echo "<pre style='background: #2b2b2b;color: #ffd479;padding:10px;border-radius:6px'>ROLES ERROR: "
        . htmlspecialchars($e->getMessage()) . "</pre>";
     // Fallback to defaults if DB fails
-    return ['admin','sistem_yoneticisi','musteri','plasiyer','uretim'];
+    return ['admin','sistem_yoneticisi','musteri','plasiyer','uretim','muhasebe'];
   }
 }
 

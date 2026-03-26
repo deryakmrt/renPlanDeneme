@@ -2,7 +2,12 @@
 // includes/order_form.php
 // Beklenen: $mode ('new'|'edit'), $order (assoc), $customers, $products, $items
 ?>
-<?php $__role = current_user()['role'] ?? ''; $__is_admin_like = in_array($__role, ['admin','sistem_yoneticisi'], true); ?>
+<?php 
+$__role = current_user()['role'] ?? ''; 
+$__is_admin_like = in_array($__role, ['admin','sistem_yoneticisi'], true); 
+$__is_muhasebe = ($__role === 'muhasebe'); 
+$__is_uretim = ($__role === 'uretim');
+?>
 
 <style>
 /* Sayfa yüklenirken select'leri anında gizle (FOUC önleme) */
@@ -10,8 +15,8 @@ select[name="product_id[]"] {
     display: none !important;
 }
 
-/* ZIRH: Admin olmayan kullanıcılar için fiyat kolonunu ZORLA gizle */
-<?php if (!$__is_admin_like): ?>
+/* ZIRH: Admin VE Muhasebe olmayan kullanıcılar için fiyat kolonunu ZORLA gizle */
+<?php if (!$__is_admin_like && !$__is_muhasebe): ?>
 input[name="price[]"],
 input[name^="price["] {
     display: none !important;
@@ -71,12 +76,40 @@ input[name^="price["] {
                   'test' => 'Test',
                   'paketleme' => 'Paketleme',
                   'sevkiyat' => 'Sevkiyat',
-                  'teslim edildi' => 'Teslim Edildi'
+                  'teslim edildi' => 'Teslim Edildi',
+                  'fatura_edildi' => 'Fatura Edildi'
               ];
-              // Eğer veritabanında listede olmayan bir durum varsa (örn: eski 'taslak'), onu da ekle ki bozulmasın
+              
               $__curStat = $order['status'] ?? '';
-              if ($__curStat && !isset($status_list[$__curStat]) && $__curStat !== 'taslak_gizli') {
-                  $status_list[$__curStat] = ucfirst($__curStat);
+              
+              // MUHASEBE ROLÜ KISITLAMASI
+              if ($__is_muhasebe) {
+                  if ($__curStat === 'teslim edildi' || $__curStat === 'fatura_edildi') {
+                      $status_list = [
+                          'teslim edildi' => 'Teslim Edildi',
+                          'fatura_edildi' => 'Fatura Edildi'
+                      ];
+                  } else {
+                      $status_list = [
+                          $__curStat => ($status_list[$__curStat] ?? ucfirst($__curStat))
+                      ];
+                  }
+              } elseif ($__is_uretim) {
+                  // ÜRETİM ROLÜ: fatura_edildi listede hiç görünmez
+                  unset($status_list['fatura_edildi']);
+                  // Sipariş zaten fatura_edildi ise sadece onu göster (salt okunur gibi)
+                  if ($__curStat === 'fatura_edildi') {
+                      $status_list = ['fatura_edildi' => 'Fatura Edildi'];
+                  }
+                  // Listede olmayan başka bir mevcut durumu ekle
+                  if ($__curStat && $__curStat !== 'fatura_edildi' && !isset($status_list[$__curStat]) && $__curStat !== 'taslak_gizli') {
+                      $status_list[$__curStat] = ucfirst($__curStat);
+                  }
+              } else {
+                  // Diğer roller için eksik durumu tamamlama
+                  if ($__curStat && !isset($status_list[$__curStat]) && $__curStat !== 'taslak_gizli') {
+                      $status_list[$__curStat] = ucfirst($__curStat);
+                  }
               }
 
               foreach($status_list as $k=>$v): ?>
@@ -168,7 +201,38 @@ input[name^="price["] {
       <div><label>Başlangıç Tarihi</label><input type="date" name="baslangic_tarihi" value="<?= h($order['baslangic_tarihi'] ?? '') ?>"></div>
       <div><label>Bitiş Tarihi</label><input type="date" name="bitis_tarihi" value="<?= h($order['bitis_tarihi'] ?? '') ?>"></div>
       <div><label>Teslim Tarihi</label><input type="date" name="teslim_tarihi" value="<?= h($order['teslim_tarihi'] ?? '') ?>"></div>
+      
+      <div id="fatura_tarihi_container" style="display:none;">
+        <label style="color: #7e22ce; font-weight:bold;">Fatura Tarihi</label>
+        <input type="date" name="fatura_tarihi" value="<?= h($order['fatura_tarihi'] ?? '') ?>" style="border-color: #a855f7; background-color: #faf5ff;">
+      </div>
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var statusSelect = document.querySelector('select[name="status"]');
+        var faturaContainer = document.getElementById('fatura_tarihi_container');
+        if(!statusSelect || !faturaContainer) return;
+
+        var faturaInput = faturaContainer.querySelector('input');
+
+        function toggleFaturaTarihi() {
+            if (statusSelect.value === 'fatura_edildi') {
+                faturaContainer.style.display = 'block';
+                // Eğer tarih tamamen boşsa, bugünü otomatik yaz (eski siparişlere dokunmaz, çünkü yeni fatura kesiliyor)
+                if (!faturaInput.value) {
+                    faturaInput.value = new Date().toISOString().split('T')[0];
+                }
+            } else {
+                faturaContainer.style.display = 'none';
+                // Başka bir duruma dönülürse tarihi silmiyoruz ki veri kaybı olmasın, sadece gizliyoruz.
+            }
+        }
+
+        statusSelect.addEventListener('change', toggleFaturaTarihi);
+        toggleFaturaTarihi(); // Sayfa yüklendiğinde durumu kontrol et
+    });
+    </script>
 
     <div class="grid g4 mt" style="gap:12px">
       <div><label>Nakliye Türü</label><input name="nakliye_turu" value="<?= h($order['nakliye_turu'] ?? '') ?>"></div>
@@ -203,7 +267,7 @@ input[name^="price["] {
           <th>Ad</th>
           <th style="width:8%">Birim</th>
           <th style="width:8%">Miktar</th>
-          <?php if ($__is_admin_like): ?><th style="width:90px">Birim Fiyat</th><?php endif; ?>
+          <?php if ($__is_admin_like || $__is_muhasebe): ?><th style="width:90px">Birim Fiyat</th><?php endif; ?>
           <th>Ürün Özeti</th>
           <th style="width:12%">Kullanım Alanı</th>
           <?php if ($__is_admin_like): ?><th class="right" style="width:8%">Sil</th><?php endif; ?>
@@ -325,6 +389,8 @@ input[name^="price["] {
           
           <?php if ($__is_admin_like): ?>
             <td><input name="price[]" type="text" class="formatted-number" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '') ?>"></td>
+          <?php elseif ($__is_muhasebe): ?>
+            <td><input name="price[]" type="text" class="formatted-number" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '') ?>" readonly title="Yetkisiz İşlem!" style="cursor: not-allowed; background-color: #f9fafb; color: #6b7280;"></td>
           <?php else: ?>
             <input type="hidden" name="price[]" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '') ?>">
           <?php endif; ?>
@@ -740,87 +806,221 @@ input[name^="price["] {
   </form>
 </div>
 <?php if ($mode === 'edit' && !empty($order['id'])): ?>
+<?php
+// ---- DRIVE BÖLÜMÜ ROL DEĞİŞKENLERİ ----
+// Hangi klasör tipini görebilir/yükleyebilir?
+$__is_uretim = ($__role === 'uretim');
+
+// Admin/sistem_yoneticisi: her şeyi görür, her ikisine de yükler
+// Üretim: sadece Çizimler klasörünü görür ve oraya yükler
+// Muhasebe: sadece Faturalar klasörünü görür ve oraya yükler
+// Diğer roller: Drive bölümü hiç görünmez
+
+$__drive_visible = $__is_admin_like || $__is_uretim || $__is_muhasebe;
+
+// Hangi folder_type'ları görebilir
+$__visible_types = [];
+if ($__is_admin_like)  $__visible_types = ['cizim', 'fatura'];
+elseif ($__is_uretim)  $__visible_types = ['cizim'];
+elseif ($__is_muhasebe) $__visible_types = ['fatura'];
+
+// Upload için hangi folder_type seçenekleri var
+// Admin/sistem_yoneticisi seçebilir, diğerleri sabittir
+$__upload_type_fixed = null;
+if ($__is_uretim)   $__upload_type_fixed = 'cizim';
+if ($__is_muhasebe) $__upload_type_fixed = 'fatura';
+
+// Sipariş Drive klasör ID'leri
+$__drive_folder_id  = $order['drive_folder_id']  ?? null;
+$__drive_cizim_id   = $order['drive_cizim_id']   ?? null;
+$__drive_fatura_id  = $order['drive_fatura_id']  ?? null;
+
+// Ana klasör linki: sadece admin ve sistem_yoneticisi görür
+$__root_folder_url = 'https://drive.google.com/drive/folders/1fQeSige0mjICeLkjKVxspD7TlMY16C6U?authuser=renplancloud@gmail.com';
+
+// Dosyaları çek — role göre filtrele
+$f_stmt = $db->prepare("SELECT * FROM order_files WHERE order_id = ? ORDER BY id DESC");
+$f_stmt->execute([$order['id']]);
+$__all_files = $f_stmt->fetchAll();
+
+// Role göre filtrele
+$__files_cizim  = array_filter($__all_files, fn($f) => ($f['folder_type'] ?? 'cizim') === 'cizim');
+$__files_fatura = array_filter($__all_files, fn($f) => ($f['folder_type'] ?? 'cizim') === 'fatura');
+?>
+
+<?php if ($__drive_visible): ?>
 <div class="card mt" style="border-top:4px solid #3b82f6;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+
+    <!-- BAŞLIK -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
         <h3 style="margin:0;">📁 Proje Dosyaları (Google Drive)</h3>
-        <span style="font-size:12px; color:#666;">
-            15 GB Alan • 
-            <a href="https://drive.google.com/drive/folders/1fQeSige0mjICeLkjKVxspD7TlMY16C6U?authuser=renplancloud@gmail.com" target="_blank" style="text-decoration:none; color:#3b82f6;">
-    📂 Klasörü Aç &rarr;
-</a>
+        <span style="font-size:12px; color:#666; display:flex; align-items:center; gap:10px;">
+            <?php if ($__is_admin_like): ?>
+                <?php if ($__drive_folder_id): ?>
+                <a href="https://drive.google.com/drive/folders/<?= h($__drive_folder_id) ?>" target="_blank"
+                   style="text-decoration:none; color:#3b82f6; font-weight:500;">
+                    📂 Sipariş Klasörü &rarr;
+                </a>
+                <?php endif; ?>
+                <a href="<?= h($__root_folder_url) ?>" target="_blank"
+                   style="text-decoration:none; color:#9ca3af; font-size:11px;">
+                    (Ana Klasör)
+                </a>
+            <?php elseif ($__is_uretim && $__drive_cizim_id): ?>
+                <a href="https://drive.google.com/drive/folders/<?= h($__drive_cizim_id) ?>" target="_blank"
+                   style="text-decoration:none; color:#d97706; font-weight:500;">
+                    📂 Çizimler Klasörü &rarr;
+                </a>
+            <?php elseif ($__is_muhasebe && $__drive_fatura_id): ?>
+                <a href="https://drive.google.com/drive/folders/<?= h($__drive_fatura_id) ?>" target="_blank"
+                   style="text-decoration:none; color:#7c3aed; font-weight:500;">
+                    📂 Faturalar Klasörü &rarr;
+                </a>
+            <?php endif; ?>
         </span>
     </div>
 
-    <div class="file-list" style="margin-bottom:20px;">
-        <?php
-        // Dosyaları çekelim
-        $f_stmt = $db->prepare("SELECT * FROM order_files WHERE order_id = ? ORDER BY id DESC");
-        $f_stmt->execute([$order['id']]);
-        $files = $f_stmt->fetchAll();
+    <?php
+    // ---- DOSYA TABLOSU YARDIMCI FONKSİYONU ----
+    // Bir grup dosyayı tablo olarak render eder
+    function renderFileTable(array $files, bool $canDelete, int $order_id): void {
+        if (empty($files)) {
+            echo '<div style="padding:12px; background:#f9fafb; border:1px dashed #d1d5db; border-radius:6px; text-align:center; color:#9ca3af; font-size:13px;">Henüz dosya yüklenmemiş.</div>';
+            return;
+        }
+        echo '<table style="width:100%; border-collapse:collapse; font-size:13px;">';
+        echo '<thead><tr style="background:#f3f4f6; color:#555;">';
+        echo '<th style="padding:8px; border-bottom:1px solid #e5e7eb; text-align:left;">Dosya Adı</th>';
+        echo '<th style="padding:8px; border-bottom:1px solid #e5e7eb; text-align:left;">Yükleyen</th>';
+        echo '<th style="padding:8px; border-bottom:1px solid #e5e7eb; text-align:left;">Tarih</th>';
+        echo '<th style="padding:8px; border-bottom:1px solid #e5e7eb; text-align:right;">İşlem</th>';
+        echo '</tr></thead><tbody>';
+        foreach ($files as $file) {
+            $icon = (($file['folder_type'] ?? 'cizim') === 'fatura') ? '🧾' : '📐';
+            echo '<tr>';
+            echo '<td style="padding:8px; border-bottom:1px solid #eee;">';
+            echo '<a href="' . h($file['web_view_link']) . '" target="_blank" style="text-decoration:none; color:#2563eb; font-weight:500; display:flex; align-items:center; gap:6px;">';
+            echo $icon . ' ' . h($file['file_name']) . ' <small style="color:#999;">↗</small></a>';
+            echo '</td>';
+            echo '<td style="padding:8px; border-bottom:1px solid #eee; color:#444;">' . h($file['uploaded_by'] ?? '-') . '</td>';
+            echo '<td style="padding:8px; border-bottom:1px solid #eee; color:#666;">' . date('d.m.Y H:i', strtotime($file['created_at'])) . '</td>';
+            echo '<td style="padding:8px; border-bottom:1px solid #eee; text-align:right;">';
+            if ($canDelete) {
+                echo '<a href="delete_file.php?id=' . (int)$file['id'] . '&order_id=' . (int)$order_id . '" '
+                   . 'onclick="return confirm(\'Bu dosyayı Drive\'dan ve buradan silmek istediğinize emin misiniz?\');" '
+                   . 'style="color:#dc2626; text-decoration:none; font-size:12px; border:1px solid #fee2e2; background:#fef2f2; padding:4px 8px; border-radius:4px;">Sil 🗑</a>';
+            } else {
+                echo '<span style="color:#d1d5db; font-size:11px;">—</span>';
+            }
+            echo '</td></tr>';
+        }
+        echo '</tbody></table>';
+    }
+    ?>
 
-        if (count($files) > 0):
-        ?>
-            <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                <thead>
-                    <tr style="background:#f3f4f6; text-align:left; color:#555;">
-                        <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Dosya Adı</th>
-                        <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Yükleyen</th>
-                        <th style="padding:8px; border-bottom:1px solid #e5e7eb;">Tarih</th>
-                        <th style="padding:8px; border-bottom:1px solid #e5e7eb; text-align:right;">İşlem</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($files as $file): ?>
-                    <tr>
-                        <td style="padding:8px; border-bottom:1px solid #eee;">
-                            <a href="<?= h($file['web_view_link']) ?>" target="_blank" style="text-decoration:none; color: #2563eb; font-weight:500; display:flex; align-items:center; gap:6px;">
-                                📄 <?= h($file['file_name']) ?>
-                                <small style="color: #999;">↗</small>
-                            </a>
-                        </td>
-                        <td style="padding:8px; border-bottom:1px solid #eee; color:#444;">
-                            <?= h($file['uploaded_by'] ?? '-') ?>
-                        </td>
-                        <td style="padding:8px; border-bottom:1px solid #eee; color:#666;">
-                            <?= date('d.m.Y H:i', strtotime($file['created_at'])) ?>
-                        </td>
-                        <td style="padding:8px; border-bottom:1px solid #eee; text-align:right;">
-                            <a href="delete_file.php?id=<?= $file['id'] ?>&order_id=<?= $order['id'] ?>" 
-                               onclick="return confirm('Bu dosyayı Drive\'dan ve buradan silmek istediğinize emin misiniz?');"
-                               style="color: #dc2626; text-decoration:none; font-size:12px; border:1px solid #fee2e2; background:#fef2f2; padding:4px 8px; border-radius:4px;">
-                               Sil 🗑
-                            </a>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php else: ?>
-            <div style="padding:15px; background: #f9fafb; border:1px dashed #d1d5db; border-radius:6px; text-align:center; color:#6b7280;">
-                Henüz bu siparişe ait dosya yüklenmemiş.
-            </div>
-        <?php endif; ?>
+    <?php if ($__is_admin_like): ?>
+    <!-- ====== ADMIN / SİSTEM YÖNETİCİSİ: İKİ SEKME ====== -->
+    <div style="display:flex; gap:0; border-bottom:2px solid #e5e7eb; margin-bottom:16px;">
+        <button type="button" onclick="driveTab('cizim')" id="tab-cizim"
+                style="padding:8px 20px; border:none; background:none; cursor:pointer; font-size:13px; font-weight:600; color:#d97706; border-bottom:2px solid #d97706; margin-bottom:-2px;">
+            📐 Çizimler (<?= count($__files_cizim) ?>)
+        </button>
+        <button type="button" onclick="driveTab('fatura')" id="tab-fatura"
+                style="padding:8px 20px; border:none; background:none; cursor:pointer; font-size:13px; font-weight:500; color:#9ca3af; border-bottom:2px solid transparent; margin-bottom:-2px;">
+            🧾 Faturalar (<?= count($__files_fatura) ?>)
+        </button>
     </div>
 
-    <div style="background: #f0f9ff; padding:15px; border-radius:8px; border:1px solid #bae6fd;">
-        <form action="upload_drive.php" method="POST" enctype="multipart/form-data" style="display:flex; align-items:center; gap:10px;">
-            <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
-            
-            <div style="flex:1;">
-                <label style="display:block; font-size:12px; font-weight:bold; color: #0369a1; margin-bottom:4px;">Yeni Dosya Seç (PDF, DWG, Excel...)</label>
-                <input type="file" name="file_upload" required style="width:100%; padding:8px; background: #fff; border:1px solid #cbd5e1; border-radius:4px;">
-            </div>
-            
-            <button type="submit" class="btn" style="background-color: #0284c7; color:white; height:42px; margin-top:18px;">
-                ☁️ Drive'a Yükle
-            </button>
+    <div id="panel-cizim">
+        <?php renderFileTable(array_values($__files_cizim), true, $order['id']); ?>
+    </div>
+    <div id="panel-fatura" style="display:none;">
+        <?php renderFileTable(array_values($__files_fatura), true, $order['id']); ?>
+    </div>
+
+    <script>
+    function driveTab(tab) {
+        document.getElementById('panel-cizim').style.display  = (tab === 'cizim')  ? '' : 'none';
+        document.getElementById('panel-fatura').style.display = (tab === 'fatura') ? '' : 'none';
+        var tc = document.getElementById('tab-cizim');
+        var tf = document.getElementById('tab-fatura');
+        if (tab === 'cizim') {
+            tc.style.color = '#d97706'; tc.style.fontWeight = '600'; tc.style.borderBottomColor = '#d97706';
+            tf.style.color = '#9ca3af'; tf.style.fontWeight = '500'; tf.style.borderBottomColor = 'transparent';
+        } else {
+            tf.style.color = '#7c3aed'; tf.style.fontWeight = '600'; tf.style.borderBottomColor = '#7c3aed';
+            tc.style.color = '#9ca3af'; tc.style.fontWeight = '500'; tc.style.borderBottomColor = 'transparent';
+        }
+    }
+    </script>
+
+    <?php elseif ($__is_uretim): ?>
+    <!-- ====== ÜRETİM: SADECE ÇİZİMLER ====== -->
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+        <span style="font-size:13px; font-weight:600; color:#d97706;">📐 Çizimler</span>
+        <span style="font-size:12px; color:#9ca3af;">(<?= count($__files_cizim) ?> dosya)</span>
+    </div>
+    <?php renderFileTable(array_values($__files_cizim), false, $order['id']); ?>
+
+    <?php elseif ($__is_muhasebe): ?>
+    <!-- ====== MUHASEBE: SADECE FATURALAR ====== -->
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+        <span style="font-size:13px; font-weight:600; color:#7c3aed;">🧾 Faturalar</span>
+        <span style="font-size:12px; color:#9ca3af;">(<?= count($__files_fatura) ?> dosya)</span>
+    </div>
+    <?php renderFileTable(array_values($__files_fatura), false, $order['id']); ?>
+    <?php endif; ?>
+
+    <!-- ====== YÜKLEME FORMU ====== -->
+    <div style="background:#f0f9ff; padding:15px; border-radius:8px; border:1px solid #bae6fd; margin-top:16px;">
+        <form action="upload_drive.php" method="POST" enctype="multipart/form-data"
+              style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+            <input type="hidden" name="order_id" value="<?= (int)$order['id'] ?>">
+
+            <?php if ($__upload_type_fixed): ?>
+                <!-- Üretim ve Muhasebe için gizli sabit tip -->
+                <input type="hidden" name="folder_type" value="<?= h($__upload_type_fixed) ?>">
+                <div style="flex:1; min-width:200px;">
+                    <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;
+                                  color:<?= $__upload_type_fixed === 'fatura' ? '#6d28d9' : '#b45309' ?>;">
+                        <?= $__upload_type_fixed === 'fatura' ? '🧾 Fatura Dosyası Seç (PDF...)' : '📐 Çizim Dosyası Seç (DWG, PDF...)' ?>
+                    </label>
+                    <input type="file" name="file_upload" required
+                           style="width:100%; padding:8px; background:#fff; border:1px solid #cbd5e1; border-radius:4px;">
+                </div>
+                <button type="submit" class="btn"
+                        style="background-color:<?= $__upload_type_fixed === 'fatura' ? '#7c3aed' : '#d97706' ?>; color:#fff; height:42px; white-space:nowrap;">
+                    ☁️ <?= $__upload_type_fixed === 'fatura' ? 'Faturalar' : 'Çizimler' ?>'e Yükle
+                </button>
+            <?php else: ?>
+                <!-- Admin: klasör tipi seçebilir -->
+                <div style="min-width:160px;">
+                    <label style="display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:4px;">Klasör</label>
+                    <select name="folder_type"
+                            style="padding:8px 10px; border:1px solid #cbd5e1; border-radius:4px; font-size:13px; background:#fff; height:38px;">
+                        <option value="cizim">📐 Çizimler</option>
+                        <option value="fatura">🧾 Faturalar</option>
+                    </select>
+                </div>
+                <div style="flex:1; min-width:200px;">
+                    <label style="display:block; font-size:12px; font-weight:600; color:#0369a1; margin-bottom:4px;">Dosya Seç (PDF, DWG, Excel...)</label>
+                    <input type="file" name="file_upload" required
+                           style="width:100%; padding:8px; background:#fff; border:1px solid #cbd5e1; border-radius:4px;">
+                </div>
+                <button type="submit" class="btn"
+                        style="background-color:#0284c7; color:#fff; height:42px; white-space:nowrap;">
+                    ☁️ Drive'a Yükle
+                </button>
+            <?php endif; ?>
         </form>
-        <div style="font-size:11px; color: #0c4a6e; margin-top:6px;">
-            * Dosyalar güvenli bir şekilde Google Drive hesabınıza yüklenir.
+        <div style="font-size:11px; color:#0c4a6e; margin-top:6px;">
+            * Dosyalar Google Drive'ınızdaki ilgili klasöre otomatik yüklenir.
         </div>
     </div>
-</div>
-<?php endif; ?>
+
+</div><!-- /.card -->
+<?php endif; // drive_visible ?>
+<?php endif; // mode === edit ?>
 
 <script>
 function addRow(){
@@ -1870,3 +2070,80 @@ function initAccordionDropdowns() {
     });
 }
 </script>
+<?php if ($__is_muhasebe): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.querySelector('form');
+    if(!form) return;
+    
+    // Formdaki tüm input ve selectleri seç
+    var elements = form.querySelectorAll('input:not([type="hidden"]), select, textarea');
+    elements.forEach(function(el) {
+        var n = el.name || el.id;
+        
+        // İzin verilen alanlar (Durum, Fatura Tarihi, Not Ekleme) kilitlenmez
+        if (n === 'status' || n === 'fatura_tarihi' || n === 'notes' || n === 'temp_note_input') return;
+        
+        // Selectleri css ile kilitle, diğerlerini readonly yap
+        if (el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'radio') {
+            el.style.pointerEvents = 'none';
+        } else {
+            el.readOnly = true;
+        }
+        
+        // Tasarımı değiştir
+        el.style.backgroundColor = '#f9fafb';
+        el.style.cursor = 'not-allowed';
+        el.style.color = '#6b7280';
+        el.title = 'Yetkisiz İşlem: Sadece Durum ve Fatura Tarihi değiştirebilirsiniz.';
+    });
+    
+    // Satır Ekle ve Sil butonlarını gizle
+    var actionBtns = form.querySelectorAll('button[onclick="addRow()"], button[onclick="delRow(this)"]');
+    actionBtns.forEach(function(b) { b.style.display = 'none'; });
+});
+</script>
+<?php endif; ?>
+<?php if ($__is_uretim): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.querySelector('form');
+    if(!form) return;
+
+    var elements = form.querySelectorAll('input:not([type="hidden"]), select, textarea');
+    elements.forEach(function(el) {
+        var n = el.name || el.id;
+
+        // Sadece Durum ve Not değiştirilebilir; fatura_tarihi dahil her şey kilitli
+        if (n === 'status' || n === 'notes' || n === 'temp_note_input') return;
+
+        if (el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'radio') {
+            el.style.pointerEvents = 'none';
+        } else {
+            el.readOnly = true;
+        }
+
+        el.style.backgroundColor = '#f9fafb';
+        el.style.cursor = 'not-allowed';
+        el.style.color = '#6b7280';
+        el.title = '⛔ Yetkisiz İşlem: Sadece Durum değiştirebilirsiniz.';
+    });
+
+    // Satır Ekle ve Sil butonlarını gizle
+    var actionBtns = form.querySelectorAll('button[onclick="addRow()"], button[onclick="delRow(this)"]');
+    actionBtns.forEach(function(b) { b.style.display = 'none'; });
+
+    // Fatura tarihi container: üretim hiçbir zaman görmesin / açmasın
+    var faturaContainer = document.getElementById('fatura_tarihi_container');
+    if (faturaContainer) {
+        faturaContainer.style.display = 'none';
+        var statusSel = form.querySelector('select[name="status"]');
+        if (statusSel) {
+            statusSel.addEventListener('change', function() {
+                faturaContainer.style.display = 'none';
+            });
+        }
+    }
+});
+</script>
+<?php endif; ?>

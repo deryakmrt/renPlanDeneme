@@ -72,17 +72,17 @@ if (method('POST')) {
         elseif ($__tmp_odeme === 'USD') { $_POST['currency'] = 'USD'; }
     }
 $fields = ['order_code','customer_id','status','currency','termin_tarihi','baslangic_tarihi','bitis_tarihi','teslim_tarihi','notes',
-    'siparis_veren','siparisi_alan','siparisi_giren','siparis_tarihi','fatura_para_birimi','kalem_para_birimi','proje_adi','revizyon_no','nakliye_turu','odeme_kosulu','odeme_para_birimi','kdv_orani'];
+    'siparis_veren','siparisi_alan','siparisi_giren','siparis_tarihi','fatura_tarihi','fatura_para_birimi','kalem_para_birimi','proje_adi','revizyon_no','nakliye_turu','odeme_kosulu','odeme_para_birimi','kdv_orani'];
   $data = [];
   foreach ($fields as $f) { $data[$f] = $_POST[$f] ?? null; }
   $data['customer_id'] = (int)$data['customer_id'];
 
   $up = $db->prepare("UPDATE orders SET order_code=?, customer_id=?, status=?, currency=?, termin_tarihi=?, baslangic_tarihi=?, bitis_tarihi=?, teslim_tarihi=?, notes=?,
-                       siparis_veren=?, siparisi_alan=?, siparisi_giren=?, siparis_tarihi=?, fatura_para_birimi=?, kalem_para_birimi=?, proje_adi=?, revizyon_no=?, nakliye_turu=?, odeme_kosulu=?, odeme_para_birimi=?, kdv_orani=?
+                       siparis_veren=?, siparisi_alan=?, siparisi_giren=?, siparis_tarihi=?, fatura_tarihi=?, fatura_para_birimi=?, kalem_para_birimi=?, proje_adi=?, revizyon_no=?, nakliye_turu=?, odeme_kosulu=?, odeme_para_birimi=?, kdv_orani=?
                       WHERE id=?");
   $up->execute([
     $data['order_code'],$data['customer_id'],$data['status'],$data['currency'],$data['termin_tarihi'],$data['baslangic_tarihi'],$data['bitis_tarihi'],$data['teslim_tarihi'],$data['notes'],
-    $data['siparis_veren'],$data['siparisi_alan'],$data['siparisi_giren'],$data['siparis_tarihi'],$data['fatura_para_birimi'],$data['kalem_para_birimi'],$data['proje_adi'],$data['revizyon_no'],$data['nakliye_turu'],$data['odeme_kosulu'],$data['odeme_para_birimi'], $data['kdv_orani'],
+    $data['siparis_veren'],$data['siparisi_alan'],$data['siparisi_giren'],$data['siparis_tarihi'],$data['fatura_tarihi'],$data['fatura_para_birimi'],$data['kalem_para_birimi'],$data['proje_adi'],$data['revizyon_no'],$data['nakliye_turu'],$data['odeme_kosulu'],$data['odeme_para_birimi'], $data['kdv_orani'],
     $id
   ]);
 

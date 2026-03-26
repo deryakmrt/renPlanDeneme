@@ -461,7 +461,7 @@ if ($action === 'edit') { $id = (int)($_GET['id'] ?? 0); redirect('order_edit.ph
 // --------- TOPLU GÜNCELLE (POST) ---------
 if ($action === 'bulk_update' && method('POST')) {
     csrf_check();
-    $allowed_statuses = ['tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi'];
+    $allowed_statuses = ['tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi','fatura_edildi'];
     $new_status = trim($_POST['bulk_status'] ?? '');
     $ids = $_POST['order_ids'] ?? [];
 
@@ -628,7 +628,7 @@ if ($action === 'new' || $action === 'edit') {
       <?php if (!empty($order['id'])): ?>
       <div class="row" style="color:#000; font-size:14px; justify-content:flex-end; gap:8px; margin-bottom:8px">
         <a class="btn" href="order_view.php?id=<?= (int)$order['id'] ?>" title="Görüntüle" aria-label="Görüntüle"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 5c-7.633 0-11 7-11 7s3.367 7 11 7 11-7 11-7-3.367-7-11-7zm0 12a5 5 0 1 1 .001-10.001A5 5 0 0 1 12 17z"/><circle cx="12" cy="12" r="3"/></svg><</a>
-<?php $___role = current_user()['role'] ?? ''; if (in_array($___role, ['admin','sistem_yoneticisi'], true)): ?>
+<?php $___role = current_user()['role'] ?? ''; if (in_array($___role, ['admin','sistem_yoneticisi','muhasebe'], true)): ?>
         <a class="btn primary" href="order_pdf.php?id=<?= (int)$order['id'] ?>" title="STF PDF" aria-label="STF PDF">STF</a>
 <?php endif; ?>
         <a class="btn btn-ustf" href="order_pdf_uretim.php?id=<?= (int)$order['id'] ?>" title="ÜSTF PDF" aria-label="ÜSTF PDF">ÜSTF</a>
@@ -874,7 +874,7 @@ if ($status !== '') {
     $sql .= " AND o.status = ?";
     $params[] = $status;
 }
-$sql .= " ORDER BY CASE WHEN LOWER(o.status) = 'taslak_gizli' THEN 0 WHEN LOWER(o.status) = 'tedarik' THEN 1 WHEN LOWER(o.status) = 'sac lazer' THEN 2 WHEN LOWER(o.status) = 'boru lazer' THEN 3 WHEN LOWER(o.status) = 'kaynak' THEN 4 WHEN LOWER(o.status) = 'boya' THEN 5 WHEN LOWER(o.status) = 'elektrik montaj' THEN 6 WHEN LOWER(o.status) = 'test' THEN 7 WHEN LOWER(o.status) = 'paketleme' THEN 8 WHEN LOWER(o.status) = 'sevkiyat' THEN 9 WHEN LOWER(o.status) = 'teslim edildi' THEN 10 ELSE 999 END ASC, CASE WHEN o.order_code REGEXP '-[0-9]+$' THEN CAST(SUBSTRING_INDEX(o.order_code, '-', -1) AS UNSIGNED) ELSE 0 END DESC, o.order_code DESC";
+$sql .= " ORDER BY CASE WHEN LOWER(o.status) = 'taslak_gizli' THEN 0 WHEN LOWER(o.status) = 'tedarik' THEN 1 WHEN LOWER(o.status) = 'sac lazer' THEN 2 WHEN LOWER(o.status) = 'boru lazer' THEN 3 WHEN LOWER(o.status) = 'kaynak' THEN 4 WHEN LOWER(o.status) = 'boya' THEN 5 WHEN LOWER(o.status) = 'elektrik montaj' THEN 6 WHEN LOWER(o.status) = 'test' THEN 7 WHEN LOWER(o.status) = 'paketleme' THEN 8 WHEN LOWER(o.status) = 'sevkiyat' THEN 9 WHEN LOWER(o.status) = 'teslim edildi' THEN 10 WHEN LOWER(o.status) = 'fatura_edildi' THEN 11 ELSE 999 END ASC, CASE WHEN o.order_code REGEXP '-[0-9]+$' THEN CAST(SUBSTRING_INDEX(o.order_code, '-', -1) AS UNSIGNED) ELSE 0 END DESC, o.order_code DESC";
 // Toplam sayfa sayısı için COUNT(*)
 $count_stmt = $db->prepare("SELECT COUNT(*) FROM (" . $sql . ") t");
 $count_stmt->execute($params);
@@ -892,6 +892,7 @@ $status_labels = [
   'paketleme' => 'Paketleme',
   'sevkiyat' => 'Sevkiyat',
   'teslim edildi' => 'Teslim Edildi',
+  'fatura_edildi' => 'Fatura Edildi',
 ];
 $__cnt_params = [];
 // Ürün araması eklendi ve COUNT(DISTINCT o.id) yapıldı
@@ -985,6 +986,7 @@ $stmt->execute($params);
               <option value="paketleme">Paketleme</option>
               <option value="sevkiyat">Sevkiyat</option>
               <option value="teslim edildi">Teslim Edildi</option>
+              <option value="fatura_edildi">Fatura Edildi</option>
           </select>
           <button type="submit" class="btn btn-sm btn-light" style="font-size:11px; border:1px solid #e2e8f0;">Uygula</button>
       </form>
@@ -1070,7 +1072,7 @@ if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
 <!-- YATAY DURUM FİLTRESİ (TABLO İÇİ) START -->
 <div class="status-quick-filter" style="font-size:14px" style="color:#000; font-size:14px; font-size:.95rem;">
     <?php
-      $ordered_statuses = ['', 'tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi'];
+      $ordered_statuses = ['', 'tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi', 'fatura_edildi'];
       $first = true;
       foreach ($ordered_statuses as $sk) {
         $label = $status_labels[$sk] ?? ($sk ?: 'Tümü');
@@ -1139,7 +1141,7 @@ if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
 <!-- YATAY DURUM FİLTRESİ (TABLO İÇİ) START -->
 <div class="status-quick-filter" style="font-size:14px" style="color:#000; font-size:14px; font-size:.95rem;">
     <?php
-      $ordered_statuses = ['', 'tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi'];
+      $ordered_statuses = ['', 'tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi', 'fatura_edildi'];
       $first = true;
       foreach ($ordered_statuses as $sk) {
         $label = $status_labels[$sk] ?? ($sk ?: 'Tümü');
@@ -1167,16 +1169,26 @@ if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
       <th style="color:#000; font-size:14px; text-align:center">Başlangıç Tarihi</th>
       <th style="color:#000; font-size:14px; text-align:center">Bitiş Tarihi</th>
       <th style="color:#000; font-size:14px; text-align:center">Teslim Tarihi</th>
+      
+      <?php if ($status === 'fatura_edildi'): ?>
+      <th style="color: #7e22ce; font-size:14px; text-align:center">Fatura Tarihi</th>
+      <style>
+          /* Yeni kolon gelince CSS kaymasın diye 11 ve 12. kolonları yeniden boyutlandırıyoruz */
+          .orders-table th:nth-child(11), .orders-table td:nth-child(11) { width: 9% !important; text-align:center; }
+          .orders-table th:nth-child(12), .orders-table td:nth-child(12) { width: 12% !important; }
+      </style>
+      <?php endif; ?>
+
       <th class="right">İşlem</th>
     </tr>
     <?php 
 $status_steps = [
   'tedarik'=>1,'sac lazer'=>2,'boru lazer'=>3,'kaynak'=>4,'boya'=>5,
-  'elektrik montaj'=>6,'test'=>7,'paketleme'=>8,'sevkiyat'=>9,'teslim edildi'=>10
+  'elektrik montaj'=>6,'test'=>7,'paketleme'=>8,'sevkiyat'=>9,'teslim edildi'=>10,'fatura_edildi'=>11
 ];
 $status_labels = [
   'tedarik'=>'Tedarik','sac lazer'=>'Sac Lazer','boru lazer'=>'Boru Lazer','kaynak'=>'Kaynak','boya'=>'Boya',
-  'elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi'
+  'elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi','fatura_edildi'=>'Fatura Edildi'
 ];
 
 // === Üretim durumu kapsül bileşeni (scoped) ===
@@ -1190,6 +1202,7 @@ function __wpstat_icon_svg($key){
         case 'lab':   return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M9 3v6l-4 7a4 4 0 0 0 3.5 6h7a4 4 0 0 0 3.5-6l-4-7V3" stroke="currentColor" stroke-width="1.7"/><path d="M9 9h6" stroke="currentColor" stroke-width="1.7"/></svg>';
         case 'truck': return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="M13 10h4l3 3v1h-7v-4z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="7.5" cy="17.5" r="1.9" stroke="currentColor" stroke-width="1.7"/><circle cx="18.5" cy="17.5" r="1.9" stroke="currentColor" stroke-width="1.7"/></svg>';
         case 'check': return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        case 'invoice': return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         default:      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>';
     }
 }
@@ -1205,6 +1218,7 @@ function __wpstat_icon_key($status){
         case 'paketleme': return 'box';
         case 'sevkiyat': return 'truck';
         case 'teslim edildi': return 'check';
+        case 'fatura_edildi': return 'invoice'; // Fatura edildiğinde de aynı fiş ikonunu kullanalım
         default: return 'box';
     }
 }
@@ -1225,25 +1239,38 @@ function __wpstat_class_by_pct($pct){
 function render_status_pill($status_raw){
     $map = [
         'tedarik'=>1,'sac lazer'=>2,'boru lazer'=>3,'kaynak'=>4,'boya'=>5,
-        'elektrik montaj'=>6,'test'=>7,'paketleme'=>8,'sevkiyat'=>9,'teslim edildi'=>10
+        'elektrik montaj'=>6,'test'=>7,'paketleme'=>8,'sevkiyat'=>9,'teslim edildi'=>10,'fatura_edildi'=>10
     ];
     $labels = [
         'tedarik'=>'Tedarik','sac lazer'=>'Sac Lazer','boru lazer'=>'Boru Lazer','kaynak'=>'Kaynak','boya'=>'Boya',
-        'elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi'
+        'elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi','fatura_edildi'=>'Fatura Edildi'
     ];
     $k = strtolower(trim((string)$status_raw));
     if(!isset($map[$k])) $k = 'tedarik';
     $step = (int)$map[$k];
-    $pct = max(10, min(100, $step*10));
-    $done = ($pct>=100);
-    $class = __wpstat_class_by_pct($pct);
+    
+    // Eski mantığa döndük: Adım başına %10
+    $pct = max(10, min(100, $step * 10));
+    
+    // RENK AYARLARI
+    if ($k === 'fatura_edildi') {
+        $class = 'wpstat-purple'; // Sadece purple verdik, yeşile dönmeyecek!
+    } elseif ($k === 'teslim edildi') {
+        $class = 'wpstat-done';
+    } else {
+        $class = __wpstat_class_by_pct($pct);
+    }
+    
     $icon = __wpstat_icon_svg(__wpstat_icon_key($k));
     $label = $labels[$k] ?? $status_raw;
+
+    // CSS'in %100'ü gördüğünde animasyonu durdurmasını engellemek için minik hile
+    $bar_width = ($k === 'fatura_edildi') ? '99.9' : (int)$pct;
 
     ob_start(); ?>
     <div class="wpstat-wrap">
       <div class="wpstat-track">
-        <div class="wpstat-bar <?= $class ?>" style="font-size:14px; width: <?= (int)$pct ?>%; max-width: <?= (int)$pct ?>%"></div>
+        <div class="wpstat-bar <?= $class ?>" style="font-size:14px; width: <?= $bar_width ?>%; max-width: <?= $bar_width ?>%"></div>
         <span class="wpstat-pct"><i class="wpstat-ico"><?= $icon ?></i>%<?= (int)$pct ?></span>
       </div>
       <div class="wpstat-label"><?= htmlspecialchars($label, ENT_QUOTES) ?></div>
@@ -1495,6 +1522,19 @@ function termin_badge_html($termin, $teslim=null, $bitis=null){ // <-- 3. parame
       <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= fmt_date_dmy($o['baslangic_tarihi'] ?? null) ?></div></td>
       <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= bitis_badge_html($o['bitis_tarihi'] ?? null, $o['termin_tarihi'] ?? null) ?></div></td>
       <td><div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%"><?= teslim_badge_html($o['teslim_tarihi'] ?? null, $o['bitis_tarihi'] ?? null) ?></div></td>
+      
+      <?php if ($status === 'fatura_edildi'): ?>
+      <td>
+        <div style="color:#000; font-size:12px; display:flex;justify-content:center;align-items:center;width:100%">
+            <?php if (!empty($o['fatura_tarihi'])): ?>
+                <span style="font-weight:bold; color:#7e22ce;"><?= fmt_date_dmy($o['fatura_tarihi']) ?></span>
+            <?php else: ?>
+                <span style="color:#aaa;">-</span>
+            <?php endif; ?>
+        </div>
+      </td>
+      <?php endif; ?>
+
       <td class="right" style="vertical-align: middle; width: 74px; padding: 2px;">
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px; width: 100%;">
@@ -1511,7 +1551,7 @@ function termin_badge_html($termin, $teslim=null, $bitis=null){ // <-- 3. parame
 
             <div style="grid-column: 1; width:100%;">
                 <?php $___role = current_user()['role'] ?? ''; 
-                if (in_array($___role, ['admin','sistem_yoneticisi'], true)): ?>
+                if (in_array($___role, ['admin','sistem_yoneticisi','muhasebe'], true)): ?>
                     <a class="btn" href="order_pdf.php?id=<?= (int)$o['id'] ?>" target="_blank" title="STF" 
                        style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background: #ffedd5; color: #ea580c; border:1px solid #fed7aa; font-size:13px; font-weight:800;">STF</a>
                 <?php endif; ?>

@@ -20,6 +20,7 @@ $order = [
     'siparisi_alan' => '',
     'siparisi_giren' => '',
     'siparis_tarihi' => null,
+    'fatura_tarihi' => null,
     'fatura_para_birimi' => '',
     'kalem_para_birimi' => 'TL',
     'proje_adi' => '',
@@ -59,6 +60,7 @@ if (method('POST')) {
         'siparisi_alan',
         'siparisi_giren',
         'siparis_tarihi',
+        'fatura_tarihi',
         'fatura_para_birimi',
         'kalem_para_birimi',
         'proje_adi',
@@ -83,30 +85,13 @@ if (method('POST')) {
             $order['order_code'] = next_order_code();
 
             $ins = $db->prepare("INSERT INTO orders (order_code, customer_id, status, currency, termin_tarihi, baslangic_tarihi, bitis_tarihi, teslim_tarihi, notes,
-                              siparis_veren, siparisi_alan, siparisi_giren, siparis_tarihi, fatura_para_birimi, kalem_para_birimi, proje_adi, revizyon_no, nakliye_turu, odeme_kosulu, odeme_para_birimi, kdv_orani)
-                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                              siparis_veren, siparisi_alan, siparisi_giren, siparis_tarihi, fatura_tarihi, fatura_para_birimi, kalem_para_birimi, proje_adi, revizyon_no, nakliye_turu, odeme_kosulu, odeme_para_birimi, kdv_orani)
+                             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"); // Soru işareti 22 oldu
             $ins->execute([
-                $order['order_code'],
-                $order['customer_id'],
-                $order['status'],
-                $order['currency'],
-                $order['termin_tarihi'],
-                $order['baslangic_tarihi'],
-                $order['bitis_tarihi'],
-                $order['teslim_tarihi'],
-                $order['notes'],
-                $order['siparis_veren'],
-                $order['siparisi_alan'],
-                $order['siparisi_giren'],
-                $order['siparis_tarihi'],
-                $order['fatura_para_birimi'],
-                $order['kalem_para_birimi'],
-                $order['proje_adi'],
-                $order['revizyon_no'],
-                $order['nakliye_turu'],
-                $order['odeme_kosulu'],
-                $order['odeme_para_birimi'],
-                $order['kdv_orani']
+                $order['order_code'], $order['customer_id'], $order['status'], $order['currency'], $order['termin_tarihi'], $order['baslangic_tarihi'], $order['bitis_tarihi'], $order['teslim_tarihi'], $order['notes'],
+                $order['siparis_veren'], $order['siparisi_alan'], $order['siparisi_giren'], $order['siparis_tarihi'], $order['fatura_tarihi'], 
+                $order['fatura_para_birimi'], $order['kalem_para_birimi'], $order['proje_adi'], 
+                $order['revizyon_no'], $order['nakliye_turu'], $order['odeme_kosulu'], $order['odeme_para_birimi'], $order['kdv_orani']
             ]);
             $order_id = (int)$db->lastInsertId();
             break;  // Başarılı, döngüden çık
