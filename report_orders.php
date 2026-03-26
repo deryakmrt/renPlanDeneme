@@ -617,11 +617,7 @@ document.addEventListener('DOMContentLoaded', function(){
                         }
                     }
                 },
-                layout: { padding: 10 },
-                animation: {
-                    animateScale: true,
-                    animateRotate: true
-                }
+                layout: { padding: 10 }
             }
         });
     }
@@ -815,7 +811,7 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 
 
 
@@ -930,38 +926,6 @@ document.addEventListener('DOMContentLoaded', function(){
     }, {threshold:.15});
     document.querySelectorAll('.will-animate').forEach(function(n){ io.observe(n); });
   });
-})();
-</script>
-
-<script>
-(function(){
-  if(!window.Chart) return;
-  Chart.overrides = Chart.overrides || {};
-  Chart.overrides.doughnut = Chart.overrides.doughnut || {};
-  Chart.overrides.doughnut.animation = {
-    animateRotate: true, animateScale: true, duration: 900, easing: 'easeOutQuart',
-    delay: (ctx) => (ctx.dataIndex||0) * 90
-  };
-  Chart.overrides.doughnut.hoverOffset = 8;
-  Chart.overrides.doughnut.cutout = '65%';
-  Chart.defaults.transitions.active = {animation: {duration: 300, easing:'easeOutCubic'}};
-  function sweepExisting(){
-    const inst = Chart.instances || Chart._instances || { };
-    const list = Array.isArray(inst) ? inst : Object.values(inst);
-    list.forEach(function(ch){
-      try{
-        if(ch && ch.config && ch.config.type === 'doughnut' && ch.data && ch.data.datasets && ch.data.datasets[0]){
-          const ds = ch.data.datasets[0];
-          if(!Array.isArray(ds.data)) return;
-          const orig = ds.data.slice();
-          ds.data = orig.map(()=>0.0001);
-          ch.update(0);
-          setTimeout(function(){ ds.data = orig; ch.update({duration:900, easing:'easeOutQuart'}); }, 60);
-        }
-      }catch(e){}
-    });
-  }
-  setTimeout(sweepExisting, 0);
 })();
 </script>
 
