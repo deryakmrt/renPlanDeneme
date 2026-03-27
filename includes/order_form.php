@@ -2114,8 +2114,8 @@ document.addEventListener('DOMContentLoaded', function() {
     elements.forEach(function(el) {
         var n = el.name || el.id;
 
-        // Sadece Durum ve Not değiştirilebilir; fatura_tarihi dahil her şey kilitli
-        if (n === 'status' || n === 'notes' || n === 'temp_note_input') return;
+        // Üretim ekibi Durum, Notlar ve Tarihlere erişebilir. Diğer her şey kilitli.
+        if (n === 'status' || n === 'notes' || n === 'temp_note_input' || n === 'termin_tarihi' || n === 'baslangic_tarihi' || n === 'bitis_tarihi' || n === 'teslim_tarihi') return;
 
         if (el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'radio') {
             el.style.pointerEvents = 'none';
@@ -2126,7 +2126,7 @@ document.addEventListener('DOMContentLoaded', function() {
         el.style.backgroundColor = '#f9fafb';
         el.style.cursor = 'not-allowed';
         el.style.color = '#6b7280';
-        el.title = '⛔ Yetkisiz İşlem: Sadece Durum değiştirebilirsiniz.';
+        el.title = '⛔ Yetkisiz İşlem';
     });
 
     // Satır Ekle ve Sil butonlarını gizle
