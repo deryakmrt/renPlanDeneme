@@ -870,7 +870,9 @@ if ($q !== '') {
     $params[] = '%'.$q.'%';
     $params[] = '%'.$q.'%'; // SKU için yeni parametre
 }
-if ($status !== '') {
+if ($status === 'revize') {
+    $sql .= " AND (o.revizyon_no IS NOT NULL AND o.revizyon_no != '' AND o.revizyon_no != '0' AND o.revizyon_no != '00')";
+} elseif ($status !== '') {
     $sql .= " AND o.status = ?";
     $params[] = $status;
 }
@@ -882,6 +884,7 @@ $count_stmt->execute($params);
 // === Quick status counts for filter bar (counts reflect current search 'q') ===
 $status_labels = [
   '' => 'Tümü',
+  'revize' => 'Revize Edilenler',
   'tedarik' => 'Tedarik',
   'sac lazer' => 'Sac Lazer',
   'boru lazer' => 'Boru Lazer',
@@ -911,6 +914,12 @@ if ($q !== '') {
     $__cnt_params[] = '%'.$q.'%';
     $__cnt_params[] = '%'.$q.'%'; // SKU parametresi
 }
+// Revize Sayısını Özel Olarak Bul
+$revize_sql = str_replace("o.status, COUNT(DISTINCT o.id) AS cnt", "COUNT(DISTINCT o.id)", $__cnt_sql) . " AND (o.revizyon_no IS NOT NULL AND o.revizyon_no != '' AND o.revizyon_no != '0' AND o.revizyon_no != '00')";
+$rev_stmt = $db->prepare($revize_sql);
+$rev_stmt->execute($__cnt_params);
+$revize_count = (int)$rev_stmt->fetchColumn();
+
 $__cnt_sql .= " GROUP BY o.status";
 $__cnt_stmt = $db->prepare($__cnt_sql);
 $__cnt_stmt->execute($__cnt_params);
@@ -919,8 +928,12 @@ while ($__r = $__cnt_stmt->fetch(PDO::FETCH_ASSOC)) {
     $k = $__r['status'] ?? '';
     $status_counts[$k] = (int)$__r['cnt'];
 }
+$status_counts['revize'] = $revize_count;
+
 $total_in_scope = 0;
-foreach ($status_counts as $__v) { $total_in_scope += $__v; }
+foreach ($status_counts as $k => $__v) { 
+    if ($k !== 'revize') { $total_in_scope += $__v; }
+}
 
 if (!function_exists('__orders_status_link')) {
     function __orders_status_link($value){
@@ -1072,7 +1085,7 @@ if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
 <!-- YATAY DURUM FİLTRESİ (TABLO İÇİ) START -->
 <div class="status-quick-filter" style="font-size:14px" style="color:#000; font-size:14px; font-size:.95rem;">
     <?php
-      $ordered_statuses = ['', 'tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi', 'fatura_edildi'];
+      $ordered_statuses = ['', 'revize', 'tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi', 'fatura_edildi'];
       $first = true;
       foreach ($ordered_statuses as $sk) {
         $label = $status_labels[$sk] ?? ($sk ?: 'Tümü');
@@ -1141,7 +1154,7 @@ if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
 <!-- YATAY DURUM FİLTRESİ (TABLO İÇİ) START -->
 <div class="status-quick-filter" style="font-size:14px" style="color:#000; font-size:14px; font-size:.95rem;">
     <?php
-      $ordered_statuses = ['', 'tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi', 'fatura_edildi'];
+      $ordered_statuses = ['', 'revize', 'tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi', 'fatura_edildi'];
       $first = true;
       foreach ($ordered_statuses as $sk) {
         $label = $status_labels[$sk] ?? ($sk ?: 'Tümü');
