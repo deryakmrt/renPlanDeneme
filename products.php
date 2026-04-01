@@ -32,7 +32,11 @@ try {
 
 $__cats = $__brands = [];
 
-try { $__cats = $db->query("SELECT id,name FROM product_categories ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch (Exception $e) { $__cats = []; }
+try { 
+    $__cats = $db->query("SELECT id, name, parent_id, macro_category FROM product_categories ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); 
+} catch (Exception $e) { 
+    $__cats = []; 
+}
 
 try { $__brands = $db->query("SELECT id,name FROM product_brands ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC); } catch (Exception $e) { $__brands = []; }
 // --- TÜM ANA ÜRÜNLERİ ÇEK (Baba Adayları) ---
@@ -208,6 +212,16 @@ if (($action === 'new' || $action === 'edit') && method('POST')) {
                     }
                 }
             }
+
+            // --- OTOMATİK KATEGORİ EŞİTLEME (SENKRONİZASYON) ---
+            // 1. Eğer bu bir Ana Ürünse, tüm çocuklarının kategorisini de benimle aynı yap
+            $db->prepare("UPDATE products SET category_id = ?, brand_id = ? WHERE parent_id = ?")->execute([$category_id, $brand_id, $id]);
+
+            // 2. Eğer ben bir Çocuksak (parent_id seçildiyse), kendi kategorimi Anneminkiyle ez
+            if (!empty($_POST['parent_id'])) {
+                $db->exec("UPDATE products child JOIN products parent ON child.parent_id = parent.id SET child.category_id = parent.category_id, child.brand_id = parent.brand_id WHERE child.id = " . (int)$id);
+            }
+
             // --- GÖRSEL SİLME KODU (BURADA OLMALI) ---
             if (isset($_POST['delete_image']) && $_POST['delete_image'] == '1') {
                 $oldImg = (string)$db->query("SELECT image FROM products WHERE id=".$id)->fetchColumn();
@@ -373,8 +387,21 @@ if ($action === 'new' || $action === 'edit') {
                         </label>
                         <select name="category_id" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:6px;">
                             <option value="">— Seçiniz —</option>
-                            <?php foreach($__cats as $c): $sel = ((int)($row['category_id'] ?? 0) === (int)$c['id']) ? 'selected' : ''; ?>
-                                <option value="<?= (int)$c['id'] ?>" <?= $sel ?>><?= h($c['name']) ?></option>
+                            <?php 
+                            // Kategorileri PHP'de ağaç yapısına (Anne -> Çocuk) göre grupla
+                            $tree = [];
+                            foreach($__cats as $c) { if (empty($c['parent_id'])) $tree[$c['id']] = ['data' => $c, 'subs' => []]; }
+                            foreach($__cats as $c) { if (!empty($c['parent_id']) && isset($tree[$c['parent_id']])) $tree[$c['parent_id']]['subs'][] = $c; }
+                            
+                            foreach($tree as $pNode): 
+                                $selP = ((int)($row['category_id'] ?? 0) === (int)$pNode['data']['id']) ? 'selected' : ''; 
+                            ?>
+                                <option value="<?= (int)$pNode['data']['id'] ?>" <?= $selP ?> style="font-weight:bold; color:#0f172a;"><?= h($pNode['data']['name']) ?></option>
+                                <?php foreach($pNode['subs'] as $sub): 
+                                    $selS = ((int)($row['category_id'] ?? 0) === (int)$sub['id']) ? 'selected' : ''; 
+                                ?>
+                                    <option value="<?= (int)$sub['id'] ?>" <?= $selS ?> style="font-weight:normal; color:#475569;">&nbsp;&nbsp;↳ <?= h($sub['name']) ?></option>
+                                <?php endforeach; ?>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -507,30 +534,108 @@ switch($sort) {
     default:          $orderBy = "id DESC"; break;   // Son Eklenen
 }
 
-// --- VERİ ÇEKME ---
-if ($q) {
-    // Arama hem ana ürünlerde hem de varyasyonlarda yapılsın
-    $countStmt = $db->prepare("SELECT COUNT(*) FROM products WHERE (name LIKE ? OR sku LIKE ?)");
-    $countStmt->execute(['%'.$q.'%','%'.$q.'%']);
-    $total = (int)$countStmt->fetchColumn();
+// --- KATEGORİ VE MAKRO FİLTRE MANTIĞI ---
+$macro_filter = $_GET['macro'] ?? '';
+$cat_filter = $_GET['cat'] ?? ''; // Seçilen Kategori ID
 
-    // Ana ürün adını getirebilmek için tabloyu kendisiyle left join yapıyoruz
-    $stmt = $db->prepare("
-                SELECT p.*, parent.name AS master_name 
-                FROM products p 
-                LEFT JOIN products parent ON p.parent_id = parent.id 
-                WHERE (p.name LIKE ? OR p.sku LIKE ?) 
-                ORDER BY p.{$orderBy} 
-                LIMIT " . (int)$perPage . " OFFSET " . (int)$offset
-            );
-    $stmt->execute(['%'.$q.'%','%'.$q.'%']);
-} else {
-    $total = (int)$db->query("SELECT COUNT(*) FROM products WHERE parent_id IS NULL")->fetchColumn();
-    
-    // Sorguya $orderBy değişkenini ekledik
-    $stmt = $db->prepare("SELECT * FROM products WHERE parent_id IS NULL ORDER BY $orderBy LIMIT " . (int)$perPage . " OFFSET " . (int)$offset);
-    $stmt->execute();
+// Kategori hiyerarşisini PHP tarafında grupla
+$macro_groups = ['ic' => [], 'dis' => [], 'diger' => []];
+$cat_details = [];
+foreach ($__cats as $c) {
+    $cat_details[$c['id']] = $c;
+    $m = $c['macro_category'] ?: 'ic';
+    if (empty($c['parent_id'])) {
+        if (!isset($macro_groups[$m])) $macro_groups[$m] = [];
+        $macro_groups[$m][$c['id']] = ['data' => $c, 'subs' => []];
+    }
 }
+foreach ($__cats as $c) {
+    if (!empty($c['parent_id'])) {
+        $m = $c['macro_category'] ?: 'ic';
+        $pid = $c['parent_id'];
+        if (isset($macro_groups[$m][$pid])) {
+            $macro_groups[$m][$pid]['subs'][$c['id']] = $c;
+        }
+    }
+}
+
+// Hangi makroda olduğumuzu bul
+if ($cat_filter !== '' && isset($cat_details[$cat_filter])) {
+    $macro_filter = $cat_details[$cat_filter]['macro_category'] ?: 'ic';
+}
+
+// SQL WHERE ve PARAMS oluşturma
+$whereSql = "1=1";
+$params = [];
+// --- KATEGORİSİZ FİLTRESİ ---
+$nocat_filter = isset($_GET['nocat']) && $_GET['nocat'] == '1';
+
+if ($nocat_filter) {
+    $whereSql .= " AND p.category_id IS NULL";
+}
+// ----------------------------
+
+if ($q !== '') {
+    $whereSql .= " AND (p.name LIKE ? OR p.sku LIKE ?)";
+    $params[] = '%'.$q.'%';
+    $params[] = '%'.$q.'%';
+} else {
+    $whereSql .= " AND p.parent_id IS NULL"; 
+}
+
+// Eğer Kategori seçildiyse:
+$exact_filter = isset($_GET['exact']) && $_GET['exact'] == '1';
+
+if ($cat_filter !== '') {
+    if ($exact_filter) {
+        // Sadece ana kategoriyi getir (alt kategorileri hariç tut)
+        $whereSql .= " AND p.category_id = ?";
+        $params[] = $cat_filter;
+    } else {
+        // Kategori ve onun alt kategorilerindeki ürünleri getir
+        $sub_ids = [$cat_filter];
+        foreach ($__cats as $c) {
+            if ($c['parent_id'] == $cat_filter) {
+                $sub_ids[] = $c['id'];
+            }
+        }
+        $in = str_repeat('?,', count($sub_ids) - 1) . '?';
+        $whereSql .= " AND p.category_id IN ($in)";
+        $params = array_merge($params, $sub_ids);
+    }
+} elseif ($macro_filter !== '') {
+    // Sadece Makro sekmesi (İç, Dış vb.) seçildiyse
+    $macro_cat_ids = [];
+    foreach ($__cats as $c) {
+        if (($c['macro_category'] ?: 'ic') === $macro_filter) {
+            $macro_cat_ids[] = $c['id'];
+        }
+    }
+    if (!empty($macro_cat_ids)) {
+        $in = str_repeat('?,', count($macro_cat_ids) - 1) . '?';
+        $whereSql .= " AND p.category_id IN ($in)";
+        $params = array_merge($params, $macro_cat_ids);
+    } else {
+        $whereSql .= " AND p.category_id = -1"; 
+    }
+}
+
+// Ürünleri Çek
+$countStmt = $db->prepare("SELECT COUNT(*) FROM products p WHERE $whereSql");
+$countStmt->execute($params);
+$total = (int)$countStmt->fetchColumn();
+
+$stmt = $db->prepare("
+    SELECT p.*, parent.name AS master_name 
+    FROM products p 
+    LEFT JOIN products parent ON p.parent_id = parent.id 
+    WHERE $whereSql 
+    ORDER BY p.{$orderBy} 
+    LIMIT " . (int)$perPage . " OFFSET " . (int)$offset
+);
+$stmt->execute($params);
+
+$totalPages = max(1, (int)ceil($total / $perPage));
 
 $totalPages = max(1, (int)ceil($total / $perPage));
 
@@ -586,8 +691,48 @@ $next = min($totalPages, $page+1);
 
 </div>
 
+<div style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    
+    <div style="display: flex; gap: 20px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; font-size: 15px;">
+        <a href="products.php" style="text-decoration:none; font-weight:bold; color: <?= $macro_filter === '' && $cat_filter === '' ? '#2563eb' : '#64748b' ?>;">TÜMÜ</a>
+        <a href="products.php?macro=ic" style="text-decoration:none; font-weight:bold; color: <?= $macro_filter === 'ic' ? '#2563eb' : '#64748b' ?>;">İÇ AYDINLATMA</a>
+        <a href="products.php?macro=dis" style="text-decoration:none; font-weight:bold; color: <?= $macro_filter === 'dis' ? '#2563eb' : '#64748b' ?>;">DIŞ AYDINLATMA</a>
+        <a href="products.php?macro=diger" style="text-decoration:none; font-weight:bold; color: <?= $macro_filter === 'diger' ? '#2563eb' : '#64748b' ?>;">DİĞER</a>
+        <a href="products.php?nocat=1" style="text-decoration:none; font-weight:bold; color: <?= $nocat_filter ? '#2563eb' : '#64748b' ?>;">❓KATEGORİSİZ</a>
+    </div>
 
+    <?php if ($macro_filter !== '' && isset($macro_groups[$macro_filter])): ?>
+    <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px;">
+        <a href="products.php?macro=<?= $macro_filter ?>" class="btn" style="padding: 4px 10px; font-size: 13px; border-radius: 15px; <?= $cat_filter === '' ? 'background:#3b82f6; color:#fff; border-color:#2563eb;' : 'background:#f8fafc; color:#475569;' ?>">Hepsi</a>
+        
+        <?php foreach ($macro_groups[$macro_filter] as $main_id => $main_data): 
+            $isActiveMain = ($cat_filter == $main_id || (isset($cat_details[$cat_filter]) && $cat_details[$cat_filter]['parent_id'] == $main_id));
+        ?>
+            <a href="products.php?cat=<?= $main_id ?>" class="btn" style="padding: 4px 10px; font-size: 13px; border-radius: 15px; <?= $isActiveMain ? 'background:#3b82f6; color:#fff; border-color:#2563eb;' : 'background:#f8fafc; color:#475569;' ?>"><?= h($main_data['data']['name']) ?></a>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 
+    <?php 
+    $active_main_id = null;
+    if ($cat_filter !== '') {
+        $active_main_id = empty($cat_details[$cat_filter]['parent_id']) ? $cat_filter : $cat_details[$cat_filter]['parent_id'];
+    }
+    if ($active_main_id && !empty($macro_groups[$macro_filter][$active_main_id]['subs'])): 
+        $isExact = isset($_GET['exact']) && $_GET['exact'] == '1';
+    ?>
+    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+        <span style="color:#94a3b8; font-size:12px; font-weight:bold;">↳ ALT KATEGORİLER:</span>
+        <?php foreach ($macro_groups[$macro_filter][$active_main_id]['subs'] as $sub_id => $sub_data): ?>
+            <a href="products.php?cat=<?= $sub_id ?>" style="text-decoration:none; font-size:13px; padding:2px 8px; border-radius:4px; <?= ($cat_filter == $sub_id && !$isExact) ? 'background:#eff6ff; color:#1e40af; font-weight:bold;' : 'color:#64748b;' ?>"><?= h($sub_data['name']) ?></a>
+        <?php endforeach; ?>
+        
+        <span style="color:#cbd5e1; margin:0 4px;">|</span>
+        <a href="products.php?cat=<?= $active_main_id ?>&exact=1" style="text-decoration:none; font-size:13px; padding:2px 8px; border-radius:4px; <?= ($cat_filter == $active_main_id && $isExact) ? 'background:#fdf4ff; color:#a21caf; font-weight:bold;' : 'color:#64748b;' ?>">Diğer (Ana Kategori Ürünleri)</a>
+    </div>
+    <?php endif; ?>
+
+</div>
 <div class="card">
 
 

@@ -13,6 +13,7 @@ $user_id = $currentUser['id'] ?? 0;
 $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
 $name = trim($_POST['name'] ?? '');
 $sku = trim($_POST['sku'] ?? '');
+if ($sku === '') $sku = null;
 $category_id = (int)($_POST['category_id'] ?? 0);
 $unit = $_POST['unit'] ?? 'Adet';
 $urun_ozeti = trim($_POST['urun_ozeti'] ?? '');
@@ -97,7 +98,8 @@ try {
     if (isset($_POST['v_name']) && is_array($_POST['v_name'])) {
         foreach ($_POST['v_name'] as $v_id => $v_name) {
             if ((isset($_POST['delete_v_ids']) && in_array($v_id, $_POST['delete_v_ids'])) || (isset($_POST['unlink_v_ids']) && in_array($v_id, $_POST['unlink_v_ids'])) || (isset($_POST['transfer_v_ids']) && array_key_exists($v_id, $_POST['transfer_v_ids']))) continue;
-            $v_sku = $_POST['v_sku'][$v_id] ?? '';
+            $v_sku = trim($_POST['v_sku'][$v_id] ?? '');
+            if ($v_sku === '') $v_sku = null;
             $v_price = (float)str_replace(',', '.', str_replace('.', '', $_POST['v_price'][$v_id] ?? ''));
             if ($v_price == 0) $v_price = $price;
             $v_ozet = $_POST['v_ozet'][$v_id] ?? $urun_ozeti;
@@ -111,7 +113,8 @@ try {
         $stmtNew = $db->prepare("INSERT INTO products (name, sku, parent_id, price, unit, category_id, urun_ozeti, kullanim_alani, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
         foreach ($_POST['new_v_name'] as $idx => $n_name) {
             if (empty($n_name)) continue;
-            $n_sku = $_POST['new_v_sku'][$idx] ?? '';
+            $n_sku = trim($_POST['new_v_sku'][$idx] ?? '');
+            if ($n_sku === '') $n_sku = null;
             $n_price = (float)str_replace(',', '.', str_replace('.', '', $_POST['new_v_price'][$idx] ?? ''));
             if ($n_price == 0) $n_price = $price;
             $n_ozet = $_POST['new_v_ozet'][$idx] ?? $urun_ozeti;
@@ -119,6 +122,10 @@ try {
             $stmtNew->execute([$n_name, $n_sku, $id, $n_price, $unit, $category_id, $n_ozet, $n_alan]);
         }
     }
+
+    // --- OTOMATİK ÇOCUK-ANNE SENKRONİZASYONU ---
+    // Eğer Ana Ürünün kategorisi veya markası değiştiyse, tüm alt varyasyonların (çocukların) verilerini de eşitle!
+    $db->exec("UPDATE products child JOIN products parent ON child.parent_id = parent.id SET child.category_id = parent.category_id, child.brand_id = parent.brand_id WHERE parent.id = " . (int)$id);
 
     $db->commit();
     header("Location: product_master_edit.php?id=" . $id . "&msg=saved");

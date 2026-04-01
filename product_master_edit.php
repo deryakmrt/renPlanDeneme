@@ -150,8 +150,20 @@ include __DIR__ . '/includes/header.php';
                             <label class="form-label">Kategori</label>
                             <select name="category_id" class="form-control">
                                 <option value="">-- Seçiniz --</option>
-                                <?php foreach($cats as $cat): ?>
-                                    <option value="<?= $cat['id'] ?>" <?= ($product['category_id']??0) == $cat['id'] ? 'selected' : '' ?>><?= h($cat['name']) ?></option>
+                                <?php 
+                                $tree = [];
+                                foreach($cats as $c) { if (empty($c['parent_id'])) $tree[$c['id']] = ['data' => $c, 'subs' => []]; }
+                                foreach($cats as $c) { if (!empty($c['parent_id']) && isset($tree[$c['parent_id']])) $tree[$c['parent_id']]['subs'][] = $c; }
+                                
+                                foreach($tree as $pNode): 
+                                    $selP = (($product['category_id']??0) == $pNode['data']['id']) ? 'selected' : '';
+                                ?>
+                                    <option value="<?= $pNode['data']['id'] ?>" <?= $selP ?> style="font-weight:bold; color:#0f172a;"><?= h($pNode['data']['name']) ?></option>
+                                    <?php foreach($pNode['subs'] as $sub): 
+                                        $selS = (($product['category_id']??0) == $sub['id']) ? 'selected' : '';
+                                    ?>
+                                        <option value="<?= $sub['id'] ?>" <?= $selS ?> style="font-weight:normal; color:#475569;">&nbsp;&nbsp;↳ <?= h($sub['name']) ?></option>
+                                    <?php endforeach; ?>
                                 <?php endforeach; ?>
                             </select>
                         </div>
