@@ -435,11 +435,11 @@ input[name^="price["] {
           <td><input name="qty[]" type="text" class="formatted-number" value="<?= number_format((float)($it['qty'] ?? 1), 2, ',', '') ?>" <?= $__is_admin_like ? '' : 'readonly title="Yetkisiz Erişim!" style="cursor: not-allowed; background-color: #f9fafb;"' ?>></td>
           
           <?php if ($__is_admin_like): ?>
-            <td><input name="price[]" type="text" class="formatted-number" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '') ?>"></td>
+            <td><input name="price[]" type="text" class="formatted-number" value="<?= number_format((float)($it['price'] ?? 0), 4, ',', '') ?>"></td>
           <?php elseif ($__is_muhasebe): ?>
-            <td><input name="price[]" type="text" class="formatted-number" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '') ?>" readonly title="Yetkisiz İşlem!" style="cursor: not-allowed; background-color: #f9fafb; color: #6b7280;"></td>
+            <td><input name="price[]" type="text" class="formatted-number" value="<?= number_format((float)($it['price'] ?? 0), 4, ',', '') ?>" readonly title="Yetkisiz İşlem!" style="cursor: not-allowed; background-color: #f9fafb; color: #6b7280;"></td>
           <?php else: ?>
-            <input type="hidden" name="price[]" value="<?= number_format((float)($it['price'] ?? 0), 2, ',', '') ?>">
+            <input type="hidden" name="price[]" value="<?= number_format((float)($it['price'] ?? 0), 4, ',', '') ?>">
           <?php endif; ?>
           
           <td><input name="urun_ozeti[]" value="<?= h($it['urun_ozeti'] ?? '') ?>" <?= $__is_admin_like ? '' : 'readonly style="background-color: #f9fafb; cursor: not-allowed;"' ?>></td>
@@ -1109,9 +1109,9 @@ function addRow(){
     <td><input name="unit[]" value="Adet"></td>
     <td><input name="qty[]" type="text" class="formatted-number" value="1,00"></td>
     <?php if ($__is_admin_like): ?>
-      <td><input name="price[]" type="text" class="formatted-number" value="0,00"></td>
+      <td><input name="price[]" type="text" class="formatted-number" value="0,0000"></td>
     <?php else: ?>
-      <input type="hidden" name="price[]" value="0,00">
+      <input type="hidden" name="price[]" value="0,0000">
     <?php endif; ?>
     <td><input name="urun_ozeti[]"></td>
     <td><input name="kullanim_alani[]"></td>

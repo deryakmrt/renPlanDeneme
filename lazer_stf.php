@@ -45,7 +45,7 @@ $items = $it->fetchAll();
 $CUSTOM_LOGO = file_exists(__DIR__ . '/assets/renled-logo.png') ? (__DIR__ . '/assets/renled-logo.png') : 'https://renplan.ditetra.com/assets/renled-logo.png';
 $logo_src = $CUSTOM_LOGO;
 
-$fmt = function($n) { return number_format((float)$n, 2, ',', '.'); };
+$fmt = function($n) { return number_format((float)$n, 4, ',', '.'); };
 $currencySymbol = '₺'; // Lazer tarafı TL bazlı
 
 function fmt_date($val, $with_time=false) {

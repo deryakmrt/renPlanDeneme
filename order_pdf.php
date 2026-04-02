@@ -39,7 +39,7 @@ $items = $it->fetchAll();
 $CUSTOM_LOGO = file_exists(__DIR__ . '/assets/renled-logo.png') ? (__DIR__ . '/assets/renled-logo.png') : 'https://renplan.ditetra.com/assets/renled-logo.png';
 $logo_src = $CUSTOM_LOGO;
 
-$fmt = function($n) { return number_format((float)$n, 2, ',', '.'); };
+$fmt = function($n) { return number_format((float)$n, 4, ',', '.'); };
 
 // --- ORTAK SEMBOL (Kalemler ve Alt Toplamlar İçin) ---
 $kpb = strtoupper(trim((string)($o['kalem_para_birimi'] ?? $o['fatura_para_birimi'] ?? $o['currency'] ?? 'TL')));
