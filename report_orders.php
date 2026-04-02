@@ -117,7 +117,7 @@ $json_uretim  = json_encode(['labels'=>array_keys($data_uretim),  'data'=>array_
 // =========================================================================================
 
 if (!function_exists('h')) { function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); } }
-if (!function_exists('fmt_tr_money')) { function fmt_tr_money($v){ if($v===null||$v==='')return ''; return number_format((float)$v,2,',','.'); }
+if (!function_exists('fmt_tr_money')) { function fmt_tr_money($v){ if($v===null||$v==='')return ''; return number_format((float)$v,4,',','.'); }
 
 function fmt_tr_date($s){
   if ($s===null || $s==='') return '';
@@ -290,23 +290,52 @@ if (isset($_GET['export']) && $_GET['export']==='csv') {
 
 $totalsByCurrency=[]; foreach($rows as $r){ $cur=normalize_currency($r['currency']??'—'); if(!isset($totalsByCurrency[$cur])) $totalsByCurrency[$cur]=0.0; $totalsByCurrency[$cur]+=(float)($r['line_total']??0); }
 
-// Aggregations with dominant currency per label
-$agg_customer = []; $agg_project = []; $agg_category = [];
-$cur_customer = []; $cur_project = []; $cur_category = []; // per-label currency sums
+// --- TCMB GÜNCEL KUR ÇEKİMİ ---
+$usd_rate = 1.0;
+$eur_rate = 1.0;
+try {
+    $ctx = stream_context_create(['http' => ['timeout' => 2]]); // Sayfa yavaşlamasın diye 2 sn sınır
+    $xml_data = @file_get_contents('https://www.tcmb.gov.tr/kurlar/today.xml', false, $ctx); //🔴 Güncel kur buradan çekiliyor. 
+    if ($xml_data) {
+        $tcmb = @simplexml_load_string($xml_data);
+        if ($tcmb) {
+            foreach ($tcmb->Currency as $c) {
+                if ((string)$c['CurrencyCode'] === 'USD') $usd_rate = (float)$c->ForexBuying;
+                if ((string)$c['CurrencyCode'] === 'EUR') $eur_rate = (float)$c->ForexBuying;
+            }
+        }
+    }
+} catch(Throwable $e){}
+
+// Hata olursa veya haftasonu API kapanırsa fallback (varsayılan) kurlar
+if ($usd_rate <= 1.0) $usd_rate = 36.50; 
+if ($eur_rate <= 1.0) $eur_rate = 38.00;
+// -----------------------------
+
+// Grafikler için TL Bazlı Toplamlar ve Ekranda Gösterilecek Ham Toplamlar
+$agg_customer_try = []; $agg_project_try = []; $agg_category_try = [];
+$cur_customer = []; $cur_project = []; $cur_category = [];
 
 foreach($rows as $r){
   $amt = (float)($r['line_total'] ?? 0);
   $cur = normalize_currency($r['currency'] ?? '—');
+  
+  $rate = 1.0;
+  if ($cur === 'USD') $rate = $usd_rate;
+  elseif ($cur === 'EUR') $rate = $eur_rate;
+  
+  $amt_try = $amt * $rate; // Grafik ve sıralama için TL karşılığı
+
   $c = trim((string)($r['customer_name'] ?? 'Diğer')); if($c==='') $c='Diğer';
   $p = trim((string)($r['project_name'] ?? 'Diğer'));  if($p==='') $p='Diğer';
   $g = trim((string)($r['product_name'] ?? 'Diğer'));  if($g==='') $g='Diğer';
 
-  // totals
-  $agg_customer[$c] = ($agg_customer[$c] ?? 0) + $amt;
-  $agg_project[$p]  = ($agg_project[$p]  ?? 0) + $amt;
-  $agg_category[$g] = ($agg_category[$g] ?? 0) + $amt;
+  // TL Üzerinden Grafik ve Sıralama Toplamları
+  $agg_customer_try[$c] = ($agg_customer_try[$c] ?? 0) + $amt_try;
+  $agg_project_try[$p]  = ($agg_project_try[$p]  ?? 0) + $amt_try;
+  $agg_category_try[$g] = ($agg_category_try[$g] ?? 0) + $amt_try;
 
-  // currency buckets
+  // Ekrana basmak için ham döviz tutarlarını koru
   if(!isset($cur_customer[$c])) $cur_customer[$c]=[];
   if(!isset($cur_customer[$c][$cur])) $cur_customer[$c][$cur]=0.0;
   $cur_customer[$c][$cur]+=$amt;
@@ -320,27 +349,32 @@ foreach($rows as $r){
   $cur_category[$g][$cur]+=$amt;
 }
 
-// sort totals desc
-arsort($agg_customer); arsort($agg_project); arsort($agg_category);
+// TL'ye çevrilmiş değerlere göre büyükten küçüğe sırala! (Zekice Kısım)
+arsort($agg_customer_try); arsort($agg_project_try); arsort($agg_category_try);
 
-// pick dominant currency by amount for each label
-function dominant_currency($bucketMap){
+function get_dominant_info($tryTotals, $bucketMap) {
   $out=[];
-  foreach($bucketMap as $label=>$curMap){
-    if(empty($curMap)){ $out[$label]='—'; continue; }
+  foreach($tryTotals as $label=>$tryVal){
+    $curMap = $bucketMap[$label] ?? [];
+    if(empty($curMap)){ 
+        $out[$label] = ['cur'=>'TRY', 'val'=>$tryVal, 'try_val'=>$tryVal]; 
+        continue; 
+    }
     arsort($curMap);
-    $out[$label] = array_key_first($curMap);
+    $dom_cur = array_key_first($curMap);
+    $out[$label] = [
+        'cur' => $dom_cur,                 // Orijinal Simge (Örn: USD)
+        'val' => $curMap[$dom_cur],        // Orijinal Miktar (Örn: 500)
+        'try_val' => $tryVal               // Grafiğin oranı için TL hali
+    ];
   }
   return $out;
 }
-$dom_customer = dominant_currency($cur_customer);
-$dom_project  = dominant_currency($cur_project);
-$dom_category = dominant_currency($cur_category);
 
 $chart_payload = [
-  'customer' => ['totals'=>$agg_customer, 'currency'=>$dom_customer],
-  'project'  => ['totals'=>$agg_project,  'currency'=>$dom_project],
-  'category' => ['totals'=>$agg_category, 'currency'=>$dom_category],
+  'customer' => get_dominant_info($agg_customer_try, $cur_customer),
+  'project'  => get_dominant_info($agg_project_try, $cur_project),
+  'category' => get_dominant_info($agg_category_try, $cur_category),
 ];
 
 
@@ -405,9 +439,9 @@ include __DIR__ . '/includes/header.php';
 .pie-canvas-wrap canvas{width:240px;max-width:100%;height:100%}
 .top5{margin-top:8px}
 .top5 ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:6px}
-.top5 li{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#475569}
-.top5 li .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.top5 li .val{font-variant-numeric:tabular-nums}
+.top5 li{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#475569;align-items:center;}
+.top5 li .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
+.top5 li .val{font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0;font-weight:600;color:#0f172a;}
 .table-wrap{margin-top:14px;border:1px solid #e8eef6;border-radius:12px;overflow:hidden;background:#fff}
 .table{width:100%;border-collapse:separate;border-spacing:0}
 .table thead th{background:#eaf2ff;color:#0f172a;text-align:left;padding:12px 14px;font-weight:700;border-bottom:1px solid #e3ecfd}
@@ -729,9 +763,25 @@ document.addEventListener('DOMContentLoaded', function(){
           <div class="val"><?= fmt_tr_money($totalsByCurrency[$cur]) ?> <?= h($cur) ?></div>
         </div>
       <?php endif; endforeach; ?>
-    
-    
-</div>
+      
+      <div class="stat-card" style="background: #d3f5d588; border-color:#cbd5e1; display:flex; flex-direction:column; justify-content:center; gap:8px; margin-top:5px;">
+        <h4 style="display:flex; justify-content:space-between; color:#334155; margin:0;">
+            <span>💱 Güncel Kur (TCMB Döviz Alış)</span>
+        </h4>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-size:11px; color: #64748b;">USD / TRY</div>
+                <div style="font-size:16px; font-weight:800; color:#0f172a;">₺<?=number_format($usd_rate, 4, ',', '.')?></div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:11px; color: #64748b;">EUR / TRY</div>
+                <div style="font-size:16px; font-weight:800; color:#0f172a;">₺<?=number_format($eur_rate, 4, ',', '.')?></div>
+            </div>
+        </div>
+        <div style="font-size:10px; color:#94a3b8; margin-top:4px;">*Grafik sıralamaları bu kur baz alınarak TL'ye çevrilir.</div>
+      </div>
+
+    </div>
   </div>
 
   <div class="chart-panel">
@@ -813,39 +863,85 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 
-
-
 <script>
 (function(){
   const payload = <?php echo json_encode($chart_payload, JSON_UNESCAPED_UNICODE); ?>;
 
-  function hashColor(str){
-    let h=0; for(let i=0;i<str.length;i++){ h=(h*31+str.charCodeAt(i))>>>0; }
-    const hue=h%360; return `hsl(${hue} 75% 55%)`;
+  // 1. CANLI ÜRETİM SAHASINDAKİ MATEMATİKSEL RENK ALGORİTMASI
+  // Yan yana gelen dilimler asla birbirine benzemez (+45 derece atlar)
+  function generateColors(count, hueStart) {
+      let colors = [];
+      for(let i=0; i<count; i++) {
+          let hue = (hueStart + (i * 45)) % 360; 
+          colors.push(`hsl(${hue}, 70%, 55%)`);
+      }
+      return colors;
   }
+
   function entriesFrom(group){
-    const totals = (payload && payload[group] && payload[group].totals) || {};
-    const curMap = (payload && payload[group] && payload[group].currency) || {};
-    return Object.entries(totals)
-      .map(([name,val])=>({name, val: Number(val)||0, cur: curMap[name]||''}))
+    const items = (payload && payload[group]) || {};
+    return Object.entries(items)
+      .map(([name, info]) => ({
+         name: name, 
+         val: Number(info.try_val)||0,        // Grafik için TL
+         disp_val: Number(info.val)||0,       // Liste için Orijinal Döviz
+         cur: info.cur||''
+      }))
       .sort((a,b)=> b.val - a.val);
   }
+  
   function symbol(cur){ return cur==='TRY'?'₺':(cur==='USD'?'$':(cur==='EUR'?'€':'')); }
 
-  function renderPie(canvasId, listId, entries){
+  function renderPie(canvasId, listId, entries, startHue){
     const labels = entries.map(e=>e.name);
-    const data   = entries.map(e=>e.val);
-    const colors = labels.map(lb=>hashColor(lb));
+    const data   = entries.map(e=>e.val); // Grafiğe giden veri (TL)
+    
+    // Rastgele değil, zeki renk dağılımı kullanıyoruz
+    const colors = generateColors(labels.length, startHue); 
 
     const ctx = document.getElementById(canvasId)?.getContext('2d');
     if (ctx && labels.length){
       new Chart(ctx, {
         type: 'doughnut',
-        data: { labels, datasets: [{ data, backgroundColor: colors }] },
+        data: { 
+            labels: labels, 
+            datasets: [{ 
+                data: data, 
+                backgroundColor: colors,
+                borderWidth: 2,           // Keskin beyaz ayrım çizgileri
+                borderColor: '#ffffff',
+                hoverOffset: 15           // Hover dışa taşma efekti
+            }] 
+        },
         options: {
-          responsive: true, maintainAspectRatio: false, cutout: '60%',
-          plugins: { legend: { display:false }, tooltip: { titleFont:{size:11}, bodyFont:{size:11} } },
-          layout: { padding: 0 }
+          responsive: true, 
+          maintainAspectRatio: false, 
+          plugins: { 
+              legend: { display:false }, 
+              tooltip: { 
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  titleColor: '#1e293b',
+                  bodyColor: '#1e293b',
+                  borderColor: '#e2e8f0',
+                  borderWidth: 1,
+                  padding: 12,
+                  callbacks: {
+                      label: function(context) {
+                          let label = context.label || '';
+                          let value = context.parsed;
+                          
+                          // İsim çok uzunsa fiyata her zaman yer kalsın diye kes (Örn: 22 Karakter)
+                          let maxLength = 30; 
+                          if (label.length > maxLength) {
+                              label = label.substring(0, maxLength) + '...';
+                          }
+                          
+                          return ' ' + label + ': ₺' + value.toLocaleString('tr-TR', {minimumFractionDigits:4, maximumFractionDigits:4});
+                      }
+                  }
+              } 
+          },
+          layout: { padding: 15 }
         }
       });
     }
@@ -857,15 +953,17 @@ document.addEventListener('DOMContentLoaded', function(){
       } else {
         const top5 = entries.slice(0,5);
         ul.innerHTML = top5.map(it => (
-          `<li><span class="name">${it.name}</span><span class="val">${it.val.toLocaleString('tr-TR',{minimumFractionDigits:2, maximumFractionDigits:2})} ${symbol(it.cur)}</span></li>`
+          // Listenin altında Orijinal Kur ve Döviz Cinsini yazıyoruz
+          `<li><span class="name">${it.name}</span><span class="val">${it.disp_val.toLocaleString('tr-TR',{minimumFractionDigits:2, maximumFractionDigits:2})} ${symbol(it.cur)}</span></li>`
         )).join('');
       }
     }
   }
 
-  renderPie('pieCustomer', 'top5Customer', entriesFrom('customer'));
-  renderPie('pieProject',  'top5Project',  entriesFrom('project'));
-  renderPie('pieCategory', 'top5Category', entriesFrom('category'));
+  // 2. HER GRAFİĞE FARKLI BİR "TEMA/BAŞLANGIÇ" RENGİ VERİYORUZ
+  renderPie('pieCustomer', 'top5Customer', entriesFrom('customer'), 200); // Mavi tonlarından başlar
+  renderPie('pieProject',  'top5Project',  entriesFrom('project'), 280);  // Mor tonlarından başlar
+  renderPie('pieCategory', 'top5Category', entriesFrom('category'), 340); // Kırmızı/Pembe tonlarından başlar
 })();
 </script>
 
