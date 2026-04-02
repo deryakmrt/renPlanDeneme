@@ -569,9 +569,17 @@ $whereSql = "1=1";
 $params = [];
 // --- KATEGORİSİZ FİLTRESİ ---
 $nocat_filter = isset($_GET['nocat']) && $_GET['nocat'] == '1';
+$sku_filter = $_GET['sku_filter'] ?? ''; // 'empty' veya 'filled'
 
 if ($nocat_filter) {
     $whereSql .= " AND p.category_id IS NULL";
+    
+    // Alt filtrelere göre SKU durumu
+    if ($sku_filter === 'empty') {
+        $whereSql .= " AND (p.sku IS NULL OR p.sku = '')";
+    } elseif ($sku_filter === 'filled') {
+        $whereSql .= " AND p.sku IS NOT NULL AND p.sku != ''";
+    }
 }
 // ----------------------------
 
@@ -729,6 +737,18 @@ $next = min($totalPages, $page+1);
         
         <span style="color:#cbd5e1; margin:0 4px;">|</span>
         <a href="products.php?cat=<?= $active_main_id ?>&exact=1" style="text-decoration:none; font-size:13px; padding:2px 8px; border-radius:4px; <?= ($cat_filter == $active_main_id && $isExact) ? 'background:#fdf4ff; color:#a21caf; font-weight:bold;' : 'color:#64748b;' ?>">Diğer (Ana Kategori Ürünleri)</a>
+    </div>
+    <?php endif; ?>
+    <?php if ($nocat_filter): ?>
+    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e2e8f0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+        <span style="color:#ef4444; font-size:12px; font-weight:bold;">↳ KATEGORİSİZ FİLTRELERİ:</span>
+        <a href="products.php?nocat=1" style="text-decoration:none; font-size:13px; padding:2px 8px; border-radius:4px; <?= $sku_filter === '' ? 'background:#fee2e2; color:#b91c1c; font-weight:bold;' : 'color:#64748b;' ?>">Tüm Kategorisizler</a>
+        
+        <span style="color:#cbd5e1; margin:0 4px;">|</span>
+        <a href="products.php?nocat=1&sku_filter=empty" style="text-decoration:none; font-size:13px; padding:2px 8px; border-radius:4px; <?= $sku_filter === 'empty' ? 'background:#fee2e2; color:#b91c1c; font-weight:bold;' : 'color:#64748b;' ?>">SKU'su Olmayanlar (Eksik)</a>
+
+        <span style="color:#cbd5e1; margin:0 4px;">|</span>
+        <a href="products.php?nocat=1&sku_filter=filled" style="text-decoration:none; font-size:13px; padding:2px 8px; border-radius:4px; <?= $sku_filter === 'filled' ? 'background:#dcfce7; color:#166534; font-weight:bold;' : 'color:#64748b;' ?>">SKU'su Olanlar (Kodlu)</a>
     </div>
     <?php endif; ?>
 
