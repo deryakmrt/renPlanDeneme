@@ -1,6 +1,63 @@
 <?php
 // includes/order_form.php
 // Beklenen: $mode ('new'|'edit'), $order (assoc), $customers, $products, $items
+// 🟢 YENİ: TCMB Kur Çekme Fonksiyonu (DÜZELTİLMİŞ & GÜVENLİ)
+if (!function_exists('tcmb_get_exchange_rate')) {
+  function tcmb_get_exchange_rate($currency, $date = null) {
+    $currency_upper = strtoupper($currency);
+    if ($currency_upper === 'TL' || $currency_upper === 'TRY') return 1.0;
+
+    $ctx = stream_context_create(['http' => ['timeout' => 3]]);
+    $urls_to_try = [];
+
+    if ($date && $date !== '0000-00-00') {
+      $ts = strtotime($date);
+      
+      // 1. KORUMA: Eğer seçilen tarih gelecek bir tarihse, bugünü baz al!
+      if ($ts > time()) $ts = time();
+      
+      if ($ts > 0) {
+        for ($i = 0; $i <= 5; $i++) {
+          $check_ts = strtotime("-{$i} day", $ts);
+          
+          // 2. KORUMA: Hafta sonlarını (Cumartesi=6, Pazar=7) atla (TCMB kur girmez)
+          if (date('N', $check_ts) >= 6) continue;
+          
+          $Ym = date('Ym', $check_ts);
+          $dmY = date('dmY', $check_ts);
+          
+          // 3. KORUMA: TCMB Arşiv Klasör Yapısı (YYYYMM/DDMMYYYY.xml)
+          if (date('Y-m-d', $check_ts) === date('Y-m-d')) {
+              $urls_to_try[] = 'https://www.tcmb.gov.tr/kurlar/today.xml';
+          } else {
+              $urls_to_try[] = "https://www.tcmb.gov.tr/kurlar/{$Ym}/{$dmY}.xml";
+          }
+        }
+      }
+    }
+
+    // Listeye her ihtimale karşı bugünü en sona ekle (Fallback)
+    $urls_to_try[] = 'https://www.tcmb.gov.tr/kurlar/today.xml';
+
+    // Linkleri dolaş ve kur bulduğunda hemen dön
+    foreach (array_unique($urls_to_try) as $url) {
+      $xml_data = @file_get_contents($url, false, $ctx);
+      if (!$xml_data) continue;
+      $xml = @simplexml_load_string($xml_data);
+      if (!$xml) continue;
+      foreach ($xml->Currency as $item) {
+        if ((string)$item['CurrencyCode'] === $currency_upper) {
+          $rate = (float)$item->ForexBuying;
+          if ($rate <= 0) $rate = (float)$item->BanknoteBuying;
+          if ($rate > 0) return $rate;
+        }
+      }
+    }
+
+    // 4. KORUMA: Kur bulunamazsa hata verebilmek için null dönüyoruz
+    return null; 
+  }
+}
 ?>
 <?php 
 $__role = current_user()['role'] ?? ''; 
@@ -261,14 +318,24 @@ input[name^="price["] {
     <div class="form-section sec-tarih">
       <div class="form-section-title">📅 Tarihler</div>
       <div class="g-auto g-tarih">
-        <div><label>Sipariş Tarihi</label><input type="date" name="siparis_tarihi" value="<?= h( ($order['siparis_tarihi'] ?? '') ?: date('Y-m-d') ) ?>"></div>
-        <div><label>Termin Tarihi</label><input type="date" name="termin_tarihi" value="<?= h($order['termin_tarihi'] ?? '') ?>"></div>
-        <div><label>Başlangıç Tarihi</label><input type="date" name="baslangic_tarihi" value="<?= h($order['baslangic_tarihi'] ?? '') ?>"></div>
-        <div><label>Bitiş Tarihi</label><input type="date" name="bitis_tarihi" value="<?= h($order['bitis_tarihi'] ?? '') ?>"></div>
-        <div><label>Teslim Tarihi</label><input type="date" name="teslim_tarihi" value="<?= h($order['teslim_tarihi'] ?? '') ?>"></div>
+        <?php
+        // Geçersiz tarih filtresi: "0000-00-00" ve boş değerleri temizle
+        function safe_date_val($val) {
+            if (empty($val) || $val === '0000-00-00' || $val === '0000-00-00 00:00:00') return '';
+            // Sadece geçerli Y-m-d formatında döndür
+            $ts = strtotime($val);
+            if ($ts === false || $ts <= 0) return '';
+            return date('Y-m-d', $ts);
+        }
+        ?>
+        <div><label>Sipariş Tarihi</label><input type="date" name="siparis_tarihi" value="<?= h( safe_date_val($order['siparis_tarihi'] ?? '') ?: date('Y-m-d') ) ?>"></div>
+        <div><label>Termin Tarihi</label><input type="date" name="termin_tarihi" value="<?= h(safe_date_val($order['termin_tarihi'] ?? '')) ?>"></div>
+        <div><label>Başlangıç Tarihi</label><input type="date" name="baslangic_tarihi" value="<?= h(safe_date_val($order['baslangic_tarihi'] ?? '')) ?>"></div>
+        <div><label>Bitiş Tarihi</label><input type="date" name="bitis_tarihi" value="<?= h(safe_date_val($order['bitis_tarihi'] ?? '')) ?>"></div>
+        <div><label>Teslim Tarihi</label><input type="date" name="teslim_tarihi" value="<?= h(safe_date_val($order['teslim_tarihi'] ?? '')) ?>"></div>
         <div id="fatura_tarihi_container" style="display:none;">
           <label style="color: #7e22ce; font-weight:bold;">Fatura Tarihi</label>
-          <input type="date" name="fatura_tarihi" value="<?= h($order['fatura_tarihi'] ?? '') ?>" style="border-color: #a855f7; background-color: #faf5ff;">
+          <input type="date" name="fatura_tarihi" value="<?= h(safe_date_val($order['fatura_tarihi'] ?? '')) ?>" style="border-color: #a855f7; background-color: #faf5ff;">
         </div>
       </div>
     </div>
@@ -450,7 +517,75 @@ input[name^="price["] {
         </tbody>
       </table>
     </div>
-	    <div class="grid g3 mt" style="gap:12px">
+<?php
+    // --- Kur Çekme Mantığı (Sadece Muhasebe/Admin için ve Dövizliyse) ---
+    $order_currency = strtoupper($order['currency'] ?? 'TL');
+    $__raw_fatura = $order['fatura_tarihi'] ?? '';
+    if (empty($__raw_fatura) || $__raw_fatura === '0000-00-00' || strtotime($__raw_fatura) <= 0) {
+        $fatura_date = date('Y-m-d');
+    } else {
+        $fatura_date = $__raw_fatura;
+    }
+    $fatura_date_fmt = date('d.m.Y', strtotime($fatura_date));
+    
+    // TCMB'den kur çek (Sistem 5 gün geriye kadar tarar)
+    $exchange_rate = tcmb_get_exchange_rate($order_currency, $fatura_date);
+    
+    // EUR kurunu da bilgi amaçlı çekelim
+    $eur_info_rate = tcmb_get_exchange_rate('EUR', $fatura_date);
+    $usd_info_rate = tcmb_get_exchange_rate('USD', $fatura_date);
+    ?>
+
+    <?php if ($__is_admin_like || $__is_muhasebe): ?>
+    <div class="mt" style="background: #ffffff; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: flex-start; gap: 40px;">
+        
+        <div id="fatura_kur_section" style="flex: 1; visibility: <?= ($order['status']??'') === 'fatura_edildi' ? 'visible' : 'hidden' ?>;">
+            <div style="font-size: 11px; color: #94a3b8; font-style: italic; margin-bottom: 10px; line-height: 1.5;">
+                🗓️ <span style="font-weight:600;"><?= $fatura_date_fmt ?></span> TCMB Alış Kuru:<br>
+                <span style="color: #64748b;">
+                    USD: <?= $usd_info_rate ? '₺' . number_format((float)$usd_info_rate, 4, ',', '.') : '<span style="color:#e53e3e; font-weight:bold;">⚠️ Çekilemedi</span>' ?> | 
+                    EUR: <?= $eur_info_rate ? '₺' . number_format((float)$eur_info_rate, 4, ',', '.') : '<span style="color:#e53e3e; font-weight:bold;">⚠️ Çekilemedi</span>' ?>
+                </span>
+                <?php if ($usd_info_rate && $eur_info_rate): ?>
+                <br>
+                <span style="color: #8b5cf6; font-weight: 600;">
+                    Çapraz Kur (EUR/USD): <?= number_format((float)($eur_info_rate / $usd_info_rate), 4, ',', '.') ?>
+                </span>
+                <?php endif; ?>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <div style="font-size: 13px; color: #64748b; font-weight: 500;">Döviz Karşılığı (<span id="lbl_fatura_pb_title" style="font-weight: 700; color: #0f172a;">TL</span>)</div>
+                <div id="lbl_converted_total" style="font-size: 26px; font-weight: 800; color: #d32f2f; letter-spacing: -1px;">
+                    0,0000 ₺
+                </div>
+                <div style="font-size: 10px; color: #cbd5e1; margin-top: 5px;">* Çevrim işlemi fatura tarihindeki kura göre yapılmıştır.</div>
+            </div>
+        </div>
+
+        <div style="width: 320px; display: flex; flex-direction: column; align-items: flex-end; text-align: right;">
+            <div style="display: flex; justify-content: flex-end; gap: 15px; width: 100%; margin-bottom: 5px;">
+                <span style="color: #64748b; font-size: 13px;">Ara Toplam:</span>
+                <span id="lbl_subtotal" style="color: #1e293b; font-weight: 600; font-size: 14px;">0,0000</span>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 15px; width: 100%; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
+                <?php $kdv_label = isset($order['kdv_orani']) ? (int)$order['kdv_orani'] : 20; ?>
+                <span style="color: #64748b; font-size: 13px;">KDV (%<span id="lbl_kdv_rate"><?= $kdv_label ?></span>):</span>
+                <span id="lbl_vat_amount" style="color: #1e293b; font-weight: 600; font-size: 14px;">0,0000</span>
+            </div>
+
+            <div style="margin-top: 5px;">
+                <div style="color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 2px;">Genel Toplam</div>
+                <div id="lbl_grand_total_display" style="font-size: 32px; font-weight: 900; color: #0f172a; letter-spacing: -1px;">
+                    0,0000
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <div class="grid g3 mt" style="gap:12px">
       <div><label class="mt">Notlar</label>
     
 <?php
@@ -2196,26 +2331,79 @@ document.addEventListener('DOMContentLoaded', function() {
 <?php endif; ?>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Revizyon No Balon Sistemi
-    var revInput = document.getElementById('rev_input');
-    var revBubble = document.getElementById('rev_warning_bubble');
-    
-    if (revInput && revBubble) {
-        var hasWarned = false; 
+    // PHP'den kurları al (Çekilemediyse null olur)
+    const usdRate = <?= json_encode($usd_info_rate) ?>;
+    const eurRate = <?= json_encode($eur_info_rate) ?>;
 
-        revInput.addEventListener('input', function() {
-            // Eğer uyarı verilmediyse ve 00 değiştirildiyse
-            if (!hasWarned) {
-                revBubble.style.display = 'block';
-                
-                // 4 saniye ekranda tut ve kibarca kaybet
-                setTimeout(function() {
-                    revBubble.style.display = 'none';
-                }, 4000);
-                
-                hasWarned = true; // Sayfa yenilenene kadar bir daha çıkarma
-            }
-        });
+    function getSymbol(cur) {
+        if (cur === 'USD') return '$';
+        if (cur === 'EUR' || cur === 'EURO') return '€';
+        return '₺';
     }
+
+    function calculateFinancials() {
+        const kalemPb = document.querySelector('select[name="kalem_para_birimi"]')?.value || 'TL';
+        const faturaPb = document.querySelector('select[name="fatura_para_birimi"]')?.value || 'TL';
+        const status = document.querySelector('select[name="status"]')?.value || '';
+        const kdvOran = parseFloat(document.querySelector('select[name="kdv_orani"]')?.value || 20);
+
+        let subtotal = 0;
+        document.querySelectorAll('#itemsTable tbody tr').forEach(tr => {
+            // Virgüllü formatı (1.000,50) parse et
+            const pStr = tr.querySelector('input[name="price[]"]')?.value || '0';
+            const qStr = tr.querySelector('input[name="qty[]"]')?.value || '1';
+            const price = parseFloat(pStr.replace(/\./g, '').replace(',', '.')) || 0;
+            const qty = parseFloat(qStr.replace(/\./g, '').replace(',', '.')) || 0;
+            subtotal += (price * qty);
+        });
+
+        const vatAmount = subtotal * (kdvOran / 100);
+        const grandTotal = subtotal + vatAmount;
+        const sym = getSymbol(kalemPb);
+
+        // --- SAĞ TARAF GÜNCELLEME ---
+        document.getElementById('lbl_subtotal').textContent = subtotal.toLocaleString('tr-TR', {minimumFractionDigits: 4}) + ' ' + sym;
+        document.getElementById('lbl_kdv_rate').textContent = kdvOran;
+        document.getElementById('lbl_vat_amount').textContent = vatAmount.toLocaleString('tr-TR', {minimumFractionDigits: 4}) + ' ' + sym;
+        document.getElementById('lbl_grand_total_display').innerHTML = grandTotal.toLocaleString('tr-TR', {minimumFractionDigits: 4}) + ' <span style="font-size:20px; color:#64748b;">' + sym + '</span>';
+
+        // --- SOL TARAF GÜNCELLEME (Kur Bölümü) ---
+        const kurSection = document.getElementById('fatura_kur_section');
+        if (status === 'fatura_edildi') {
+            kurSection.style.visibility = 'visible';
+            
+            // Başlıktaki (TL) yazısını Fatura Para Birimine göre anlık güncelle
+            document.getElementById('lbl_fatura_pb_title').textContent = faturaPb;
+            
+            // Kur eksikse uyarı ver, yanlış hesaplama yapma
+            if ((kalemPb === 'USD' && !usdRate) || (kalemPb === 'EUR' && !eurRate) || (faturaPb === 'USD' && !usdRate) || (faturaPb === 'EUR' && !eurRate)) {
+                document.getElementById('lbl_converted_total').innerHTML = '<span style="font-size:16px; color:#e53e3e; letter-spacing:0;">⚠️ Kur eksik, hesaplanamadı</span>';
+            } else {
+                // Çapraz Kur Mantığı (Cross-Rate)
+                let tryAmount = grandTotal;
+                if (kalemPb === 'USD') tryAmount = grandTotal * usdRate;
+                else if (kalemPb === 'EUR') tryAmount = grandTotal * eurRate;
+
+                let finalConverted = tryAmount;
+                if (faturaPb === 'USD') finalConverted = tryAmount / usdRate;
+                else if (faturaPb === 'EUR') finalConverted = tryAmount / eurRate;
+
+                document.getElementById('lbl_converted_total').innerHTML = finalConverted.toLocaleString('tr-TR', {minimumFractionDigits: 4}) + ' <span style="font-size:20px; color:#64748b;">' + getSymbol(faturaPb) + '</span>';
+            }
+        } else {
+            kurSection.style.visibility = 'hidden';
+        }
+    }
+
+    // Değişimleri izle
+    const form = document.querySelector('form');
+    form.addEventListener('input', calculateFinancials);
+    form.addEventListener('change', calculateFinancials);
+    
+    // Satır eklendiğinde/silindiğinde
+    const observer = new MutationObserver(calculateFinancials);
+    observer.observe(document.querySelector('#itemsTable tbody'), { childList: true });
+
+    calculateFinancials(); // Sayfa açılışında hesapla
 });
 </script>
