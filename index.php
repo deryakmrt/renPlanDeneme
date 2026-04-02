@@ -106,12 +106,23 @@ include __DIR__ . '/includes/header.php';
     <div class="value">—</div>
   </div>
   <div class="tile t-purple">
-    <a href="#" class="stretch" aria-label="Raporlar"></a>
+    <?php 
+    // Kullanıcının admin olup olmadığını kontrol et
+    $__role = current_user()['role'] ?? ''; 
+    $__is_admin_like = in_array($__role, ['admin','sistem_yoneticisi'], true); 
+    
+    if ($__is_admin_like): 
+    ?>
+        <a href="report_orders.php" class="stretch" aria-label="Raporlar"></a>
+    <?php else: ?>
+        <a href="#" onclick="alert('⚠️ Bu sayfaya erişim için admin yetkisi gereklidir.'); return false;" class="stretch" aria-label="Raporlar"></a>
+    <?php endif; ?>
+
     <div class="icon">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 20V8m4 12V4m4 16v-8m4 8v-5" stroke="currentColor" stroke-width="1.6"/></svg>
     </div>
     <div class="title">Raporlar</div>
-    <div class="value">—</div>
+    <div class="value">📊</div>
   </div>
 </div>
 
@@ -141,35 +152,52 @@ $lastOrders = $db->query('
 // Dynamic tasks: Son değiştirilen siparişlerin notlarını göster
 $tasks = [];
 try {
-  // En son değiştirilen siparişleri audit_log'dan bul
+  // 🟢 DÜZELTİLDİ: Notun yazıldığı zamana göre sıralama
+  // Not formatı: "derya | 05.02.2026 12:47: deneme not"
+  // Nottan tarih/saati çıkarıp ona göre sıralıyoruz
   $rows = [];
   try {
-    // Önce audit_log'dan en son değiştirilen siparişleri bul
+    // En son satırdaki notu ve tarihini parse edip sıralıyoruz
     $st = $db->query("
-      SELECT o.id, o.order_code, o.customer_id, o.notes AS note, al.ts AS last_modified,
-             c.name AS customer_name
+      SELECT 
+        o.id, 
+        o.order_code, 
+        o.customer_id, 
+        o.notes AS note,
+        c.name AS customer_name,
+        -- En son not satırını al (son \\n'den sonrası)
+        TRIM(SUBSTRING_INDEX(o.notes, '\n', -1)) AS last_note_line,
+        -- Nottan tarihi parse et: \"derya | 05.02.2026 12:47: ...\" formatından
+        -- Tarih/saat kısmını al (| ile : arasındaki)
+        TRIM(
+          SUBSTRING_INDEX(
+            SUBSTRING_INDEX(TRIM(SUBSTRING_INDEX(o.notes, '\n', -1)), '|', -1), 
+            ':', 
+            1
+          )
+        ) AS note_datetime_str
       FROM orders o
       LEFT JOIN customers c ON c.id = o.customer_id
-      LEFT JOIN (
-        SELECT object_id, MAX(ts) AS ts
-        FROM audit_log
-        WHERE object_type = 'orders'
-        GROUP BY object_id
-      ) al ON al.object_id = o.id
       WHERE o.notes IS NOT NULL AND TRIM(o.notes) <> ''
-      ORDER BY COALESCE(al.ts, o.created_at) DESC
+      ORDER BY 
+        -- Tarih/saat string'ini MySQL datetime'a çevir ve sırala
+        -- Format: \"05.02.2026 12:47\" → datetime
+        STR_TO_DATE(
+          TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(TRIM(SUBSTRING_INDEX(o.notes, '\n', -1)), '|', -1), ':', 1)),
+          '%d.%m.%Y %H:%i'
+        ) DESC
       LIMIT 10
     ");
     $rows = $st->fetchAll(PDO::FETCH_ASSOC);
   } catch (Throwable $e1) {
-    // Fallback: audit_log yoksa sadece orders.notes'a bak
+    // Fallback: SQL parse başarısızsa basit sıralama
     $st2 = $db->query("
       SELECT o.id, o.order_code, o.customer_id, o.notes AS note, o.created_at AS last_modified,
              c.name AS customer_name
       FROM orders o
       LEFT JOIN customers c ON c.id = o.customer_id
       WHERE o.notes IS NOT NULL AND TRIM(o.notes) <> ''
-      ORDER BY o.id DESC
+      ORDER BY o.created_at DESC
       LIMIT 10
     ");
     $rows = $st2->fetchAll(PDO::FETCH_ASSOC);
@@ -197,17 +225,19 @@ try {
       $noteDate = '';
       $noteTime = '';
       
-      // Parse et - önce kullanıcı ve tarihi ayır
-      if (preg_match('/^([^|]+)\s*\|\s*([^:]+):\s*(.+)$/u', $lastNoteLine, $matches)) {
+      // Parse et - önce kullanıcı ve tarihi ayır (DÜZELTİLMİŞ)
+      if (preg_match('/^(.*?)\s*\|\s*(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2})\s*:\s*(.*)$/u', $lastNoteLine, $matches)) {
+        // Yeni Format: İsim | Tarih Saat: Not
         $userName = trim($matches[1]);
-        $dateTimePart = trim($matches[2]); // "05.02.2026 12:47"
-        $noteText = trim($matches[3]);
-        
-        // Tarih ve saati parse et
-        if (preg_match('/(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2})/', $dateTimePart, $dtMatch)) {
-          $noteDate = $dtMatch[1]; // 05.02.2026
-          $noteTime = $dtMatch[2]; // 12:47
-        }
+        $noteDate = $matches[2]; // 05.02.2026
+        $noteTime = $matches[3]; // 12:47
+        $noteText = trim($matches[4]);
+      } elseif (preg_match('/^(\d{2}\.\d{2}\.\d{4})\s+(\d{2}:\d{2})\s*\|\s*(.*?):\s*(.*)$/u', $lastNoteLine, $matches)) {
+        // Eski Format: Tarih Saat | İsim: Not (İhtimal dahilinde koruma amaçlı)
+        $noteDate = $matches[1];
+        $noteTime = $matches[2];
+        $userName = trim($matches[3]);
+        $noteText = trim($matches[4]);
       }
       
       // Notun başında kalan saat bilgisini temizle (örn: "04: MÜŞTERİ...")
@@ -253,9 +283,13 @@ try {
         // Bugünün başlangıcı (00:00:00)
         $todayStart = strtotime('today');
         
-        // Notun tarihi bugünse "Bugün", değilse tarih göster
+        $yesterdayStart = strtotime('yesterday');
+        
+        // Notun tarihi bugünse "Bugün", dünse "Dün", değilse tarih göster
         if ($ts >= $todayStart) {
-          $badge = 'Bugün';
+          $badge = 'Bugün ' . date('H:i', $ts);
+        } elseif ($ts >= $yesterdayStart) {
+          $badge = 'Dün ' . date('H:i', $ts);
         } else {
           $badge = date('d.m.Y', $ts);
         }
