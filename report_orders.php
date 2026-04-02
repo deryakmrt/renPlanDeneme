@@ -8,6 +8,18 @@ ini_set('display_errors','1'); ini_set('display_startup_errors','1'); error_repo
 
 require_once __DIR__ . '/includes/helpers.php';
 require_login();
+
+// --- 🔒 SADECE ADMİN YETKİ KONTROLÜ ---
+$__role = current_user()['role'] ?? ''; 
+if ($__role !== 'admin') {
+    die('<div style="margin:50px auto; max-width:500px; padding:30px; background:#fff1f2; border:2px solid #fda4af; border-radius:12px; color:#e11d48; font-family:sans-serif; text-align:center; box-shadow:0 10px 25px rgba(225,29,72,0.1);">
+        <h2 style="margin-top:0; font-size:24px;">⛔ YETKİSİZ ERİŞİM</h2>
+        <p style="font-size:15px; line-height:1.5;">Bu finansal raporları ve grafikleri yalnızca <b>Yönetici (Admin)</b> yetkisine sahip kullanıcılar görüntüleyebilir.</p>
+        <a href="index.php" style="display:inline-block; margin-top:15px; padding:10px 20px; background:#e11d48; color:#fff; text-decoration:none; border-radius:8px; font-weight:bold;">Ana Sayfaya Dön</a>
+    </div>');
+}
+// --------------------------------------
+
 $db = pdo();
 // =========================================================================================
 // [YENİ] CANLI ÜRETİM YÜKÜ GRAFİK MOTORU (V2 - GENİŞLETİLMİŞ DURUM KONTROLÜ)
