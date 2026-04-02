@@ -461,7 +461,7 @@ if ($action === 'edit') { $id = (int)($_GET['id'] ?? 0); redirect('order_edit.ph
 // --------- TOPLU GÜNCELLE (POST) ---------
 if ($action === 'bulk_update' && method('POST')) {
     csrf_check();
-    $allowed_statuses = ['tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi','fatura_edildi'];
+    $allowed_statuses = ['tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi','fatura_edildi', 'askiya_alindi'];
     $new_status = trim($_POST['bulk_status'] ?? '');
     $ids = $_POST['order_ids'] ?? [];
 
@@ -663,8 +663,19 @@ if ($action === 'new' || $action === 'edit') {
           <div>
             <label>Durum</label>
             <select name="status" style="color:#000; font-size:14px; max-width:150px;">
-              <?php foreach(['tedarik'=>'Tedarik','sac lazer'=>'Sac Lazer','boru lazer'=>'Boru Lazer','kaynak'=>'Kaynak','boya'=>'Boya','elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi'] as $k=>$v): ?>
-                <option value="<?= h($k) ?>" <?= $order['status']===$k?'selected':'' ?>><?= h($v) ?></option>
+              <?php 
+              $form_statuses = ['tedarik'=>'Tedarik','sac lazer'=>'Sac Lazer','boru lazer'=>'Boru Lazer','kaynak'=>'Kaynak','boya'=>'Boya','elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi'];
+              
+              // Sadece admin (veya eklemek istersen sistem yöneticisi) "Askıya Alındı"yı seçebilir
+              if (in_array(current_user()['role'] ?? '', ['admin', 'sistem_yoneticisi'])) {
+                  $form_statuses['askiya_alindi'] = 'Askıya Alındı';
+              } elseif (($order['status'] ?? '') === 'askiya_alindi') {
+                  // Eğer sipariş ZATEN askıdaysa ve kişi admin değilse, seçili olarak tut (bozulmasın) ama listede görünmesin
+                  $form_statuses['askiya_alindi'] = 'Askıya Alındı (Yetkisiz)'; 
+              }
+              
+              foreach($form_statuses as $k=>$v): ?>
+                <option value="<?= h($k) ?>" <?= ($order['status']??'')===$k?'selected':'' ?>><?= h($v) ?></option>
               <?php endforeach; ?>
             </select>
           </div>
@@ -876,7 +887,7 @@ if ($status === 'revize') {
     $sql .= " AND o.status = ?";
     $params[] = $status;
 }
-$sql .= " ORDER BY CASE WHEN LOWER(o.status) = 'taslak_gizli' THEN 0 WHEN LOWER(o.status) = 'tedarik' THEN 1 WHEN LOWER(o.status) = 'sac lazer' THEN 2 WHEN LOWER(o.status) = 'boru lazer' THEN 3 WHEN LOWER(o.status) = 'kaynak' THEN 4 WHEN LOWER(o.status) = 'boya' THEN 5 WHEN LOWER(o.status) = 'elektrik montaj' THEN 6 WHEN LOWER(o.status) = 'test' THEN 7 WHEN LOWER(o.status) = 'paketleme' THEN 8 WHEN LOWER(o.status) = 'sevkiyat' THEN 9 WHEN LOWER(o.status) = 'teslim edildi' THEN 10 WHEN LOWER(o.status) = 'fatura_edildi' THEN 11 ELSE 999 END ASC, CASE WHEN o.order_code REGEXP '-[0-9]+$' THEN CAST(SUBSTRING_INDEX(o.order_code, '-', -1) AS UNSIGNED) ELSE 0 END DESC, o.order_code DESC";
+$sql .= " ORDER BY CASE WHEN LOWER(o.status) = 'taslak_gizli' THEN 0 WHEN LOWER(o.status) = 'tedarik' THEN 1 WHEN LOWER(o.status) = 'sac lazer' THEN 2 WHEN LOWER(o.status) = 'boru lazer' THEN 3 WHEN LOWER(o.status) = 'kaynak' THEN 4 WHEN LOWER(o.status) = 'boya' THEN 5 WHEN LOWER(o.status) = 'elektrik montaj' THEN 6 WHEN LOWER(o.status) = 'test' THEN 7 WHEN LOWER(o.status) = 'paketleme' THEN 8 WHEN LOWER(o.status) = 'sevkiyat' THEN 9 WHEN LOWER(o.status) = 'teslim edildi' THEN 10 WHEN LOWER(o.status) = 'fatura_edildi' THEN 11 WHEN LOWER(o.status) = 'askiya_alindi' THEN 12 ELSE 999 END ASC, CASE WHEN o.order_code REGEXP '-[0-9]+$' THEN CAST(SUBSTRING_INDEX(o.order_code, '-', -1) AS UNSIGNED) ELSE 0 END DESC, o.order_code DESC";
 // Toplam sayfa sayısı için COUNT(*)
 $count_stmt = $db->prepare("SELECT COUNT(*) FROM (" . $sql . ") t");
 $count_stmt->execute($params);
@@ -896,6 +907,7 @@ $status_labels = [
   'sevkiyat' => 'Sevkiyat',
   'teslim edildi' => 'Teslim Edildi',
   'fatura_edildi' => 'Fatura Edildi',
+  'askiya_alindi' => 'Askıya Alındı',
 ];
 $__cnt_params = [];
 // Ürün araması eklendi ve COUNT(DISTINCT o.id) yapıldı
@@ -1085,7 +1097,7 @@ if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
 <!-- YATAY DURUM FİLTRESİ (TABLO İÇİ) START -->
 <div class="status-quick-filter" style="font-size:14px" style="color:#000; font-size:14px; font-size:.95rem;">
     <?php
-      $ordered_statuses = ['', 'revize', 'tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi', 'fatura_edildi'];
+      $ordered_statuses = ['', 'revize', 'tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi', 'fatura_edildi', 'askiya_alindi'];
       $first = true;
       foreach ($ordered_statuses as $sk) {
         $label = $status_labels[$sk] ?? ($sk ?: 'Tümü');
@@ -1154,7 +1166,7 @@ if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
 <!-- YATAY DURUM FİLTRESİ (TABLO İÇİ) START -->
 <div class="status-quick-filter" style="font-size:14px" style="color:#000; font-size:14px; font-size:.95rem;">
     <?php
-      $ordered_statuses = ['', 'revize', 'tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi', 'fatura_edildi'];
+      $ordered_statuses = ['', 'revize', 'tedarik','sac lazer','boru lazer','kaynak','boya','elektrik montaj','test','paketleme','sevkiyat','teslim edildi', 'fatura_edildi', 'askiya_alindi'];
       $first = true;
       foreach ($ordered_statuses as $sk) {
         $label = $status_labels[$sk] ?? ($sk ?: 'Tümü');
@@ -1216,6 +1228,7 @@ function __wpstat_icon_svg($key){
         case 'truck': return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="M13 10h4l3 3v1h-7v-4z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="7.5" cy="17.5" r="1.9" stroke="currentColor" stroke-width="1.7"/><circle cx="18.5" cy="17.5" r="1.9" stroke="currentColor" stroke-width="1.7"/></svg>';
         case 'check': return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 12l5 5 11-11" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
         case 'invoice': return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        case 'askiya': return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>'; // İptal / Ban İkonu
         default:      return '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>';
     }
 }
@@ -1231,7 +1244,8 @@ function __wpstat_icon_key($status){
         case 'paketleme': return 'box';
         case 'sevkiyat': return 'truck';
         case 'teslim edildi': return 'check';
-        case 'fatura_edildi': return 'invoice'; // Fatura edildiğinde de aynı fiş ikonunu kullanalım
+        case 'fatura_edildi': return 'invoice';
+        case 'askiya_alindi': return 'askiya'; // Yeni ikon anahtarı
         default: return 'box';
     }
 }
@@ -1256,29 +1270,33 @@ function render_status_pill($status_raw){
     ];
     $labels = [
         'tedarik'=>'Tedarik','sac lazer'=>'Sac Lazer','boru lazer'=>'Boru Lazer','kaynak'=>'Kaynak','boya'=>'Boya',
-        'elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi','fatura_edildi'=>'Fatura Edildi'
+        'elektrik montaj'=>'Elektrik Montaj','test'=>'Test','paketleme'=>'Paketleme','sevkiyat'=>'Sevkiyat','teslim edildi'=>'Teslim Edildi','fatura_edildi'=>'Fatura Edildi',
+        'askiya_alindi'=>'Askıya Alındı'
     ];
     $k = strtolower(trim((string)$status_raw));
-    if(!isset($map[$k])) $k = 'tedarik';
-    $step = (int)$map[$k];
     
-    // Eski mantığa döndük: Adım başına %10
-    $pct = max(10, min(100, $step * 10));
-    
-    // RENK AYARLARI
-    if ($k === 'fatura_edildi') {
-        $class = 'wpstat-purple'; // Sadece purple verdik, yeşile dönmeyecek!
-    } elseif ($k === 'teslim edildi') {
-        $class = 'wpstat-done';
+    // YENİ: Askıya alındıysa özel işlem
+    if ($k === 'askiya_alindi') {
+        $pct = 0;
+        $class = 'wpstat-red';
+        $icon = __wpstat_icon_svg('askiya');
     } else {
-        $class = __wpstat_class_by_pct($pct);
+        if(!isset($map[$k])) $k = 'tedarik';
+        $step = (int)$map[$k];
+        $pct = max(10, min(100, $step * 10));
+        
+        if ($k === 'fatura_edildi') {
+            $class = 'wpstat-purple'; 
+        } elseif ($k === 'teslim edildi') {
+            $class = 'wpstat-done';
+        } else {
+            $class = __wpstat_class_by_pct($pct);
+        }
+        $icon = __wpstat_icon_svg(__wpstat_icon_key($k));
     }
     
-    $icon = __wpstat_icon_svg(__wpstat_icon_key($k));
     $label = $labels[$k] ?? $status_raw;
-
-    // CSS'in %100'ü gördüğünde animasyonu durdurmasını engellemek için minik hile
-    $bar_width = ($k === 'fatura_edildi') ? '99.9' : (int)$pct;
+    $bar_width = ($k === 'fatura_edildi') ? '99.9' : (($k === 'askiya_alindi') ? '0' : (int)$pct);
 
     ob_start(); ?>
     <div class="wpstat-wrap">
@@ -1512,15 +1530,22 @@ function termin_badge_html($termin, $teslim=null, $bitis=null){ // <-- 3. parame
 ?>
 <!--================================================ -->
 <?php while($o = $stmt->fetch()): 
-  // Taslak ise sarı arka plan rengi belirle
+        // Satır ve Yazı Stilleri
         $row_style = '';
+        $text_style = '';
+        
         if (($o['status']??'') === 'taslak_gizli') {
             $row_style = 'style="background-color: #fffbeb;"'; // Açık Sarı
-        }?>
-        <tr <?= $row_style ?>>
-    <tr class="order-row" data-order-id="<?= (int)$o['id'] ?>"><td><input type='checkbox' class='orderCheck' name='order_ids[]' value='<?= (int)$o['id'] ?>'></td><td><div class="twolines"><?= h($o['customer_name']) ?></div></td>
-      <td><div class="twolines"><?= h($o['proje_adi']) ?></div></td>
-      <td><?= h($o['order_code']) ?></td>
+        } elseif (($o['status']??'') === 'askiya_alindi') {
+            $row_style = 'style="background-color: #fef2f2;"'; // Çok açık kırmızı arka plan
+            $text_style = 'text-decoration: line-through; font-style: italic; opacity: 0.5;'; // Üstü çizili ve soluk
+        }
+?>
+    <tr class="order-row" data-order-id="<?= (int)$o['id'] ?>" <?= $row_style ?>>
+      <td><input type='checkbox' class='orderCheck' name='order_ids[]' value='<?= (int)$o['id'] ?>'></td>
+      <td><div class="twolines" style="<?= $text_style ?>"><?= h($o['customer_name']) ?></div></td>
+      <td><div class="twolines" style="<?= $text_style ?>"><?= h($o['proje_adi']) ?></div></td>
+      <td style="<?= $text_style ?>"><?= h($o['order_code']) ?></td>
       <td>
     <?php if(($o['status']??'') === 'taslak_gizli'): ?>
         <span class="badge" style="background:#f59e0b; color:#fff; padding:4px 8px; border-radius:4px; font-size:11px;">

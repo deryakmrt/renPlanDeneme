@@ -77,6 +77,20 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
   foreach ($fields as $f) { $data[$f] = $_POST[$f] ?? null; }
   $data['customer_id'] = (int)$data['customer_id'];
 
+  // --- YETKİ KONTROLÜ: ASKIYA ALMA / ÇIKARMA KORUMASI ---
+  $is_admin = in_array(current_user()['role'] ?? '', ['admin', 'sistem_yoneticisi']);
+  $old_status = $AUD_beforeOrder ? $AUD_beforeOrder['status'] : ''; // Mevcut durumu denetim değişkeninden al
+
+  if (!$is_admin) {
+      // Admin değilse;
+      if ($old_status === 'askiya_alindi') {
+          $data['status'] = 'askiya_alindi'; // Siparişi askıdan çıkaramaz, zorla geri askıya al
+      } elseif ($data['status'] === 'askiya_alindi') {
+          $data['status'] = $old_status; // Siparişi askıya alamaz, eski haline geri döndür
+      }
+  }
+  // ---------------------------------------------------------
+
   $up = $db->prepare("UPDATE orders SET order_code=?, customer_id=?, status=?, currency=?, termin_tarihi=?, baslangic_tarihi=?, bitis_tarihi=?, teslim_tarihi=?, notes=?,
                        siparis_veren=?, siparisi_alan=?, siparisi_giren=?, siparis_tarihi=?, fatura_tarihi=?, fatura_para_birimi=?, kalem_para_birimi=?, proje_adi=?, revizyon_no=?, nakliye_turu=?, odeme_kosulu=?, odeme_para_birimi=?, kdv_orani=?
                       WHERE id=?");

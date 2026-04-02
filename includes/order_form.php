@@ -36,175 +36,240 @@ input[name^="price["] {
 </style>
 
 <div class="card">
-  <h2><?= $mode==='edit' ? 'Sipariş Düzenle' : 'Yeni Sipariş' ?></h2>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+      
+      <div style="background: linear-gradient(90deg, #f8fafc 0%, #ffffff 100%); padding: 16px 28px; border-radius: 8px; border-left: 8px solid #2563eb; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+          <div style="font-size: 25px !important; font-weight: 800 !important; color: #0f172a; margin: 0; letter-spacing: 2px !important; text-transform: uppercase; line-height: 1.2;">
+              <?= $mode==='edit' ? '📋SİPARİŞ DÜZENLE' : '📋YENİ SİPARİŞ' ?>
+          </div>
+      </div>
 
-  <?php if ($mode==='edit' && !empty($order['id'])): ?>
-    <div class="row" style="justify-content:flex-end; gap:8px; margin-bottom:8px">
-      <a class="btn" href="order_view.php?id=<?= (int)$order['id'] ?>">Görüntüle</a>
-      <?php if ($__is_admin_like): ?>
-      <a class="btn primary" href="order_pdf.php?id=<?= (int)$order['id'] ?>">STF</a>
+      <?php if ($mode==='edit' && !empty($order['id'])): ?>
+        <div class="row" style="gap:8px; align-items: center;">
+          <a class="btn" href="order_view.php?id=<?= (int)$order['id'] ?>">Görüntüle</a>
+          <?php if ($__is_admin_like): ?>
+          <a class="btn primary" href="order_pdf.php?id=<?= (int)$order['id'] ?>">STF</a>
+          <?php endif; ?>
+          <button type="button" class="btn primary" onclick="this.closest('.card').querySelector('form').requestSubmit()" style="font-weight: bold; padding: 8px 20px; font-size: 15px;">Güncelle</button>
+          <a class="btn" href="orders.php">Vazgeç</a>
+        </div>
       <?php endif; ?>
-      <button type="button" class="btn primary" onclick="this.closest('.card').querySelector('form').requestSubmit()">Güncelle</button>
-      <a class="btn" href="orders.php">Vazgeç</a>
-    </div>
-  <?php endif; ?>
+  </div>
 
   <form method="post">
     <?php csrf_input(); ?>
-    <div class="grid g4 mt" style="gap:12px">
-      <div>
-        <label>Durum</label>
-        <?php if (($order['status'] ?? '') === 'taslak_gizli'): ?>
-            <div style="padding:8px; border:1px dashed #d97706; background:#fffbeb; border-radius:6px; color:#d97706;">
-                <div style="font-weight:bold; display:flex; align-items:center; gap:6px;">
-                    🔒 Taslak (Gizli)
-                </div>
-                <div style="font-size:11px; margin-top:2px;">Yayınla diyene kadar kimse görmez.</div>
-                <input type="hidden" name="status" value="taslak_gizli">
-            </div>
-        <?php else: ?>
-            <select name="status">
+    <style>
+    /* FORM KARTLARI (CONTAINER) STİLLERİ */
+    .form-section { border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .form-section-title { font-size: 14px; font-weight: bold; margin-bottom: 12px; border-bottom: 1px dashed; padding-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    
+    /* Renk Temaları (Şeffaf / Pastel) */
+    .sec-temel { background: rgba(239, 246, 255, 0.5); border: 1px solid #bfdbfe; }
+    .sec-temel .form-section-title { color: #1d4ed8; border-color: #bfdbfe; }
+    
+    .sec-kisiler { background: rgba(245, 243, 255, 0.5); border: 1px solid #e9d5ff; }
+    .sec-kisiler .form-section-title { color: #6d28d9; border-color: #e9d5ff; }
+    
+    .sec-finans { background: rgba(236, 253, 245, 0.5); border: 1px solid #a7f3d0; }
+    .sec-finans .form-section-title { color: #047857; border-color: #a7f3d0; }
+    
+    .sec-tarih { background: rgba(255, 251, 235, 0.5); border: 1px solid #fde68a; }
+    .sec-tarih .form-section-title { color: #b45309; border-color: #fde68a; }
+
+    /* Izgara (Grid) Ayarları */
+    .g-auto { display: grid; gap: 12px; }
+    @media (min-width: 768px) {
+        .g-temel { grid-template-columns: repeat(4, 1fr); }
+        .g-kisiler { grid-template-columns: repeat(4, 1fr); }
+        .g-finans { grid-template-columns: repeat(5, 1fr); }
+        .g-tarih { grid-template-columns: repeat(6, 1fr); }
+    }
+    </style>
+
+    <div class="form-section sec-temel mt">
+      <div class="form-section-title">📌 Temel Bilgiler</div>
+      <div class="g-auto g-temel">
+        
+        <div>
+          <label>Durum</label>
+          <?php if (($order['status'] ?? '') === 'taslak_gizli'): ?>
+              <div style="padding:8px; border:1px dashed #d97706; background:#fffbeb; border-radius:6px; color:#d97706;">
+                  <div style="font-weight:bold; display:flex; align-items:center; gap:6px;">🔒 Taslak (Gizli)</div>
+                  <div style="font-size:11px; margin-top:2px;">Yayınla diyene kadar kimse görmez.</div>
+                  <input type="hidden" name="status" value="taslak_gizli">
+              </div>
+          <?php else: ?>
               <?php 
-              // Normal Durum Listesi
-              $status_list = [
-                  'tedarik' => 'Tedarik',
-                  'sac lazer' => 'Sac Lazer',
-                  'boru lazer' => 'Boru Lazer',
-                  'kaynak' => 'Kaynak',
-                  'boya' => 'Boya',
-                  'elektrik montaj' => 'Elektrik Montaj',
-                  'test' => 'Test',
-                  'paketleme' => 'Paketleme',
-                  'sevkiyat' => 'Sevkiyat',
-                  'teslim edildi' => 'Teslim Edildi',
-                  'fatura_edildi' => 'Fatura Edildi'
-              ];
-              
               $__curStat = $order['status'] ?? '';
+              $status_disabled = '';
+              $status_list = [
+                  'tedarik'=>'Tedarik', 'sac lazer'=>'Sac Lazer', 'boru lazer'=>'Boru Lazer',
+                  'kaynak'=>'Kaynak', 'boya'=>'Boya', 'elektrik montaj'=>'Elektrik Montaj',
+                  'test'=>'Test', 'paketleme'=>'Paketleme', 'sevkiyat'=>'Sevkiyat',
+                  'teslim edildi'=>'Teslim Edildi', 'fatura_edildi'=>'Fatura Edildi'
+              ];
+              if ($__is_admin_like) { $status_list['askiya_alindi'] = 'Askıya Alındı'; } 
+              else { if ($__curStat === 'askiya_alindi') { $status_list = ['askiya_alindi' => 'Askıya Alındı (Yetkisiz)']; $status_disabled = 'disabled'; } }
               
-              // MUHASEBE ROLÜ KISITLAMASI
-              if ($__is_muhasebe) {
-                  if ($__curStat === 'teslim edildi' || $__curStat === 'fatura_edildi') {
-                      $status_list = [
-                          'teslim edildi' => 'Teslim Edildi',
-                          'fatura_edildi' => 'Fatura Edildi'
-                      ];
+              if ($__curStat !== 'askiya_alindi') {
+                  if ($__is_muhasebe) {
+                      if ($__curStat === 'teslim edildi' || $__curStat === 'fatura_edildi') { $status_list = ['teslim edildi'=>'Teslim Edildi', 'fatura_edildi'=>'Fatura Edildi']; } 
+                      else { $status_list = [$__curStat => ($status_list[$__curStat] ?? ucfirst($__curStat))]; }
+                  } elseif ($__is_uretim) {
+                      unset($status_list['fatura_edildi']);
+                      if ($__curStat === 'fatura_edildi') { $status_list = ['fatura_edildi' => 'Fatura Edildi']; }
+                      if ($__curStat && $__curStat !== 'fatura_edildi' && !isset($status_list[$__curStat]) && $__curStat !== 'taslak_gizli') { $status_list[$__curStat] = ucfirst($__curStat); }
                   } else {
-                      $status_list = [
-                          $__curStat => ($status_list[$__curStat] ?? ucfirst($__curStat))
-                      ];
-                  }
-              } elseif ($__is_uretim) {
-                  // ÜRETİM ROLÜ: fatura_edildi listede hiç görünmez
-                  unset($status_list['fatura_edildi']);
-                  // Sipariş zaten fatura_edildi ise sadece onu göster (salt okunur gibi)
-                  if ($__curStat === 'fatura_edildi') {
-                      $status_list = ['fatura_edildi' => 'Fatura Edildi'];
-                  }
-                  // Listede olmayan başka bir mevcut durumu ekle
-                  if ($__curStat && $__curStat !== 'fatura_edildi' && !isset($status_list[$__curStat]) && $__curStat !== 'taslak_gizli') {
-                      $status_list[$__curStat] = ucfirst($__curStat);
-                  }
-              } else {
-                  // Diğer roller için eksik durumu tamamlama
-                  if ($__curStat && !isset($status_list[$__curStat]) && $__curStat !== 'taslak_gizli') {
-                      $status_list[$__curStat] = ucfirst($__curStat);
+                      if ($__curStat && !isset($status_list[$__curStat]) && $__curStat !== 'taslak_gizli') { $status_list[$__curStat] = ucfirst($__curStat); }
                   }
               }
-
-              foreach($status_list as $k=>$v): ?>
-                <option value="<?= h($k) ?>" <?= ($order['status']??'')===$k?'selected':'' ?>><?= h($v) ?></option>
-              <?php endforeach; ?>
-            </select>
-        <?php endif; ?>
-      </div>
-      <div><label>Sipariş Kodu</label><input name="order_code" value="<?= h($order['order_code'] ?? '') ?>"></div>
-      <div>
+              ?>
+              <select name="status" <?= $status_disabled ?>>
+                <?php foreach($status_list as $k=>$v): ?><option value="<?= h($k) ?>" <?= $__curStat===$k?'selected':'' ?>><?= h($v) ?></option><?php endforeach; ?>
+              </select>
+              <?php if ($status_disabled): ?><input type="hidden" name="status" value="<?= h($__curStat) ?>"><?php endif; ?>
+          <?php endif; ?>
+        </div>
         
-<label>Müşteri</label>
-<?php if ($mode==='new'): ?>
-  <select name="customer_id" required>
-    <option value="">– Seç –</option>
-    <?php foreach ($customers as $c): ?>
-      <option value="<?= (int)$c['id'] ?>"><?= h($c['name']) ?></option>
-    <?php endforeach; ?>
-  </select>
-<?php else: // edit ?>
-  <?php
-    $__custName = '';
-    $__custId = (int)($order['customer_id'] ?? 0);
-    if ($__custId) { foreach ($customers as $c) { if ((int)$c['id'] === $__custId) { $__custName = $c['name']; break; } } }
-  ?>
-  <div class="muted" style="padding:8px 10px; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa;">
-    <?= h($__custName ?: '—') ?>
+        <div><label>Sipariş Kodu</label><input name="order_code" value="<?= h($order['order_code'] ?? '') ?>"></div>
+        <div><label>Proje Adı</label><input name="proje_adi" value="<?= h($order['proje_adi'] ?? '') ?>"></div>
+        
+        <div style="grid-row: span 2; display: flex; flex-direction: column;">
+          <label>Müşteri</label>
+          <?php if ($mode==='new'): ?>
+            <select name="customer_id" required>
+              <option value="">– Seç –</option>
+              <?php foreach ($customers as $c): ?><option value="<?= (int)$c['id'] ?>"><?= h($c['name']) ?></option><?php endforeach; ?>
+            </select>
+          <?php else: ?>
+            <?php $__custName = ''; $__custId = (int)($order['customer_id'] ?? 0);
+              if ($__custId) { foreach ($customers as $c) { if ((int)$c['id'] === $__custId) { $__custName = $c['name']; break; } } } ?>
+            <div class="muted" style="padding:8px 10px; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; flex:1;"><?= h($__custName ?: '—') ?></div>
+            <input type="hidden" name="customer_id" value="<?= (int)$__custId ?>">
+            <div style="margin-top:auto; padding-top:6px;">
+              <label style="font-size:12px;color:#6b7280">Değiştir:</label>
+              <select name="customer_id_override">
+                <option value="">—</option>
+                <?php foreach ($customers as $c): ?><option value="<?= (int)$c['id'] ?>"><?= h($c['name']) ?></option><?php endforeach; ?>
+              </select>
+            </div>
+          <?php endif; ?>
+        </div>
+
+        <div style="position: relative; display: flex; flex-direction: column;">
+    <label>Revizyon No</label>
+    <input name="revizyon_no" id="rev_input" value="<?= h(($order['revizyon_no'] ?? '') === '' ? '00' : $order['revizyon_no']) ?>">
+    
+    <div id="rev_warning_bubble" style="display: none; position: absolute; top: 70px; left: 0px; background: #eff6ff; border: 2px solid #3b82f6; color: #1e3a8a; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: bold; box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5); z-index: 9999; white-space: nowrap;">
+        <div style="position: absolute; top: -12px; left: 20px; width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 10px solid #3b82f6;"></div>
+        <div style="position: absolute; top: -8px; left: 20px; width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 10px solid #eff6ff;"></div>
+        ⚠️ Lütfen revize edilenleri <b>"Notlar"</b> kısmında belirtiniz!
+    </div>
+</div>
+        <div><label>Nakliye Türü</label><input name="nakliye_turu" value="<?= h($order['nakliye_turu'] ?? '') ?>"></div>
+        
+      </div>
+    </div>
+
+    <div class="form-section sec-kisiler">
+  <div class="form-section-title">👤 İlgili Kişiler & Roller</div>
+  <div class="g-auto g-kisiler">
+    <div>
+      <label>Sipariş Veren</label>
+      <input name="siparis_veren" value="<?= h($order['siparis_veren'] ?? '') ?>">
+    </div>
+    
+    <div>
+      <label>Satış Temsilcisi</label>
+      <select name="siparisi_alan">
+        <option value="">— Seçiniz —</option>
+        <?php 
+        $temsilciler = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞAHİN', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
+        $current_alan = $order['siparisi_alan'] ?? '';
+        foreach($temsilciler as $t): ?>
+          <option value="<?= h($t) ?>" <?= $current_alan === $t ? 'selected' : '' ?>><?= h($t) ?></option>
+        <?php endforeach; 
+        if ($current_alan && !in_array($current_alan, $temsilciler)): ?>
+          <option value="<?= h($current_alan) ?>" selected><?= h($current_alan) ?> (Diğer)</option>
+        <?php endif; ?>
+      </select>
+    </div>
+
+    <div>
+      <label>Siparişi Giren</label>
+      <select name="siparisi_giren">
+        <option value="">— Seçiniz —</option>
+        <?php 
+        $girenler = ['ALİ ALTUNAY', 'DİLARA DUYAR'];
+        $current_giren = $order['siparisi_giren'] ?? '';
+        foreach($girenler as $g): ?>
+          <option value="<?= h($g) ?>" <?= $current_giren === $g ? 'selected' : '' ?>><?= h($g) ?></option>
+        <?php endforeach; 
+        // Eğer veritabanında Ali veya Dilara dışında biri kayıtlıysa onu koru
+        if ($current_giren && !in_array($current_giren, $girenler)): ?>
+          <option value="<?= h($current_giren) ?>" selected><?= h($current_giren) ?> (Diğer)</option>
+        <?php endif; ?>
+      </select>
+    </div>
   </div>
-  <input type="hidden" name="customer_id" value="<?= (int)$__custId ?>">
-  <div style="margin-top:6px">
-    <label style="font-size:12px;color:#6b7280">Değiştir:</label>
-    <select name="customer_id_override">
-      <option value="">—</option>
-      <?php foreach ($customers as $c): ?>
-        <option value="<?= (int)$c['id'] ?>"><?= h($c['name']) ?></option>
-      <?php endforeach; ?>
-    </select>
-    <small class="muted">Yeni müşteri seçerseniz kaydettiğinizde müşteri güncellenir.</small>
-  </div>
-<?php endif; ?>
-      </div>
-      <div><label>Sipariş Tarihi</label><input type="date" name="siparis_tarihi" value="<?= h( ($order['siparis_tarihi'] ?? '') ?: date('Y-m-d') ) ?>"></div>
-    </div>
+</div>
 
-    <div class="grid g4 mt" style="gap:12px">
-      <div><label>Proje Adı</label><input name="proje_adi" value="<?= h($order['proje_adi'] ?? '') ?>"></div>
-      <div><label>Revizyon No</label><input name="revizyon_no" value="<?= h($order['revizyon_no'] ?? '') ?>"></div>
-      <div>
-        <label>Kalem Para Birimi</label>
-        <select name="kalem_para_birimi">
-          <?php $val = $order['kalem_para_birimi'] ?? $order['fatura_para_birimi'] ?? 'TL'; ?>
-          <option value="TL"  <?= $val==='TL'  ?'selected':'' ?>>TL</option>
-          <option value="EUR" <?= $val==='EUR' ?'selected':'' ?>>Euro</option>
-          <option value="USD" <?= $val==='USD' ?'selected':'' ?>>USD</option>
-        </select>
-      </div>
-      <div></div> </div>
-
-    <div class="grid g4 mt" style="gap:12px">
-      <div>
-        <label>Fatura Para Birimi</label>
-        <select name="fatura_para_birimi">
-          <?php $val2f = $order['fatura_para_birimi'] ?? 'TL'; ?>
-          <option value="TL"  <?= $val2f==='TL'  ?'selected':'' ?>>TL</option>
-          <option value="EUR" <?= $val2f==='EUR' ?'selected':'' ?>>Euro</option>
-          <option value="USD" <?= $val2f==='USD' ?'selected':'' ?>>USD</option>
-        </select>
-      </div>
-      <div>
-        <label>Ödeme Para Birimi</label>
-        <select name="odeme_para_birimi">
-          <?php $val2 = $order['odeme_para_birimi'] ?? ''; ?>
-          <option value="TL"  <?= $val2==='TL'  ?'selected':'' ?>>TL</option>
-          <option value="EUR" <?= $val2==='EUR' ?'selected':'' ?>>Euro</option>
-          <option value="USD" <?= $val2==='USD' ?'selected':'' ?>>USD</option>
-        </select>
+    <div class="form-section sec-finans">
+      <div class="form-section-title">💰 Finansal Bilgiler</div>
+      <div class="g-auto g-finans">
+        <div>
+          <label>Kalem Para Birimi</label>
+          <select name="kalem_para_birimi">
+            <?php $val = $order['kalem_para_birimi'] ?? $order['fatura_para_birimi'] ?? 'TL'; ?>
+            <option value="TL"  <?= $val==='TL'  ?'selected':'' ?>>TL</option>
+            <option value="EUR" <?= $val==='EUR' ?'selected':'' ?>>Euro</option>
+            <option value="USD" <?= $val==='USD' ?'selected':'' ?>>USD</option>
+          </select>
+        </div>
+        <div>
+          <label>Fatura Para Birimi</label>
+          <select name="fatura_para_birimi">
+            <?php $val2f = $order['fatura_para_birimi'] ?? 'TL'; ?>
+            <option value="TL"  <?= $val2f==='TL'  ?'selected':'' ?>>TL</option>
+            <option value="EUR" <?= $val2f==='EUR' ?'selected':'' ?>>Euro</option>
+            <option value="USD" <?= $val2f==='USD' ?'selected':'' ?>>USD</option>
+          </select>
+        </div>
+        <div>
+          <label>Ödeme Para Birimi</label>
+          <select name="odeme_para_birimi">
+            <?php $val2 = $order['odeme_para_birimi'] ?? ''; ?>
+            <option value="TL"  <?= $val2==='TL'  ?'selected':'' ?>>TL</option>
+            <option value="EUR" <?= $val2==='EUR' ?'selected':'' ?>>Euro</option>
+            <option value="USD" <?= $val2==='USD' ?'selected':'' ?>>USD</option>
+          </select>
+        </div>
+        <div><label>Ödeme Koşulu</label><input name="odeme_kosulu" value="<?= h($order['odeme_kosulu'] ?? '') ?>" placeholder="Peşin, vadeli vb."></div>
+        <div>
+          <label>KDV Oranı</label>
+          <?php $secili_kdv = isset($order['kdv_orani']) ? (int)$order['kdv_orani'] : 20; ?>
+          <select name="kdv_orani">
+            <option value="20" <?= $secili_kdv === 20 ? 'selected' : '' ?>>%20</option>
+            <option value="10" <?= $secili_kdv === 10 ? 'selected' : '' ?>>%10</option>
+            <option value="1" <?= $secili_kdv === 1 ? 'selected' : '' ?>>%1</option>
+            <option value="0" <?= $secili_kdv === 0 ? 'selected' : '' ?>>%0</option>
+          </select>
+        </div>
       </div>
     </div>
 
-    <div class="grid g4 mt" style="gap:12px">
-      <div><label>Sipariş Veren</label><input name="siparis_veren" value="<?= h($order['siparis_veren'] ?? '') ?>"></div>
-      <div><label>Siparişi Alan</label><input name="siparisi_alan" value="<?= h($order['siparisi_alan'] ?? '') ?>"></div>
-      <div><label>Siparişi Giren</label><input name="siparisi_giren" value="<?= h($order['siparisi_giren'] ?? '') ?>"></div>
-      <div><label>Ödeme Koşulu</label><input name="odeme_kosulu" value="<?= h($order['odeme_kosulu'] ?? '') ?>"></div>
-    </div>
-
-    <div class="grid g4 mt" style="gap:12px">
-      <div><label>Termin Tarihi</label><input type="date" name="termin_tarihi" value="<?= h($order['termin_tarihi'] ?? '') ?>"></div>
-      <div><label>Başlangıç Tarihi</label><input type="date" name="baslangic_tarihi" value="<?= h($order['baslangic_tarihi'] ?? '') ?>"></div>
-      <div><label>Bitiş Tarihi</label><input type="date" name="bitis_tarihi" value="<?= h($order['bitis_tarihi'] ?? '') ?>"></div>
-      <div><label>Teslim Tarihi</label><input type="date" name="teslim_tarihi" value="<?= h($order['teslim_tarihi'] ?? '') ?>"></div>
-      
-      <div id="fatura_tarihi_container" style="display:none;">
-        <label style="color: #7e22ce; font-weight:bold;">Fatura Tarihi</label>
-        <input type="date" name="fatura_tarihi" value="<?= h($order['fatura_tarihi'] ?? '') ?>" style="border-color: #a855f7; background-color: #faf5ff;">
+    <div class="form-section sec-tarih">
+      <div class="form-section-title">📅 Tarihler</div>
+      <div class="g-auto g-tarih">
+        <div><label>Sipariş Tarihi</label><input type="date" name="siparis_tarihi" value="<?= h( ($order['siparis_tarihi'] ?? '') ?: date('Y-m-d') ) ?>"></div>
+        <div><label>Termin Tarihi</label><input type="date" name="termin_tarihi" value="<?= h($order['termin_tarihi'] ?? '') ?>"></div>
+        <div><label>Başlangıç Tarihi</label><input type="date" name="baslangic_tarihi" value="<?= h($order['baslangic_tarihi'] ?? '') ?>"></div>
+        <div><label>Bitiş Tarihi</label><input type="date" name="bitis_tarihi" value="<?= h($order['bitis_tarihi'] ?? '') ?>"></div>
+        <div><label>Teslim Tarihi</label><input type="date" name="teslim_tarihi" value="<?= h($order['teslim_tarihi'] ?? '') ?>"></div>
+        <div id="fatura_tarihi_container" style="display:none;">
+          <label style="color: #7e22ce; font-weight:bold;">Fatura Tarihi</label>
+          <input type="date" name="fatura_tarihi" value="<?= h($order['fatura_tarihi'] ?? '') ?>" style="border-color: #a855f7; background-color: #faf5ff;">
+        </div>
       </div>
     </div>
 
@@ -219,36 +284,18 @@ input[name^="price["] {
         function toggleFaturaTarihi() {
             if (statusSelect.value === 'fatura_edildi') {
                 faturaContainer.style.display = 'block';
-                // Eğer tarih tamamen boşsa, bugünü otomatik yaz (eski siparişlere dokunmaz, çünkü yeni fatura kesiliyor)
                 if (!faturaInput.value) {
                     faturaInput.value = new Date().toISOString().split('T')[0];
                 }
             } else {
                 faturaContainer.style.display = 'none';
-                // Başka bir duruma dönülürse tarihi silmiyoruz ki veri kaybı olmasın, sadece gizliyoruz.
             }
         }
 
         statusSelect.addEventListener('change', toggleFaturaTarihi);
-        toggleFaturaTarihi(); // Sayfa yüklendiğinde durumu kontrol et
+        toggleFaturaTarihi(); 
     });
     </script>
-
-    <div class="grid g4 mt" style="gap:12px">
-      <div><label>Nakliye Türü</label><input name="nakliye_turu" value="<?= h($order['nakliye_turu'] ?? '') ?>"></div>
-      <div>
-        <label>KDV Oranı</label>
-        <?php $secili_kdv = isset($order['kdv_orani']) ? (int)$order['kdv_orani'] : 20; ?>
-        <select name="kdv_orani">
-          <option value="20" <?= $secili_kdv === 20 ? 'selected' : '' ?>>%20</option>
-          <option value="10" <?= $secili_kdv === 10 ? 'selected' : '' ?>>%10</option>
-          <option value="1" <?= $secili_kdv === 1 ? 'selected' : '' ?>>%1</option>
-          <option value="0" <?= $secili_kdv === 0 ? 'selected' : '' ?>>%0</option>
-        </select>
-      </div>
-      <div></div>
-      <div></div>
-    </div>
 
     <h3 class="mt">Kalemler</h3>
     <div id="items">
@@ -267,9 +314,9 @@ input[name^="price["] {
           <th>Ad</th>
           <th style="width:8%">Birim</th>
           <th style="width:8%">Miktar</th>
-          <?php if ($__is_admin_like || $__is_muhasebe): ?><th style="width:90px">Birim Fiyat</th><?php endif; ?>
-          <th>Ürün Özeti</th>
-          <th style="width:12%">Kullanım Alanı</th>
+          <?php if ($__is_admin_like || $__is_muhasebe): ?><th style="width:120px">Birim Fiyat</th><?php endif; ?>
+          <th style="width:7%">Ürün Özeti</th>
+          <th style="width:7%">Kullanım Alanı</th>
           <?php if ($__is_admin_like): ?><th class="right" style="width:8%">Sil</th><?php endif; ?>
         </tr>
         </thead>
@@ -2147,3 +2194,28 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <?php endif; ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Revizyon No Balon Sistemi
+    var revInput = document.getElementById('rev_input');
+    var revBubble = document.getElementById('rev_warning_bubble');
+    
+    if (revInput && revBubble) {
+        var hasWarned = false; 
+
+        revInput.addEventListener('input', function() {
+            // Eğer uyarı verilmediyse ve 00 değiştirildiyse
+            if (!hasWarned) {
+                revBubble.style.display = 'block';
+                
+                // 4 saniye ekranda tut ve kibarca kaybet
+                setTimeout(function() {
+                    revBubble.style.display = 'none';
+                }, 4000);
+                
+                hasWarned = true; // Sayfa yenilenene kadar bir daha çıkarma
+            }
+        });
+    }
+});
+</script>
