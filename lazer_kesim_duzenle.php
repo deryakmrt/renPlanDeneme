@@ -335,6 +335,7 @@ function safe_date($d) { return ($d && $d !== '0000-00-00') ? $d : ''; }
                         <option value="2">2 mm</option>
                         <option value="2.5">2.5 mm</option>
                         <option value="3">3 mm</option>
+                        <option value="10">10 mm</option>
                     </select>
                 </div>
                 <div>
