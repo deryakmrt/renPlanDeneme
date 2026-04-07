@@ -53,6 +53,7 @@ if (!$captcha_ok) {
         } else {
             $_SESSION['uid']   = (int)$user['id'];
             $_SESSION['uname'] = $user['username'];
+            $_SESSION['ulinked_customer'] = $user['linked_customer'] ?? '';
             audit_log_action('login', 'auth', null, null, null, ['result'=>'success']);
             redirect('index.php');
         }

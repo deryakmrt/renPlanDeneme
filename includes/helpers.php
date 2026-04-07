@@ -96,7 +96,12 @@ function role_label($role){
 // Auth
 function current_user(){
     if(!empty($_SESSION['uid'])) {
-        return ['id'=>$_SESSION['uid'], 'username'=>$_SESSION['uname'] ?? '', 'role'=>($_SESSION['urole'] ?? 'musteri')];
+        return [
+            'id'=>$_SESSION['uid'], 
+            'username'=>$_SESSION['uname'] ?? '', 
+            'role'=>($_SESSION['urole'] ?? 'musteri'),
+            'linked_customer'=>$_SESSION['ulinked_customer'] ?? ''
+        ];
     }
     return null;
 }
@@ -246,4 +251,19 @@ function flash() {
         unset($_SESSION['flash_error']);
     }
 }
+
+// --- 🔒 MÜŞTERİ GÜVENLİK DUVARI ---
+if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['uid'])) {
+    $cu_role = $_SESSION['urole'] ?? '';
+    if ($cu_role === 'musteri') {
+        // Müşterinin URL'den girebileceği izinli sayfalar:
+        $allowed_pages = ['index.php', 'orders.php', 'order_view.php', 'logout.php', 'login.php', 'order_edit.php', 'order_pdf.php'];
+        $current_file = basename($_SERVER['SCRIPT_NAME']);
+        
+        if (!in_array($current_file, $allowed_pages)) {
+            die('<div style="padding:50px; text-align:center; font-family:sans-serif;"><h3>⛔ Yetkisiz Erişim</h3><p>Bu sayfayı görüntüleme yetkiniz yok.</p><a href="index.php" style="color:#ea580c; text-decoration:none; font-weight:bold;">⬅ Ana Sayfaya Dön</a></div>');
+        }
+    }
+}
+// ----------------------------------
 ?>
