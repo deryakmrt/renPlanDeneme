@@ -46,10 +46,16 @@ if (!$captcha_ok) {
     $user = $stmt->fetch();
 
     if ($user && password_verify($pw, $user['password_hash'])) {
-        $_SESSION['uid']   = (int)$user['id'];
-        $_SESSION['uname'] = $user['username'];
-        audit_log_action('login', 'auth', null, null, null, ['result'=>'success']);
-  redirect('index.php');
+        // --- 🚫 ASKIYA ALINMIŞ KULLANICI KONTROLÜ ---
+        if (isset($user['is_active']) && (int)$user['is_active'] === 0) {
+            $error = '⛔ Hesabınız sistem yöneticisi tarafından askıya alınmıştır.';
+            audit_log_action('login_failed', 'auth', null, null, null, ['reason'=>'account_suspended', 'username'=>$u]);
+        } else {
+            $_SESSION['uid']   = (int)$user['id'];
+            $_SESSION['uname'] = $user['username'];
+            audit_log_action('login', 'auth', null, null, null, ['result'=>'success']);
+            redirect('index.php');
+        }
     } else {
         $error = 'Hatalı kullanıcı adı veya şifre';
     }
