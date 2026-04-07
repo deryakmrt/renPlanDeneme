@@ -12,6 +12,7 @@ require_once __DIR__ . '/helpers.php';
   <base href="https://renplan.ditetra.com/">
   <link rel="stylesheet" href="/assets/burak_ui.css">
   <link rel="stylesheet" href="/assets/burak_ui_hamburger2.css?v=3">
+  <link rel="stylesheet" href="/assets/core.css?v=1.0.1">
   <script src="/assets/js/dropdown_fix.js"></script>
   <style>
     /* Workpilot: Ürünler dropdown min-css */
