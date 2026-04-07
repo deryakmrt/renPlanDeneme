@@ -192,10 +192,10 @@ input[name^="price["] {
         </div>
         
         <div><label>Sipariş Kodu</label><input name="order_code" value="<?= h($order['order_code'] ?? '') ?>"></div>
-        <div><label>Proje Adı</label><input name="proje_adi" value="<?= h($order['proje_adi'] ?? '') ?>"></div>
+        <div><label>Proje Adı <span style="color:red;">*</span></label><input name="proje_adi" value="<?= h($order['proje_adi'] ?? '') ?>" required></div>
         
         <div style="grid-row: span 2; display: flex; flex-direction: column;">
-          <label>Müşteri</label>
+          <label>Müşteri <span style="color:red;">*</span></label>
           <?php if ($mode==='new'): ?>
             <select name="customer_id" required>
               <option value="">– Seç –</option>
@@ -226,7 +226,7 @@ input[name^="price["] {
         ⚠️ Lütfen revize edilenleri <b>"Notlar"</b> kısmında belirtiniz!
     </div>
 </div>
-        <div><label>Nakliye Türü</label><input name="nakliye_turu" value="<?= h($order['nakliye_turu'] ?? '') ?>"></div>
+        <div><label>Nakliye Türü</label><input name="nakliye_turu" value="<?= h($order['nakliye_turu'] ?? 'DEPO TESLİM') ?>"></div>
         
       </div>
     </div>
@@ -235,13 +235,13 @@ input[name^="price["] {
   <div class="form-section-title">👤 İlgili Kişiler & Roller</div>
   <div class="g-auto g-kisiler">
     <div>
-      <label>Sipariş Veren</label>
-      <input name="siparis_veren" value="<?= h($order['siparis_veren'] ?? '') ?>">
+      <label>Sipariş Veren <span style="color:red;">*</span></label>
+      <input name="siparis_veren" value="<?= h($order['siparis_veren'] ?? '') ?>" required>
     </div>
     
     <div>
-      <label>Satış Temsilcisi</label>
-      <select name="siparisi_alan">
+      <label>Satış Temsilcisi <span style="color:red;">*</span></label>
+      <select name="siparisi_alan" required>
         <option value="">— Seçiniz —</option>
         <?php 
         $temsilciler = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞAHİN', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
@@ -256,8 +256,8 @@ input[name^="price["] {
     </div>
 
     <div>
-      <label>Siparişi Giren</label>
-      <select name="siparisi_giren">
+      <label>Siparişi Giren <span style="color:red;">*</span></label>
+      <select name="siparisi_giren" required>
         <option value="">— Seçiniz —</option>
         <?php 
         $girenler = ['ALİ ALTUNAY', 'DİLARA DUYAR'];
@@ -278,8 +278,8 @@ input[name^="price["] {
       <div class="form-section-title">💰 Finansal Bilgiler</div>
       <div class="g-auto g-finans">
         <div>
-          <label>Kalem Para Birimi</label>
-          <select name="kalem_para_birimi">
+          <label>Kalem Para Birimi <span style="color:red;">*</span></label>
+          <select name="kalem_para_birimi" required>
             <?php $val = $order['kalem_para_birimi'] ?? $order['fatura_para_birimi'] ?? 'TL'; ?>
             <option value="TL"  <?= $val==='TL'  ?'selected':'' ?>>TL</option>
             <option value="EUR" <?= $val==='EUR' ?'selected':'' ?>>Euro</option>
@@ -287,8 +287,8 @@ input[name^="price["] {
           </select>
         </div>
         <div>
-          <label>Fatura Para Birimi</label>
-          <select name="fatura_para_birimi">
+          <label>Fatura Para Birimi <span style="color:red;">*</span></label>
+          <select name="fatura_para_birimi" required>
             <?php $val2f = $order['fatura_para_birimi'] ?? 'TL'; ?>
             <option value="TL"  <?= $val2f==='TL'  ?'selected':'' ?>>TL</option>
             <option value="EUR" <?= $val2f==='EUR' ?'selected':'' ?>>Euro</option>
@@ -296,19 +296,19 @@ input[name^="price["] {
           </select>
         </div>
         <div>
-          <label>Ödeme Para Birimi</label>
-          <select name="odeme_para_birimi">
+          <label>Ödeme Para Birimi <span style="color:red;">*</span></label>
+          <select name="odeme_para_birimi" required>
             <?php $val2 = $order['odeme_para_birimi'] ?? ''; ?>
             <option value="TL"  <?= $val2==='TL'  ?'selected':'' ?>>TL</option>
             <option value="EUR" <?= $val2==='EUR' ?'selected':'' ?>>Euro</option>
             <option value="USD" <?= $val2==='USD' ?'selected':'' ?>>USD</option>
           </select>
         </div>
-        <div><label>Ödeme Koşulu</label><input name="odeme_kosulu" value="<?= h($order['odeme_kosulu'] ?? '') ?>" placeholder="Peşin, vadeli vb."></div>
+        <div><label>Ödeme Koşulu <span style="color:red;">*</span></label><input name="odeme_kosulu" value="<?= h($order['odeme_kosulu'] ?? '') ?>" placeholder="Peşin, vadeli vb." required></div>
         <div>
-          <label>KDV Oranı</label>
+          <label>KDV Oranı <span style="color:red;">*</span></label>
           <?php $secili_kdv = isset($order['kdv_orani']) ? (int)$order['kdv_orani'] : 20; ?>
-          <select name="kdv_orani">
+          <select name="kdv_orani" required>
             <option value="20" <?= $secili_kdv === 20 ? 'selected' : '' ?>>%20</option>
             <option value="10" <?= $secili_kdv === 10 ? 'selected' : '' ?>>%10</option>
             <option value="1" <?= $secili_kdv === 1 ? 'selected' : '' ?>>%1</option>
