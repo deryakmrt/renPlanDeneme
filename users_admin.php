@@ -28,7 +28,11 @@ if (!function_exists('go')) {
 }
 
 // ---- DB ----
-try { $db = pdo(); }
+try { 
+    $db = pdo(); 
+    // OTOMATİK KURULUM: users tablosuna is_active kolonu ekle (Zaten varsa hata vermez, yoksayar)
+    try { $db->exec("ALTER TABLE users ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1"); } catch(Throwable $e){}
+}
 catch (Throwable $e) {
   echo "<pre style='background:#2b2b2b;color:#ffd479;padding:10px;border-radius:6px'>DB ERROR: "
      . htmlspecialchars($e->getMessage()) . "</pre>";
@@ -59,6 +63,13 @@ function fetch_roles(PDO $db): array {
     return ['admin','sistem_yoneticisi','musteri','plasiyer','uretim','muhasebe'];
   }
 }
+// Müşteriler tablosundan isimleri çeken fonksiyon
+function fetch_customers(PDO $db): array {
+  try {
+    $rs = $db->query("SELECT DISTINCT name FROM customers WHERE name IS NOT NULL AND name<>'' ORDER BY name");
+    return $rs ? $rs->fetchAll(PDO::FETCH_COLUMN) : [];
+  } catch (Throwable $e) { return []; }
+}
 
 $action = $_GET['a'] ?? 'list';
 $id     = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -67,59 +78,102 @@ $id     = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($action==='new') {
   $u = ['username'=>'','email'=>'','role'=>''];
   $roles = fetch_roles($db);
+  $customers = fetch_customers($db);
   include __DIR__ . '/includes/header.php'; ?>
-  <div class="container py-4" style="max-width:900px;">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h3 class="m-0">Yeni Kullanıcı</h3>
-      <a class="btn btn-sm btn-outline-secondary" href="users_admin.php?a=list">Listeye Dön</a>
+
+  <div class="admin-container">
+    
+    <div class="form-header-panel">
+        <div class="page-title-box">
+            <h1 class="page-title-text">➕ YENİ KULLANICI</h1>
+        </div>
+        
+        <a class="btn-cancel" href="users_admin.php?a=list">
+            <span style="margin-right: 6px; font-size: 16px;">⬅</span> Listeye Dön
+        </a>
     </div>
+
     <?php if (function_exists('flash')) { flash(); } ?>
-    <form method="post" action="users_admin.php?a=create" class="vstack gap-3">
-      <div class="row g-3">
-        <div class="col-md-4">
-          <label class="form-label">Kullanıcı Adı</label>
-          <input type="text" name="username" class="form-control" required>
+
+    <div class="form-card">
+      <form method="post" action="users_admin.php?a=create">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <label class="custom-form-label">Kullanıcı Adı</label>
+            <input type="text" name="username" class="custom-input" required placeholder="Örn: ahmet.yilmaz">
+          </div>
+          <div class="col-md-6">
+            <label class="custom-form-label">E-posta</label>
+            <input type="email" name="email" class="custom-input" placeholder="ahmet@firma.com (Opsiyonel)">
+          </div>
+          <div class="col-md-12">
+            <label class="custom-form-label">Sistem Rolü (Yetkisi)</label>
+            <select name="role" class="custom-input" style="cursor: pointer;">
+              <?php foreach ($roles as $opt): ?>
+                <option value="<?= h($opt) ?>"><?= mb_strtoupper(h($opt), 'UTF-8') ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          
+          <div class="col-md-12" id="customer_select_wrapper" style="display: none;">
+            <label class="custom-form-label">Bağlı Olduğu Müşteri <span style="color:red">*</span></label>
+            <select name="linked_customer" id="linked_customer_select" class="custom-input">
+              <option value="">--- Müşteri Seçiniz ---</option>
+              <?php foreach ($customers as $c): ?>
+                <option value="<?= h($c) ?>" <?= (isset($u['linked_customer']) && $u['linked_customer'] == $c) ? 'selected' : '' ?>>
+                  <?= h($c) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="custom-form-label">Geçici Şifre</label>
+            <input type="password" name="password" class="custom-input" required placeholder="******">
+          </div>
+          <div class="col-md-6">
+            <label class="custom-form-label">Şifre Tekrar</label>
+            <input type="password" name="password2" class="custom-input" required placeholder="******">
+          </div>
         </div>
-        <div class="col-md-4">
-          <label class="form-label">E-posta</label>
-          <input type="email" name="email" class="form-control" placeholder="opsiyonel">
+
+        <div class="form-actions">
+          <button class="btn-save" type="submit">💾 Kullanıcıyı Kaydet</button>
         </div>
-        <div class="col-md-4">
-          <label class="form-label">Rol</label>
-          <select name="role" class="form-select">
-            <?php foreach ($roles as $opt): ?>
-              <option value="<?= h($opt) ?>"><?= h($opt) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-      </div>
-      <div class="row g-3">
-        <div class="col-md-4">
-          <label class="form-label">Şifre</label>
-          <input type="password" name="password" class="form-control" required>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Şifre (Tekrar)</label>
-          <input type="password" name="password2" class="form-control" required>
-        </div>
-      </div>
-      <div class="d-flex gap-2">
-        <button class="btn btn-success" type="submit">Kaydet</button>
-        <a class="btn btn-outline-secondary" href="users_admin.php?a=list">İptal</a>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+      const roleSelect = document.querySelector('select[name="role"]');
+      const customerWrapper = document.getElementById('customer_select_wrapper');
+      const customerSelect = document.getElementById('linked_customer_select');
+
+      function toggleCustomerField() {
+          if (roleSelect.value === 'musteri') {
+              customerWrapper.style.display = 'block';
+              customerSelect.setAttribute('required', 'required');
+          } else {
+              customerWrapper.style.display = 'none';
+              customerSelect.removeAttribute('required');
+              customerSelect.value = '';
+          }
+      }
+      roleSelect.addEventListener('change', toggleCustomerField);
+      toggleCustomerField();
+  });
+  </script>
 <?php
   ob_end_flush();
   exit;
 }
 
-// ---------------- DELETE ----------------
 // ---------------- CREATE (INSERT) ----------------
 if ($_SERVER['REQUEST_METHOD']==='POST' && $action==='create') {
   $username = trim((string)($_POST['username'] ?? ''));
   $email    = trim((string)($_POST['email'] ?? ''));
   $role     = trim((string)($_POST['role'] ?? ''));
+  $linked_customer = trim((string)($_POST['linked_customer'] ?? '')); // <--- YENİ EKLENDİ
   $pass1    = (string)($_POST['password'] ?? '');
   $pass2    = (string)($_POST['password2'] ?? '');
 
@@ -130,37 +184,46 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && $action==='create') {
     if ($pass1!==$pass2) throw new Exception('Şifreler uyuşmuyor.');
 
     $hash = password_hash($pass1, PASSWORD_BCRYPT);
-    $st = $db->prepare("INSERT INTO users (username, email, role, password_hash) VALUES (?,?,?,?)");
-    $st->execute([$username, ($email!==''?$email:null), $role, $hash]);
+    // Sorguya linked_customer eklendi:
+    $st = $db->prepare("INSERT INTO users (username, email, role, linked_customer, password_hash) VALUES (?,?,?,?,?)");
+    $st->execute([$username, ($email!==''?$email:null), $role, ($linked_customer!==''?$linked_customer:null), $hash]);
 
     $_SESSION['flash_success'] = 'Kullanıcı oluşturuldu.';
     go('users_admin.php?a=list');
   } catch (Throwable $e) {
-    echo "<pre style='background:#2b2b2b;color:#ffb4b4;padding:10px;border-radius:6px'>CREATE ERROR: "
-       . htmlspecialchars($e->getMessage()) . "</pre>";
-    $_SESSION['flash_error'] = 'Hata: '.$e->getMessage();
+    $_SESSION['flash_error'] = $e->getMessage();
     go('users_admin.php?a=new');
   }
 }
 
-if ($_SERVER['REQUEST_METHOD']==='POST' && ($action==='delete')) {
-  $del_id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+if ($_SERVER['REQUEST_METHOD']==='POST' && ($action==='delete' || $action==='toggle_active')) {
+  $target_id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
   try {
-    $st = $db->prepare("DELETE FROM users WHERE id=?");
-    $st->execute([$del_id]);
-    $_SESSION['flash_success'] = 'Kullanıcı silindi.';
+    // Kişinin şu anki durumunu bul
+    $st = $db->prepare("SELECT is_active FROM users WHERE id=?");
+    $st->execute([$target_id]);
+    $curr = $st->fetchColumn();
+    
+    if($curr !== false) {
+        $new_status = $curr ? 0 : 1; // 1 ise 0 yap, 0 ise 1 yap
+        $up = $db->prepare("UPDATE users SET is_active=? WHERE id=?");
+        $up->execute([$new_status, $target_id]);
+        
+        $_SESSION['flash_success'] = $new_status ? 'Kullanıcı başarıyla aktifleştirildi.' : 'Kullanıcı hesabı askıya alındı (Donduruldu).';
+    }
   } catch (Throwable $e) {
-    echo "<pre style='background:#2b2b2b;color:#ffb4b4;padding:10px;border-radius:6px'>DELETE ERROR: "
+    echo "<pre style='background:#2b2b2b;color:#ffb4b4;padding:10px;border-radius:6px'>TOGGLE ERROR: "
        . htmlspecialchars($e->getMessage()) . "</pre>";
   }
   go('users_admin.php?a=list');
 }
 
-// ---------------- SAVE (EDIT) ----------------
+// ---------------- SAVE (EDIT POST) ----------------
 if ($_SERVER['REQUEST_METHOD']==='POST' && $action==='edit' && $id>0) {
   $username = trim((string)($_POST['username'] ?? ''));
   $email    = trim((string)($_POST['email'] ?? ''));
   $role     = trim((string)($_POST['role'] ?? ''));
+  $linked_customer = trim((string)($_POST['linked_customer'] ?? '')); 
   $pass1    = (string)($_POST['password'] ?? '');
   $pass2    = (string)($_POST['password2'] ?? '');
 
@@ -171,76 +234,124 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && $action==='edit' && $id>0) {
     if ($pass1!=='' || $pass2!=='') {
       if ($pass1!==$pass2) throw new Exception('Şifreler uyuşmuyor.');
       $hash = password_hash($pass1, PASSWORD_BCRYPT);
-      $st = $db->prepare("UPDATE users SET username=?, email=?, role=?, password_hash=? WHERE id=?");
-      $st->execute([$username, ($email!==''?$email:null), $role, $hash, $id]);
+      $st = $db->prepare("UPDATE users SET username=?, email=?, role=?, linked_customer=?, password_hash=? WHERE id=?");
+      $st->execute([$username, ($email!==''?$email:null), $role, ($linked_customer!==''?$linked_customer:null), $hash, $id]);
     } else {
-      $st = $db->prepare("UPDATE users SET username=?, email=?, role=? WHERE id=?");
-      $st->execute([$username, ($email!==''?$email:null), $role, $id]);
+      $st = $db->prepare("UPDATE users SET username=?, email=?, role=?, linked_customer=? WHERE id=?");
+      $st->execute([$username, ($email!==''?$email:null), $role, ($linked_customer!==''?$linked_customer:null), $id]);
     }
+
     $_SESSION['flash_success'] = 'Kullanıcı güncellendi.';
     go('users_admin.php?a=edit&id='.$id);
+
   } catch (Throwable $e) {
-    echo "<pre style='background:#2b2b2b;color:#ffb4b4;padding:10px;border-radius:6px'>SAVE ERROR: "
-       . htmlspecialchars($e->getMessage()) . "</pre>";
     $_SESSION['flash_error'] = 'Hata: '.$e->getMessage();
   }
-}
+} // <--- Bu parantez en üstteki if bloğunu kapatır ve hatayı çözer!
 
-// ---------------- EDIT SCREEN ----------------
+// ---------------- EDIT SCREEN (KUSURSUZ VE DÜZELTİLMİŞ) ----------------
 if ($action==='edit' && $id>0) {
   try {
-    $st = $db->prepare("SELECT id, username, email, role FROM users WHERE id=?");
+    $st = $db->prepare("SELECT id, username, email, role, linked_customer FROM users WHERE id=?");
     $st->execute([$id]);
     $u = $st->fetch(PDO::FETCH_ASSOC);
   } catch (Throwable $e) {
-    echo "<pre style='background:#2b2b2b;color:#ffb4b4;padding:10px;border-radius:6px'>READ ERROR: "
-       . htmlspecialchars($e->getMessage()) . "</pre>";
+    echo "<pre style='background:#2b2b2b;color:#ffb4b4;padding:10px;border-radius:6px'>READ ERROR: " . htmlspecialchars($e->getMessage()) . "</pre>";
     exit;
   }
   if (!$u) { $_SESSION['flash_error'] = 'Kullanıcı bulunamadı.'; go('users_admin.php?a=list'); }
   $roles = fetch_roles($db);
+  $customers = fetch_customers($db);
 
   include __DIR__ . '/includes/header.php'; ?>
-  <div class="container py-4" style="max-width:900px;">
-    <h3>Kullanıcı Düzenle</h3>
+
+  <div class="admin-container">
+    
+    <div class="form-header-panel">
+        <div class="page-title-box">
+            <h1 class="page-title-text">✏️ KULLANICI DÜZENLE: <span style="color: #ea580c;"><?= mb_strtoupper(h($u['username']), 'UTF-8') ?></span></h1>
+        </div>
+        
+        <a class="btn-cancel" href="users_admin.php?a=list">
+            <span style="margin-right: 6px; font-size: 16px;">⬅</span> Listeye Dön
+        </a>
+    </div>
+
     <?php if (function_exists('flash')) { flash(); } ?>
-    <form method="post" action="users_admin.php?a=edit&id=<?= (int)$u['id'] ?>">
-      <div class="card"><div class="card-body">
-        <div class="mb-3">
-          <label class="form-label">Kullanıcı Adı</label>
-          <input type="text" name="username" class="form-control" required value="<?= h($u['username']) ?>">
+
+    <div class="form-card">
+      <form method="post" action="users_admin.php?a=edit&id=<?= (int)$u['id'] ?>">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <label class="custom-form-label">Kullanıcı Adı</label>
+            <input type="text" name="username" class="custom-input" required value="<?= h($u['username']) ?>">
+          </div>
+          <div class="col-md-6">
+            <label class="custom-form-label">E-posta</label>
+            <input type="email" name="email" class="custom-input" value="<?= h($u['email'] ?? '') ?>" placeholder="kullanici@firma.com">
+          </div>
+
+          <div class="col-md-12">
+            <label class="custom-form-label">Sistem Rolü (Yetkisi)</label>
+            <select name="role" id="role_select_edit" class="custom-input" style="cursor: pointer;">
+              <?php $current = (string)($u['role'] ?? '');
+              if ($current!==''): ?>
+                <option value="<?= h($current) ?>" selected><?= mb_strtoupper(h($current), 'UTF-8') ?> (Mevcut)</option>
+              <?php endif;
+              foreach ($roles as $opt) { if ($opt===$current) continue; ?>
+                <option value="<?= h($opt) ?>"><?= mb_strtoupper(h($opt), 'UTF-8') ?></option>
+              <?php } ?>
+            </select>
+          </div>
+
+          <div class="col-md-12" id="customer_select_wrapper" style="display: none;">
+            <label class="custom-form-label">Bağlı Olduğu Müşteri <span style="color:red">*</span></label>
+            <select name="linked_customer" id="linked_customer_select" class="custom-input">
+              <option value="">--- Müşteri Seçiniz ---</option>
+              <?php foreach ($customers as $c): ?>
+                <option value="<?= h($c) ?>" <?= (isset($u['linked_customer']) && $u['linked_customer'] == $c) ? 'selected' : '' ?>>
+                  <?= h($c) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label class="custom-form-label">Yeni Şifre (Değişiklik Yoksa Boş Bırakın)</label>
+            <input type="password" name="password" class="custom-input" placeholder="Gizli">
+          </div>
+          <div class="col-md-6">
+            <label class="custom-form-label">Şifre (Tekrar)</label>
+            <input type="password" name="password2" class="custom-input" placeholder="Gizli">
+          </div>
         </div>
-        <div class="mb-3">
-          <label class="form-label">Rol</label>
-          <select name="role" class="form-select">
-            <?php $current = (string)($u['role'] ?? '');
-            if ($current!==''): ?>
-              <option value="<?= h($current) ?>" selected><?= h($current) ?></option>
-            <?php endif;
-            foreach ($roles as $opt) { if ($opt===$current) continue; ?>
-              <option value="<?= h($opt) ?>"><?= h($opt) ?></option>
-            <?php } ?>
-          </select>
+
+        <div class="form-actions">
+          <button class="btn-save" type="submit">💾 Değişiklikleri Kaydet</button>
         </div>
-        <div class="mb-3">
-          <label class="form-label">E-posta</label>
-          <input type="email" name="email" class="form-control" value="<?= h($u['email'] ?? '') ?>" placeholder="kullanici@firma.com">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Şifre (opsiyonel)</label>
-          <input type="password" name="password" class="form-control" placeholder="Değiştirmek istemiyorsanız boş bırakın">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Şifre (Tekrar)</label>
-          <input type="password" name="password2" class="form-control">
-        </div>
-        <div class="d-flex gap-2">
-          <button class="btn btn-primary" type="submit">Güncelle</button>
-          <a class="btn btn-secondary" href="users_admin.php?a=list">Vazgeç</a>
-        </div>
-      </div></div>
-    </form>
+      </form>
+    </div>
   </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+      const roleSelect = document.getElementById('role_select_edit');
+      const customerWrapper = document.getElementById('customer_select_wrapper');
+      const customerSelect = document.getElementById('linked_customer_select');
+
+      function toggleCustomerField() {
+          if (roleSelect.value === 'musteri') {
+              customerWrapper.style.display = 'block';
+              customerSelect.setAttribute('required', 'required');
+          } else {
+              customerWrapper.style.display = 'none';
+              customerSelect.removeAttribute('required');
+          }
+      }
+      roleSelect.addEventListener('change', toggleCustomerField);
+      toggleCustomerField(); // Sayfa açıldığında otomatik kontrol
+  });
+  </script>
 <?php
   include __DIR__ . '/includes/footer.php';
   exit;
@@ -250,58 +361,98 @@ if ($action==='edit' && $id>0) {
 $search = trim((string)($_GET['q'] ?? ''));
 $where  = ''; $args = [];
 if ($search!=='') { $where="WHERE username LIKE ? OR email LIKE ? OR role LIKE ?"; $args=["%$search%","%$search%","%$search%"]; }
-
-$st = $db->prepare("SELECT id, username, email, role, created_at FROM users $where ORDER BY id DESC");
+// is_active sütununu da çekiyoruz
+$st = $db->prepare("SELECT id, username, email, role, created_at, is_active FROM users $where ORDER BY is_active DESC, id DESC");
 $st->execute($args);
 $rows = $st->fetchAll(PDO::FETCH_ASSOC);
 
 include __DIR__ . '/includes/header.php'; ?>
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-  <h3 class="m-0">Kullanıcılar</h3>
-  <a class="btn btn-primary btn-sm" href="users_admin.php?a=new">+ Yeni Kullanıcı</a>
-</div>
-    <form method="get" class="d-flex" action="users_admin.php">
-      <input type="hidden" name="a" value="list">
-      <input type="text" class="form-control me-2" name="q" value="<?= h($search) ?>" placeholder="Kullanıcı adı veya e-posta ara">
-      <button class="btn btn-outline-secondary">Ara</button>
-    </form>
-  </div>
+
+<div class="admin-container">
   <?php if (function_exists('flash')) { flash(); } ?>
-  <div class="table-responsive">
-    <table class="table table-striped align-middle">
-      <thead>
-        <tr>
-          <th style="width:80px;">ID</th>
-          <th>Kullanıcı Adı</th>
-          <th>E-posta</th>
-          <th>Rol</th>
-          <th style="width:200px;">İşlem</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($rows as $r): ?>
+
+  <div class="table-card">
+    
+    <div class="card-header-panel">
+        
+        <div class="header-left">
+            <div class="page-title-box">
+                <h1 class="page-title-text">👥 KULLANICI YÖNETİMİ</h1>
+            </div>
+        </div>
+        
+        <div class="header-center">
+            <form method="get" action="users_admin.php" class="search-form">
+              <input type="hidden" name="a" value="list">
+              <span style="color:#94a3b8; margin-right:8px; font-size:16px;">🔍</span>
+              <input type="text" class="search-input" name="q" value="<?= h($search ?? '') ?>" placeholder="Kullanıcı adı veya e-posta ara...">
+              <button class="search-btn" type="submit">Ara</button>
+            </form>
+        </div>
+
+        <div class="header-right">
+            <a class="btn-neon" href="users_admin.php?a=new">
+              <span style="font-size:16px;">➕</span> YENİ KULLANICI
+            </a>
+        </div>
+
+    </div>
+
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead>
           <tr>
-            <td><?= (int)$r['id'] ?></td>
-            <td><?= h($r['username']) ?></td>
-            <td><?= h($r['email'] ?? '') ?></td>
-            <td><?= h($r['role']) ?></td>
-            <td class="d-flex gap-2">
-              <a class="btn btn-sm btn-secondary" href="users_admin.php?a=edit&id=<?= (int)$r['id'] ?>">Düzenle</a>
-              <form method="post" action="users_admin.php?a=delete" onsubmit="return confirm('Bu kullanıcı silinsin mi?');" style="display:inline">
-                <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
-                <button class="btn btn-sm btn-danger" type="submit">Sil</button>
-              </form>
-            </td>
+            <th style="width: 80px;">ID</th>
+            <th style="width: 100px;">Durum</th>
+            <th>Kullanıcı Adı</th>
+            <th>E-posta</th>
+            <th>Rol</th>
+            <th style="width: 250px; text-align: center;">İşlemler</th>
           </tr>
-        <?php endforeach; if (!$rows): ?>
-          <tr><td colspan="5" class="text-muted">Kayıt bulunamadı.</td></tr>
-        <?php endif; ?>
-      </tbody>
-    </table>
-  </div>
-</div>
+        </thead>
+        <tbody>
+          <?php foreach ($rows as $r): 
+              $is_active = (isset($r['is_active']) ? (int)$r['is_active'] : 1);
+              $row_class = $is_active ? '' : 'row-suspended'; 
+          ?>
+            <tr class="<?= $row_class ?>">
+              <td class="text-muted fw-bold">#<?= (int)$r['id'] ?></td>
+              <td>
+                  <?php if($is_active): ?>
+                      <span class="badge-active">Aktif</span>
+                  <?php else: ?>
+                      <span class="badge-suspended">Askıda</span>
+                  <?php endif; ?>
+              </td>
+              <td style="font-weight: 600; color: #0f172a; font-size: 15px;"><?= h($r['username']) ?></td>
+              <td><?= h($r['email'] ?? '—') ?></td>
+              <td>
+                  <span class="badge-role"><?= h($r['role']) ?></span>
+              </td>
+              <td>
+                <div class="action-buttons">
+                    <a class="btn-action btn-edit" href="users_admin.php?a=edit&id=<?= (int)$r['id'] ?>">✏️ Düzenle</a>
+                    <form method="post" action="users_admin.php?a=toggle_active">
+                      <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+                      <?php if($is_active): ?>
+                          <button class="btn-action btn-suspend" type="submit" onclick="return confirm('Bu kullanıcının sisteme erişimi kesilecek. Onaylıyor musunuz?');">🚫 Askıya Al</button>
+                      <?php else: ?>
+                          <button class="btn-action btn-activate" type="submit" onclick="return confirm('Kullanıcı tekrar aktifleştirilecek. Onaylıyor musunuz?');">✅ Aktifleştir</button>
+                      <?php endif; ?>
+                    </form>
+                </div>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+          
+          <?php if(empty($rows)): ?>
+              <tr><td colspan="6" style="text-align:center; padding:40px; color:#94a3b8; font-size:15px;">Kayıt bulunamadı.</td></tr>
+          <?php endif; ?>
+        </tbody>
+      </table>
+    </div>
+    
+  </div> </div>
 <?php
 // DEBUG: flush buffer to reveal any header warnings
 ob_end_flush();
