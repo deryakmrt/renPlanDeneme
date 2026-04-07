@@ -343,6 +343,12 @@ require_once __DIR__ . '/helpers.php';
             </div>
           <?php endif; ?>
         </div>
+      <?php elseif (has_role('musteri')): ?>
+        <div class="menu-list">
+          <div class="dropdown">
+            <a href="orders.php" style="padding: 14px 16px; display: block; color: #fff; text-decoration: none; font-weight: bold;">Siparişlerim</a>
+          </div>
+        </div>
       <?php else: ?>
         <div class="menu-list">
           <a href="index.php">Panel</a>

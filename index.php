@@ -4,15 +4,45 @@ require_once __DIR__ . '/includes/helpers.php';
 require_login();
 
 $db = pdo();
+$cu = current_user();
+$role = $cu['role'] ?? '';
+$welcome_name = h($cu['username']);
+$linked_customer = $cu['linked_customer'] ?? '';
+
 $pc = $db->query('SELECT COUNT(*) FROM products')->fetchColumn();
 $cc = $db->query('SELECT COUNT(*) FROM customers')->fetchColumn();
-// SİPARİŞ SAYISI (Yetkiye Göre Filtreli)
-$sqlOrders = "SELECT COUNT(*) FROM orders";
-if (!in_array(current_user()['role']??'', ['admin','sistem_yoneticisi'])) {
-    // Admin değilse taslakları sayma
-    $sqlOrders .= " WHERE status != 'taslak_gizli'";
+
+// --- SİPARİŞ İSTATİSTİKLERİ (Yetkiye ve Müşteriye Göre Filtreli) ---
+$where_clause = " WHERE 1=1 ";
+
+// 1. KURAL: Admin/Sistem Yöneticisi DEĞİLSE taslakları asla göremez (Müşteri dahil)
+if (!in_array($role, ['admin','sistem_yoneticisi'])) {
+    $where_clause .= " AND status != 'taslak_gizli'";
 }
-$oc = $db->query($sqlOrders)->fetchColumn();
+
+// 2. KURAL: Müşteriyse SADECE kendi siparişlerini görebilir
+if ($role === 'musteri') {
+    if ($linked_customer !== '') {
+        $where_clause .= " AND customer_id IN (SELECT id FROM customers WHERE name = " . $db->quote($linked_customer) . ")";
+    } else {
+        $where_clause .= " AND 1=0 ";
+    }
+}
+
+// Toplam Sipariş
+$oc = $db->query("SELECT COUNT(*) FROM orders" . $where_clause)->fetchColumn();
+
+// Devam Edenler (Teslim edilenler ve iptaller hariç)
+$active_orders = $db->query("SELECT COUNT(*) FROM orders" . $where_clause . " AND status NOT IN ('teslim edildi', 'fatura_edildi', 'askiya_alindi', 'taslak_gizli')")->fetchColumn();
+
+// Tamamlananlar
+$completed_orders = $db->query("SELECT COUNT(*) FROM orders" . $where_clause . " AND status IN ('teslim edildi', 'fatura_edildi')")->fetchColumn();
+
+// Son 5 Sipariş (Müşteriler için ana sayfa mini tablosu)
+$recent_orders = [];
+if ($role === 'musteri' && $linked_customer !== '') {
+    $recent_orders = $db->query("SELECT id, order_code, proje_adi, status, termin_tarihi FROM orders" . $where_clause . " ORDER BY id DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+}
 
 include __DIR__ . '/includes/header.php';
 ?>
@@ -64,6 +94,13 @@ include __DIR__ . '/includes/header.php';
 .list li a.row-link{display:inline-block;max-width:calc(100% - 72px);text-decoration:none;color:inherit}
 </style>
 
+<div class="welcome-box" style="background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%); padding: 15px 25px; border-radius: 12px; margin-bottom: 25px; border-bottom: 3px solid #f97316;">
+    <h2 style="margin:0; color: #7c2d12; font-size: 1.25rem;">👋 Hoş Geldiniz, <span style="font-weight: 800;"><?= $welcome_name ?></span></h2>
+    <?php if($role === 'musteri'): ?>
+        <p style="margin: 5px 0 0 0; color: #9a3412; font-size: 0.9rem;">Bağlı Olduğunuz Müşteri: <strong><?= h($linked_customer) ?></strong></p>
+    <?php endif; ?>
+</div>
+
 <div class="tile-grid">
   <div class="tile t-yellow">
     <a href="orders.php" class="stretch" aria-label="Siparişler"></a>
@@ -72,7 +109,25 @@ include __DIR__ . '/includes/header.php';
     </div>
     <div class="title">Sipariş</div>
     <div class="value"><?= (int)$oc ?></div>
-  </div>  
+  </div>
+  
+  <?php if (($role ?? '') === 'musteri'): ?>
+  <div class="tile t-orange">
+    <a href="orders.php" class="stretch" aria-label="Devam Edenler"></a>
+    <div class="icon"><span style="font-size:20px;">⏳</span></div>
+    <div class="title">Üretimde Olanlar</div>
+    <div class="value"><?= (int)$active_orders ?></div>
+  </div>
+
+  <div class="tile t-green">
+    <a href="orders.php" class="stretch" aria-label="Tamamlananlar"></a>
+    <div class="icon"><span style="font-size:20px;">✅</span></div>
+    <div class="title">Tamamlananlar</div>
+    <div class="value"><?= (int)$completed_orders ?></div>
+  </div>
+  <?php endif; ?>
+    
+  <?php if (($role ?? '') !== 'musteri'): ?>
     <div class="tile t-blue">
     <a href="products.php" class="stretch" aria-label="Ürünler"></a>
     <div class="icon">
@@ -389,4 +444,42 @@ $upcoming = $db->query("
   <?php define('CAL_EMBED', true); define('CAL_EMBED_STYLES', true); include __DIR__ . '/calendar.php'; ?>
 </div>
 
+<?php if (($role ?? '') === 'musteri' && !empty($recent_orders)): ?>
+<div class="card mt" style="margin-top: 30px; border-top: 4px solid #f97316;">
+    <h3 style="margin-top: 0; color: #1e293b; font-size: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px;">🔍 Son Siparişlerinizin Durumu</h3>
+    <div class="table-responsive">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+            <thead>
+                <tr style="background: #f8fafc; color: #64748b;">
+                    <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Sipariş Kodu</th>
+                    <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Proje Adı</th>
+                    <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Güncel Durum</th>
+                    <th style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right;">İşlem</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach($recent_orders as $ro): ?>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <td style="padding: 10px; font-weight: bold; color: #0f172a;"><?= h($ro['order_code']) ?></td>
+                    <td style="padding: 10px; color: #475569;"><?= h($ro['proje_adi']) ?></td>
+                    <td style="padding: 10px;">
+                        <span style="background: #e0f2fe; color: #0284c7; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase;">
+                            <?= h(str_replace('_', ' ', $ro['status'])) ?>
+                        </span>
+                    </td>
+                    <td style="padding: 10px; text-align: right;">
+                        <a href="order_view.php?id=<?= $ro['id'] ?>" style="color: #ea580c; text-decoration: none; font-weight: bold; font-size: 13px;">Görüntüle ↗</a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <div style="text-align: center; margin-top: 15px;">
+        <a href="orders.php" style="color: #64748b; font-size: 13px; text-decoration: none; font-weight: 600;">Tüm Siparişlerimi Gör &rarr;</a>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php endif; ?>
 <?php include __DIR__ . '/includes/footer.php'; ?>
