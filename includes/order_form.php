@@ -105,10 +105,12 @@ input[name^="price["] {
       <?php if ($mode==='edit' && !empty($order['id'])): ?>
         <div class="row" style="gap:8px; align-items: center;">
           <a class="btn" href="order_view.php?id=<?= (int)$order['id'] ?>">Görüntüle</a>
-          <?php if ($__is_admin_like): ?>
-          <a class="btn primary" href="order_pdf.php?id=<?= (int)$order['id'] ?>">STF</a>
+          <?php if ($__is_admin_like || $__is_muhasebe || $__role === 'musteri'): ?>
+          <a class="btn primary" href="order_pdf.php?id=<?= (int)$order['id'] ?>" target="_blank">STF</a>
           <?php endif; ?>
+          <?php if ($__role !== 'musteri'): ?>
           <button type="button" class="btn primary" onclick="this.closest('.card').querySelector('form').requestSubmit()" style="font-weight: bold; padding: 8px 20px; font-size: 15px;">Güncelle</button>
+          <?php endif; ?>
           <a class="btn" href="orders.php">Vazgeç</a>
         </div>
       <?php endif; ?>
@@ -633,6 +635,7 @@ input[name^="price["] {
     </div>
     <?php endif; ?>
 
+    <?php if ($__role !== 'musteri'): ?>
     <div class="grid g3 mt" style="gap:12px">
       <div><label class="mt">Notlar</label>
     
@@ -1019,13 +1022,21 @@ input[name^="price["] {
       <div></div>
       <div></div>
     </div>
+    <?php endif; ?>
+
     <div class="row mt" style="justify-content:flex-end; gap:8px; margin-top:16px">
       <a class="btn" href="order_view.php?id=<?= (int)$order['id'] ?>">Görüntüle</a>
-      <?php if ($__is_admin_like): ?><a class="btn primary" href="order_pdf.php?id=<?= (int)$order['id'] ?>">PDF</a><?php endif; ?>
+      
+      <?php if ($__is_admin_like || $__is_muhasebe || $__role === 'musteri'): ?>
+      <a class="btn primary" href="order_pdf.php?id=<?= (int)$order['id'] ?>" target="_blank">PDF (STF)</a>
+      <?php endif; ?>
+      
+      <?php if ($__role !== 'musteri'): ?>
       <a class="btn" style="background-color:#16a34a;border-color:#15803d;color:#fff" href="order_pdf_uretim.php?id=<?= (int)$order['id'] ?>" target="_blank">Üretim Föyü</a>
       <button type="submit" class="btn primary"><?= $mode==='edit' ? 'Güncelle' : 'Kaydet' ?></button>
+      <?php endif; ?>
       
-      <?php if (($order['status'] ?? '') === 'taslak_gizli' && $mode === 'edit'): ?>
+      <?php if (($order['status'] ?? '') === 'taslak_gizli' && $mode === 'edit' && $__role !== 'musteri'): ?>
           <button type="submit" name="yayinla_butonu" value="1" class="btn" style="background-color:#cd94ff; color:#fff; font-weight:bold; margin-left:5px;">
              🚀 SİPARİŞİ YAYINLA
           </button>
@@ -1925,6 +1936,7 @@ tr.active-editing td {
   // --- 3. AÇILMA VE KONUMLANDIRMA ---
   function openEditor(input){
     currentInput = input;
+    var isReadOnly = input.readOnly || input.disabled; // 🟢 YENİ: Tıklanan kutu kilitli mi?
     
     var row = input.closest('tr');
     var prodName = '';
@@ -1954,6 +1966,21 @@ tr.active-editing td {
     // Değeri yükle
     tarea.value = input.value || '';
     updateFont(); // Mevcut font ayarını uygula
+
+    // 🟢 YENİ: Kilitliyse Pop-Up'ı da Kilitle
+    if (isReadOnly) {
+        tarea.readOnly = true;
+        tarea.style.backgroundColor = '#f9fafb';
+        tarea.style.cursor = 'not-allowed';
+        saveBtn.style.display = 'none'; // Kaydet butonunu gizle
+        cancelBtn.textContent = 'Kapat (Esc)'; // Vazgeç yerine Kapat yaz
+    } else {
+        tarea.readOnly = false;
+        tarea.style.backgroundColor = '#fff';
+        tarea.style.cursor = 'text';
+        saveBtn.style.display = 'inline-block';
+        cancelBtn.textContent = 'Vazgeç (Esc)';
+    }
 
     // Görünür yap
     overlay.style.display = 'block';
@@ -1992,7 +2019,7 @@ tr.active-editing td {
   }
 
   function saveEditor(){
-    if(currentInput) {
+    if(currentInput && !tarea.readOnly) { // 🟢 YENİ: Sadece kilitli değilse kaydet
       currentInput.value = tarea.value.trim();
       // Tetikleyiciler
       try{ currentInput.dispatchEvent(new Event('input', {bubbles:true})); }catch(e){}
@@ -2374,6 +2401,32 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
+});
+</script>
+<?php endif; ?>
+<?php if ($__role === 'musteri'): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.querySelector('form');
+    if(!form) return;
+
+    // Formdaki tüm input, select ve textarea alanlarını kilitle
+    var elements = form.querySelectorAll('input:not([type="hidden"]), select, textarea');
+    elements.forEach(function(el) {
+        if (el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'radio') {
+            el.style.pointerEvents = 'none';
+        } else {
+            el.readOnly = true;
+        }
+        el.style.backgroundColor = '#f9fafb';
+        el.style.cursor = 'not-allowed';
+        el.style.color = '#6b7280';
+        el.title = '⛔ Müşteriler sipariş formunu sadece görüntüleyebilir.';
+    });
+
+    // Satır Ekle ve Sil butonlarını tamamen gizle
+    var actionBtns = form.querySelectorAll('button[onclick="addRow()"], button[onclick="delRow(this)"]');
+    actionBtns.forEach(function(b) { b.style.display = 'none'; });
 });
 </script>
 <?php endif; ?>

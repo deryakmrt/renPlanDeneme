@@ -6,6 +6,11 @@ require_login();
 
 $db = pdo();
 $action = $_GET['a'] ?? 'list';
+// --- Müşteri Güvenliği ---
+if ((current_user()['role'] ?? '') === 'musteri' && in_array($action, ['new', 'edit', 'delete', 'bulk_update'])) {
+    die('Bu işlem için yetkiniz bulunmamaktadır.');
+}
+// -------------------------
 // 🔴 Tüm siparişleri sil (POST, transaction)
 // Yeni sayfalara yönlendir (ayrı dosyalar)
 if ($action === 'new') {
@@ -458,9 +463,24 @@ $offset = ($page - 1) * $per_page;
 $params = [];
 // Ürün araması (oi.name) eklendi
 $sql = "SELECT DISTINCT o.*, c.name AS customer_name, c.email AS customer_email FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id LEFT JOIN products p ON oi.product_id=p.id WHERE 1=1";
-// --- GİZLİLİK FİLTRESİ (DÜZELTİLDİ) ---
-if (!in_array(current_user()['role'] ?? '', ['admin', 'sistem_yoneticisi'])) {
-  $sql .= " AND o.status != 'taslak_gizli'";
+
+// --- GİZLİLİK VE MÜŞTERİ FİLTRESİ ---
+$cu = current_user();
+$cu_role = $cu['role'] ?? '';
+
+// Taslak kalkanı herkese (Admin/SistemYöneticisi hariç) uygula
+if (!in_array($cu_role, ['admin', 'sistem_yoneticisi'])) {
+    $sql .= " AND o.status != 'taslak_gizli'";
+}
+
+// Müşteri kalkanı
+if ($cu_role === 'musteri') {
+    $linked = $cu['linked_customer'] ?? '';
+    if ($linked !== '') {
+        $sql .= " AND c.name = " . $db->quote($linked);
+    } else {
+        $sql .= " AND 1=0 "; 
+    }
 }
 // -------------------------------------
 
@@ -503,10 +523,22 @@ $status_labels = [
 $__cnt_params = [];
 // Ürün araması eklendi ve COUNT(DISTINCT o.id) yapıldı
 $__cnt_sql = "SELECT o.status, COUNT(DISTINCT o.id) AS cnt FROM orders o LEFT JOIN customers c ON c.id=o.customer_id LEFT JOIN order_items oi ON o.id=oi.order_id LEFT JOIN products p ON oi.product_id=p.id WHERE 1=1";
-// --- GİZLİLİK FİLTRESİ (DÜZELTİLDİ) ---
-// Sadece yetkisiz kullanıcılardan gizle. Adminler hepsini görsün.
-if (!in_array(current_user()['role'] ?? '', ['admin', 'sistem_yoneticisi'])) {
-  $__cnt_sql .= " AND o.status != 'taslak_gizli'";
+
+// --- GİZLİLİK VE MÜŞTERİ FİLTRESİ ---
+$cu = current_user();
+$cu_role = $cu['role'] ?? '';
+
+if (!in_array($cu_role, ['admin', 'sistem_yoneticisi'])) {
+    $__cnt_sql .= " AND o.status != 'taslak_gizli'";
+}
+
+if ($cu_role === 'musteri') {
+    $linked = $cu['linked_customer'] ?? '';
+    if ($linked !== '') {
+        $__cnt_sql .= " AND c.name = " . $db->quote($linked);
+    } else {
+        $__cnt_sql .= " AND 1=0 ";
+    }
 }
 // -------------------------------------
 if ($q !== '') {
@@ -1301,15 +1333,19 @@ $__isAll = ($status === '' || $status === null);
 
               <div style="grid-column: 1; width:100%;">
                 <?php $___role = current_user()['role'] ?? '';
-                if (in_array($___role, ['admin', 'sistem_yoneticisi', 'muhasebe'], true)): ?>
+                // Müşteri dahil yetkili olanlar STF'yi görür
+                if (in_array($___role, ['admin', 'sistem_yoneticisi', 'muhasebe', 'musteri'], true)): ?>
                   <a class="btn" href="order_pdf.php?id=<?= (int)$o['id'] ?>" target="_blank" title="STF"
                     style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background: #ffedd5; color: #ea580c; border:1px solid #fed7aa; font-size:13px; font-weight:800;">STF</a>
                 <?php endif; ?>
               </div>
 
+              <?php if ($___role !== 'musteri'): ?>
               <a class="btn" href="order_pdf_uretim.php?id=<?= (int)$o['id'] ?>" target="_blank" title="ÜSTF"
                 style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background: #dcfce7; color: #16a34a; border:1px solid #bbf7d0; font-size:13px; font-weight:800;">ÜSTF</a>
+              <?php endif; ?>
 
+              <?php if ($___role !== 'musteri'): ?>
               <div style="grid-column: 1; width:100%;">
                 <?php
                 $___is_admin = ($___role === 'admin');
@@ -1356,6 +1392,7 @@ $__isAll = ($status === '' || $status === null);
                   <span class="btn disabled" style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; border:1px solid #f3f4f6; color: #e5e7eb; background:#fff;">📧</span>
                 <?php endif; ?>
               </div>
+              <?php endif; ?>
 
             </div>
           </td>
