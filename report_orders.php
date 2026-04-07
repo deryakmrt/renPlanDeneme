@@ -204,6 +204,10 @@ try { $db->query("SELECT status FROM `$itemsTable` LIMIT 0"); $itemStatusCol="`$
 catch(Throwable $e){ $itemStatusCol=null; }
 $prodStatusCol = 'orders.status';
 
+// --- YENİ: Siparişi alan kolon kontrolü ---
+// Veritabanında olduğundan emin olduğumuz için kontrolü atlıyor ve direkt okuyoruz
+$siparisiAlanCol = 'orders.siparisi_alan';
+
 try { $db->query("SELECT orders.order_date FROM orders LIMIT 0"); }
 catch(Throwable $e){ try{ $db->query("SELECT orders.siparis_tarihi FROM orders LIMIT 0"); $dateCol='orders.siparis_tarihi'; }catch(Throwable $e2){ try{ $db->query("SELECT orders.created_at FROM orders LIMIT 0"); $dateCol='orders.created_at'; }catch(Throwable $e3){ $dateCol='orders.id'; } } }
 try { $db->query("SELECT orders.proje_adi FROM orders LIMIT 0"); }
@@ -259,6 +263,7 @@ $whereSql = $where ? ('WHERE '.implode(' AND ',$where)) : '';
 
 $sel=[
   "orders.id AS order_id",
+  "$siparisiAlanCol AS siparisi_alan",
   "$custNameCol AS customer_name",
   "$orderCodeCol AS order_code",
   ($projectCol ? "$projectCol AS project_name" : "NULL AS project_name"),
@@ -295,8 +300,12 @@ if (isset($_GET['export']) && $_GET['export']==='csv') {
   header('Content-Disposition: attachment; filename="'.$filename.'"');
   echo "\xEF\xBB\xBF";
   $out=fopen('php://output','w');
-  fputcsv($out,['Müşteri','Proje','Sipariş Kodu','Ürün','SKU','Miktar','Birim','Birim Fiyat','Para Birimi','Satır Toplam','Sipariş Tarihi']);
-  foreach($rows as $r){ fputcsv($out,[$r['customer_name']??'',$r['project_name']??'',$r['order_code']??'',$r['product_name']??'',$r['sku']??'',$r['qty']??'',$r['unit_name']??'',$r['unit_price']??'',$r['currency']??'',$r['line_total']??'',$r['order_date']??'']); }
+  fputcsv($out,['Siparişi Alan','Müşteri','Proje','Sipariş Kodu','Ürün','SKU','Miktar','Birim','Birim Fiyat','Para Birimi','Satır Toplam','Sipariş Tarihi']);
+  foreach($rows as $r){ 
+      $export_sp = trim((string)($r['siparisi_alan'] ?? ''));
+      $export_sp = $export_sp === '' ? 'Belirtilmemiş' : mb_convert_case(mb_strtolower(str_replace(['I','İ'], ['ı','i'], $export_sp), 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+      fputcsv($out,[$export_sp, $r['customer_name']??'',$r['project_name']??'',$r['order_code']??'',$r['product_name']??'',$r['sku']??'',$r['qty']??'',$r['unit_name']??'',$r['unit_price']??'',$r['currency']??'',$r['line_total']??'',$r['order_date']??'']); 
+  }
   fclose($out); exit;
 }
 
@@ -328,6 +337,10 @@ if ($eur_rate <= 1.0) $eur_rate = 38.00;
 $agg_customer_try = []; $agg_project_try = []; $agg_category_try = [];
 $cur_customer = []; $cur_project = []; $cur_category = [];
 
+// [YENİ] Satış temsilcisi (siparisi_alan) verileri
+$salesperson_orders = [];
+$processed_orders_for_sp = []; 
+
 foreach($rows as $r){
   $amt = (float)($r['line_total'] ?? 0);
   $cur = normalize_currency($r['currency'] ?? '—');
@@ -341,6 +354,24 @@ foreach($rows as $r){
   $c = trim((string)($r['customer_name'] ?? 'Diğer')); if($c==='') $c='Diğer';
   $p = trim((string)($r['project_name'] ?? 'Diğer'));  if($p==='') $p='Diğer';
   $g = trim((string)($r['product_name'] ?? 'Diğer'));  if($g==='') $g='Diğer';
+  
+  // --- [YENİ] Siparişi Alan (Büyük/Küçük Harf ve Boşluk Gruplama Zekası) ---
+  $raw_sp = trim((string)($r['siparisi_alan'] ?? ''));
+  if ($raw_sp === '') {
+      $sp = 'Belirtilmemiş'; // Boş siparişler koca bir "Diğer" yerine buraya düşsün
+  } else {
+      // Türkçe I/İ harf sorunlarını çöz, hepsini küçük harfe çevir, sonra Baş Harflerini Büyüt
+      $lower_sp = mb_strtolower(str_replace(['I','İ'], ['ı','i'], $raw_sp), 'UTF-8');
+      $sp = mb_convert_case($lower_sp, MB_CASE_TITLE, 'UTF-8');
+  }
+  
+  $oid = $r['order_id'];
+
+  // Siparişi alan kişinin sipariş sayısını hesaplama (Aynı sipariş no 1 kez sayılır)
+  if(!isset($processed_orders_for_sp[$oid])) {
+      $processed_orders_for_sp[$oid] = true;
+      $salesperson_orders[$sp] = ($salesperson_orders[$sp] ?? 0) + 1;
+  }
 
   // TL Üzerinden Grafik ve Sıralama Toplamları
   $agg_customer_try[$c] = ($agg_customer_try[$c] ?? 0) + $amt_try;
@@ -363,6 +394,7 @@ foreach($rows as $r){
 
 // TL'ye çevrilmiş değerlere göre büyükten küçüğe sırala! (Zekice Kısım)
 arsort($agg_customer_try); arsort($agg_project_try); arsort($agg_category_try);
+arsort($salesperson_orders); // Satış Temsilcisini en çok satandan küçüğe sırala
 
 function get_dominant_info($tryTotals, $bucketMap) {
   $out=[];
@@ -383,10 +415,21 @@ function get_dominant_info($tryTotals, $bucketMap) {
   return $out;
 }
 
+// Satış temsilcilerini grafiğin anlayacağı formata çevir
+$sp_formatted = [];
+foreach($salesperson_orders as $name => $count) {
+    $sp_formatted[$name] = [
+        'cur' => 'Adet',
+        'val' => $count,
+        'try_val' => $count
+    ];
+}
+
 $chart_payload = [
-  'customer' => get_dominant_info($agg_customer_try, $cur_customer),
-  'project'  => get_dominant_info($agg_project_try, $cur_project),
-  'category' => get_dominant_info($agg_category_try, $cur_category),
+  'customer'    => get_dominant_info($agg_customer_try, $cur_customer),
+  'project'     => get_dominant_info($agg_project_try, $cur_project),
+  'category'    => get_dominant_info($agg_category_try, $cur_category),
+  'salesperson' => $sp_formatted,
 ];
 
 
@@ -442,9 +485,9 @@ include __DIR__ . '/includes/header.php';
 .stat-card .val{font-size:22px;font-weight:800}
 
 .chart-panel{margin-top:14px; padding:12px; border:1px solid #e8eef6; border-radius:12px; background:#fff}
-.triple-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
-@media (max-width:1200px){.triple-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:820px){.triple-grid{grid-template-columns:1fr}}
+.quad-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media (max-width:1400px){.quad-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:820px){.quad-grid{grid-template-columns:1fr}}
 .pie-card{border:1px solid #e8eef6;border-radius:12px;padding:12px}
 .pie-card h4{margin:0 0 8px 0;font-size:13px;color:#0f172a}
 .pie-canvas-wrap{width:100%;height:220px;display:flex;align-items:center;justify-content:center}
@@ -797,7 +840,12 @@ document.addEventListener('DOMContentLoaded', function(){
   </div>
 
   <div class="chart-panel">
-    <div class="triple-grid">
+    <div class="quad-grid">
+      <div class="pie-card">
+        <h4>Satış Temsilcisi Dağılımı</h4>
+        <div class="pie-canvas-wrap"><canvas id="pieSalesperson"></canvas></div>
+        <div class="top5"><ul id="top5Salesperson"></ul></div>
+      </div>
       <div class="pie-card">
         <h4>Müşterilere Göre Dağılım</h4>
         <div class="pie-canvas-wrap"><canvas id="pieCustomer"></canvas></div>
@@ -821,6 +869,7 @@ document.addEventListener('DOMContentLoaded', function(){
       <thead>
         <tr>
           <th>Sipariş Tarihi</th>
+          <th>Siparişi Alan</th>
           <th>Müşteri</th>
           <th>Proje Adı</th>
           <th class="ta-center" style="text-align:center;">Sipariş Kodu</th>
@@ -836,10 +885,16 @@ document.addEventListener('DOMContentLoaded', function(){
         foreach (($rows ?? []) as $r) {
           $__code = (string)($r['order_code'] ?? '');
           if ($__code === '') continue;
+          
+          // Satici ismini formatla
+          $raw_sp2 = trim((string)($r['siparisi_alan'] ?? ''));
+          $formatted_sp = $raw_sp2 === '' ? 'Belirtilmemiş' : mb_convert_case(mb_strtolower(str_replace(['I','İ'], ['ı','i'], $raw_sp2), 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+
           if (!isset($__orders[$__code])) {
             $__orders[$__code] = [
-              'order_id'     => $r['order_id'] ?? null,
+              'order_id'      => $r['order_id'] ?? null,
               'order_date'    => $r['order_date'] ?? '',
+              'siparisi_alan' => $formatted_sp,
               'customer_name' => $r['customer_name'] ?? '',
               'project_name'  => $r['project_name'] ?? '',
               'order_code'    => $__code,
@@ -852,13 +907,17 @@ document.addEventListener('DOMContentLoaded', function(){
         // Yazdır
         if (empty($__orders)):
         ?>
-          <tr><td style="text-align:center;" colspan="7" class="ta-center muted">Kayıt bulunamadı.</td></tr>
+          <tr><td style="text-align:center;" colspan="8" class="ta-center muted">Kayıt bulunamadı.</td></tr>
         <?php else: foreach ($__orders as $__o): 
           $__kdv = $__o['subtotal'] * $__vatRate;
           $__genel = $__o['subtotal'] + $__kdv;
+          
+          // Satici ismine gore renk ver (Bos ise kirmizi olsun)
+          $sp_color = $__o['siparisi_alan'] === 'Belirtilmemiş' ? 'color:#ef4444; font-style:italic;' : 'color:#0f172a; font-weight:600;';
         ?>
           <tr data-order-id="<?= (int)($__o['order_id'] ?? 0) ?>" class="order-row">
             <td><?=fmt_tr_date($__o['order_date'] ?? '')?></td>
+            <td style="<?= $sp_color ?>"><?=h($__o['siparisi_alan'])?></td>
             <td><?=h($__o['customer_name'])?></td>
             <td><?=h($__o['project_name'])?></td>
             <td style="text-align:center;" class="ta-center"><a href="order_view.php?id=<?= (int)($__o['order_id'] ?? 0) ?>" class="badge"><?=h($__o['order_code'])?></a></td>
@@ -904,11 +963,10 @@ document.addEventListener('DOMContentLoaded', function(){
   
   function symbol(cur){ return cur==='TRY'?'₺':(cur==='USD'?'$':(cur==='EUR'?'€':'')); }
 
-  function renderPie(canvasId, listId, entries, startHue){
+  function renderPie(canvasId, listId, entries, startHue, isCount = false){
     const labels = entries.map(e=>e.name);
-    const data   = entries.map(e=>e.val); // Grafiğe giden veri (TL)
+    const data   = entries.map(e=>e.val); 
     
-    // Rastgele değil, zeki renk dağılımı kullanıyoruz
     const colors = generateColors(labels.length, startHue); 
 
     const ctx = document.getElementById(canvasId)?.getContext('2d');
@@ -920,9 +978,9 @@ document.addEventListener('DOMContentLoaded', function(){
             datasets: [{ 
                 data: data, 
                 backgroundColor: colors,
-                borderWidth: 2,           // Keskin beyaz ayrım çizgileri
+                borderWidth: 2,           
                 borderColor: '#ffffff',
-                hoverOffset: 15           // Hover dışa taşma efekti
+                hoverOffset: 15           
             }] 
         },
         options: {
@@ -942,13 +1000,16 @@ document.addEventListener('DOMContentLoaded', function(){
                           let label = context.label || '';
                           let value = context.parsed;
                           
-                          // İsim çok uzunsa fiyata her zaman yer kalsın diye kes (Örn: 22 Karakter)
                           let maxLength = 30; 
                           if (label.length > maxLength) {
                               label = label.substring(0, maxLength) + '...';
                           }
                           
-                          return ' ' + label + ': ₺' + value.toLocaleString('tr-TR', {minimumFractionDigits:4, maximumFractionDigits:4});
+                          if (isCount) {
+                              return ' ' + label + ': ' + value + ' Sipariş';
+                          } else {
+                              return ' ' + label + ': ₺' + value.toLocaleString('tr-TR', {minimumFractionDigits:4, maximumFractionDigits:4});
+                          }
                       }
                   }
               } 
@@ -964,18 +1025,22 @@ document.addEventListener('DOMContentLoaded', function(){
         ul.innerHTML = '<li><span class="name">Veri yok</span><span class="val">—</span></li>';
       } else {
         const top5 = entries.slice(0,5);
-        ul.innerHTML = top5.map(it => (
-          // Listenin altında Orijinal Kur ve Döviz Cinsini yazıyoruz
-          `<li><span class="name">${it.name}</span><span class="val">${it.disp_val.toLocaleString('tr-TR',{minimumFractionDigits:2, maximumFractionDigits:2})} ${symbol(it.cur)}</span></li>`
-        )).join('');
+        ul.innerHTML = top5.map(it => {
+          if (isCount) {
+              return `<li><span class="name">${it.name}</span><span class="val" style="color:#10b981;">${it.disp_val} Adet</span></li>`;
+          } else {
+              return `<li><span class="name">${it.name}</span><span class="val">${it.disp_val.toLocaleString('tr-TR',{minimumFractionDigits:2, maximumFractionDigits:2})} ${symbol(it.cur)}</span></li>`;
+          }
+        }).join('');
       }
     }
   }
 
   // 2. HER GRAFİĞE FARKLI BİR "TEMA/BAŞLANGIÇ" RENGİ VERİYORUZ
-  renderPie('pieCustomer', 'top5Customer', entriesFrom('customer'), 200); // Mavi tonlarından başlar
-  renderPie('pieProject',  'top5Project',  entriesFrom('project'), 280);  // Mor tonlarından başlar
-  renderPie('pieCategory', 'top5Category', entriesFrom('category'), 340); // Kırmızı/Pembe tonlarından başlar
+  renderPie('pieSalesperson', 'top5Salesperson', entriesFrom('salesperson'), 50, true); // Sarı/Yeşil (Sipariş Sayısı)
+  renderPie('pieCustomer', 'top5Customer', entriesFrom('customer'), 200, false); // Mavi tonlarından başlar
+  renderPie('pieProject',  'top5Project',  entriesFrom('project'), 280, false);  // Mor tonlarından başlar
+  renderPie('pieCategory', 'top5Category', entriesFrom('category'), 340, false); // Kırmızı/Pembe tonları
 })();
 </script>
 
