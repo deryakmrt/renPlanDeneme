@@ -47,8 +47,9 @@ if (!function_exists('tcmb_get_exchange_rate')) {
       if (!$xml) continue;
       foreach ($xml->Currency as $item) {
         if ((string)$item['CurrencyCode'] === $currency_upper) {
-          $rate = (float)$item->ForexBuying;
-          if ($rate <= 0) $rate = (float)$item->BanknoteBuying;
+          // Faturalandırmada Döviz Satış Kuru baz alınır
+          $rate = (float)$item->ForexSelling;
+          if ($rate <= 0) $rate = (float)$item->BanknoteSelling;
           if ($rate > 0) return $rate;
         }
       }
@@ -537,51 +538,98 @@ input[name^="price["] {
     ?>
 
     <?php if ($__is_admin_like || $__is_muhasebe): ?>
-    <div class="mt" style="background: #ffffff; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: flex-start; gap: 40px;">
+    <div class="mt" style="background: #ffffff; border-radius: 12px; padding: 25px 20px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: flex-start;">
         
-        <div id="fatura_kur_section" style="flex: 1; visibility: <?= ($order['status']??'') === 'fatura_edildi' ? 'visible' : 'hidden' ?>;">
-            <div style="font-size: 11px; color: #94a3b8; font-style: italic; margin-bottom: 10px; line-height: 1.5;">
-                🗓️ <span style="font-weight:600;"><?= $fatura_date_fmt ?></span> TCMB Alış Kuru:<br>
-                <span style="color: #64748b;">
-                    USD: <?= $usd_info_rate ? '₺' . number_format((float)$usd_info_rate, 4, ',', '.') : '<span style="color:#e53e3e; font-weight:bold;">⚠️ Çekilemedi</span>' ?> | 
-                    EUR: <?= $eur_info_rate ? '₺' . number_format((float)$eur_info_rate, 4, ',', '.') : '<span style="color:#e53e3e; font-weight:bold;">⚠️ Çekilemedi</span>' ?>
-                </span>
-                <?php if ($usd_info_rate && $eur_info_rate): ?>
-                <br>
-                <span style="color: #8b5cf6; font-weight: 600;">
-                    Çapraz Kur (EUR/USD): <?= number_format((float)($eur_info_rate / $usd_info_rate), 4, ',', '.') ?>
-                </span>
-                <?php endif; ?>
-            </div>
-            
-            <div style="margin-top: 15px;">
-                <div style="font-size: 13px; color: #64748b; font-weight: 500;">Döviz Karşılığı (<span id="lbl_fatura_pb_title" style="font-weight: 700; color: #0f172a;">TL</span>)</div>
-                <div id="lbl_converted_total" style="font-size: 26px; font-weight: 800; color: #d32f2f; letter-spacing: -1px;">
-                    0,0000 ₺
+        <div id="fatura_kur_section" style="visibility: <?= ($order['status']??'') === 'fatura_edildi' ? 'visible' : 'hidden' ?>;">
+            <input type="hidden" name="kur_usd" id="hidden_kur_usd" value="<?= $order['kur_usd'] ?? '' ?>">
+            <input type="hidden" name="kur_eur" id="hidden_kur_eur" value="<?= $order['kur_eur'] ?? '' ?>">
+
+            <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">TCMB Kur Bilgileri</div>
+            <div style="font-size: 11px; color: #94a3b8; font-style: italic; line-height: 1.8;">
+                <div style="margin-bottom: 6px;">🗓️ <span style="font-weight:600;"><?= $fatura_date_fmt ?></span> TCMB Satış Kuru:</div>
+                
+                <div id="kur_display_container" style="display: flex; align-items: flex-start; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; color: #475569;">
+                        <div>USD: <span id="lbl_usd_val" style="font-weight:600; color:#0f172a;"><?= $usd_info_rate ? '₺' . number_format((float)$usd_info_rate, 4, ',', '.') : '<span style="color:#e53e3e; font-weight:bold;">⚠️ Çekilemedi</span>' ?></span></div>
+                        <div>EUR: <span id="lbl_eur_val" style="font-weight:600; color:#0f172a;"><?= $eur_info_rate ? '₺' . number_format((float)$eur_info_rate, 4, ',', '.') : '<span style="color:#e53e3e; font-weight:bold;">⚠️ Çekilemedi</span>' ?></span></div>
+                        <div id="cross_rate_container" style="color: #8b5cf6; font-weight: 600; display: <?= ($usd_info_rate && $eur_info_rate) ? 'block' : 'none' ?>;">
+                            Çapraz Kur (EUR/USD): <span id="lbl_cross_rate"><?= ($usd_info_rate && $eur_info_rate) ? number_format((float)($eur_info_rate / $usd_info_rate), 4, ',', '.') : '' ?></span>
+                        </div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px; margin-top: 2px;">
+                        <button type="button" onclick="toggleRateEdit(true)" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; padding:5px 12px; color:#475569; box-shadow:0 1px 2px rgba(0,0,0,0.05); transition:all 0.2s;" title="Kuru Düzenle">✏️ Düzenle</button>
+                        <button type="button" id="btn_reset_rate" onclick="resetRate()" style="display:none; background:#fef2f2; border:1px solid #fecaca; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; padding:5px 12px; color:#ef4444; box-shadow:0 1px 2px rgba(0,0,0,0.05); transition:all 0.2s;" title="Orijinal Kur">🔄 Sıfırla</button>
+                    </div>
                 </div>
-                <div style="font-size: 10px; color: #cbd5e1; margin-top: 5px;">* Çevrim işlemi fatura tarihindeki kura göre yapılmıştır.</div>
+
+                <span id="kur_edit_container" style="display: none; flex-direction:column; gap: 8px; margin-top: 10px; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; box-shadow:inset 0 1px 2px rgba(0,0,0,0.02);">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; color:#334155; font-weight:600; font-size:11px;">
+                        USD: 
+                        <div style="position:relative; display:flex; align-items:center;">
+                            <span style="position:absolute; left:6px; color:#94a3b8; font-weight:500;">₺</span>
+                            <input type="text" id="input_usd_rate" value="<?= $usd_info_rate ? number_format((float)$usd_info_rate, 4, ',', '') : '' ?>" style="width:75px; padding:4px 4px 4px 16px; font-size:11px; font-weight:600; color:#0f172a; border:1px solid #cbd5e1; border-radius:6px; outline:none;">
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; color:#334155; font-weight:600; font-size:11px;">
+                        EUR: 
+                        <div style="position:relative; display:flex; align-items:center;">
+                            <span style="position:absolute; left:6px; color:#94a3b8; font-weight:500;">₺</span>
+                            <input type="text" id="input_eur_rate" value="<?= $eur_info_rate ? number_format((float)$eur_info_rate, 4, ',', '') : '' ?>" style="width:75px; padding:4px 4px 4px 16px; font-size:11px; font-weight:600; color:#0f172a; border:1px solid #cbd5e1; border-radius:6px; outline:none;">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:6px; margin-top:4px;">
+                        <button type="button" onclick="saveRateEdit()" style="background:#10b981; border:none; color:#fff; border-radius:6px; cursor:pointer; padding:6px; font-size:11px; font-weight:600; flex:1; box-shadow:0 2px 4px rgba(16,185,129,0.2);">✔️ Onayla</button>
+                        <button type="button" onclick="toggleRateEdit(false)" style="background:#ef4444; border:none; color:#fff; border-radius:6px; cursor:pointer; padding:6px; font-size:11px; font-weight:600; flex:1; box-shadow:0 2px 4px rgba(239,68,68,0.2);">❌ İptal</button>
+                    </div>
+                </span>
+                
+                <div style="font-size: 10px; color: #cbd5e1; margin-top: 10px;">* Fatura tarihindeki kur baz alınmıştır.</div>
             </div>
         </div>
 
-        <div style="width: 320px; display: flex; flex-direction: column; align-items: flex-end; text-align: right;">
+        <div id="fatura_cevrilmis_section" style="visibility: <?= ($order['status']??'') === 'fatura_edildi' ? 'visible' : 'hidden' ?>; border-left: 1px dashed #cbd5e1; padding-left: 20px; display: flex; flex-direction: column; align-items: flex-end; text-align: right;">
+            <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px; width: 100%; text-align: right;">Fatura Karşılığı (<span id="lbl_fatura_pb_title" style="color:#0f172a;">TL</span>)</div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 15px; width: 100%; margin-bottom: 5px;">
+                <span style="color: #64748b; font-size: 13px;">Ara Toplam:</span>
+                <span id="lbl_converted_subtotal" style="color: #1e293b; font-weight: 600; font-size: 14px;">0,0000</span>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 15px; width: 100%; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
+                <?php $kdv_label = isset($order['kdv_orani']) ? (int)$order['kdv_orani'] : 20; ?>
+                <span style="color: #64748b; font-size: 13px;">KDV (%<span id="lbl_converted_kdv_rate"><?= $kdv_label ?></span>):</span>
+                <span id="lbl_converted_vat" style="color: #1e293b; font-weight: 600; font-size: 14px;">0,0000</span>
+            </div>
+
+            <div style="margin-top: 5px;">
+                <div style="color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 2px;">Genel Toplam</div>
+                <div id="lbl_converted_total" style="font-size: 26px; font-weight: 800; color: #d32f2f; letter-spacing: -1px;">
+                    0,0000 ₺
+                </div>
+            </div>
+        </div>
+
+        <div style="border-left: 1px dashed #cbd5e1; padding-left: 20px; display: flex; flex-direction: column; align-items: flex-end; text-align: right;">
+            <div style="font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px; width: 100%; text-align: right;">Kalem Toplamı (<span id="lbl_kalem_pb_title" style="color:#0f172a;">TL</span>)</div>
+
             <div style="display: flex; justify-content: flex-end; gap: 15px; width: 100%; margin-bottom: 5px;">
                 <span style="color: #64748b; font-size: 13px;">Ara Toplam:</span>
                 <span id="lbl_subtotal" style="color: #1e293b; font-weight: 600; font-size: 14px;">0,0000</span>
             </div>
             
             <div style="display: flex; justify-content: flex-end; gap: 15px; width: 100%; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
-                <?php $kdv_label = isset($order['kdv_orani']) ? (int)$order['kdv_orani'] : 20; ?>
                 <span style="color: #64748b; font-size: 13px;">KDV (%<span id="lbl_kdv_rate"><?= $kdv_label ?></span>):</span>
                 <span id="lbl_vat_amount" style="color: #1e293b; font-weight: 600; font-size: 14px;">0,0000</span>
             </div>
 
             <div style="margin-top: 5px;">
                 <div style="color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 2px;">Genel Toplam</div>
-                <div id="lbl_grand_total_display" style="font-size: 32px; font-weight: 900; color: #0f172a; letter-spacing: -1px;">
+                <div id="lbl_grand_total_display" style="font-size: 26px; font-weight: 800; color: #0f172a; letter-spacing: -1px;">
                     0,0000
                 </div>
             </div>
         </div>
+        
     </div>
     <?php endif; ?>
 
@@ -2331,29 +2379,123 @@ document.addEventListener('DOMContentLoaded', function() {
 <?php endif; ?>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // PHP'den kurları al (Çekilemediyse null olur)
-    const usdRate = <?= json_encode($usd_info_rate) ?>;
-    const eurRate = <?= json_encode($eur_info_rate) ?>;
+    // PHP'den orijinal (TCMB) kurları yedekle
+    const originalUsdRate = <?= json_encode($usd_info_rate) ?>;
+    const originalEurRate = <?= json_encode($eur_info_rate) ?>;
 
+    // Veritabanında (gizli inputta) kayıtlı bir özel kur varsa al
+    const dbSavedUsd = parseFloat(document.getElementById('hidden_kur_usd')?.value || 0);
+    const dbSavedEur = parseFloat(document.getElementById('hidden_kur_eur')?.value || 0);
+
+    // Eğer veritabanında özel kur varsa onu baz al, yoksa TCMB'yi kullan
+    let activeUsdRate = dbSavedUsd > 0 ? dbSavedUsd : originalUsdRate;
+    let activeEurRate = dbSavedEur > 0 ? dbSavedEur : originalEurRate;
+
+    // ---------------------------------------------------------
+    // SİLİNEN HAYATİ FONKSİYONLAR BURAYA EKLENDİ
+    // ---------------------------------------------------------
     function getSymbol(cur) {
         if (cur === 'USD') return '$';
         if (cur === 'EUR' || cur === 'EURO') return '€';
         return '₺';
     }
 
+    function parseNum(str) {
+        if (!str) return 0;
+        let clean = str.toString().replace(/\./g, '').replace(',', '.');
+        let val = parseFloat(clean);
+        return isNaN(val) ? 0 : val;
+    }
+
+    function fmt(n) {
+        return n.toLocaleString('tr-TR', {minimumFractionDigits: 4, maximumFractionDigits: 4});
+    }
+    // ---------------------------------------------------------
+
+    // --- EKRAN GÜNCELLEYİCİ (Ortak Hafıza Fonksiyonu) ---
+    function updateRateUI() {
+        const usdIsEdited = (activeUsdRate !== originalUsdRate);
+        const eurIsEdited = (activeEurRate !== originalEurRate);
+
+        if(document.getElementById('lbl_usd_val')) {
+            document.getElementById('lbl_usd_val').innerHTML = activeUsdRate 
+                ? '₺' + fmt(activeUsdRate) + (usdIsEdited ? ' <span style="font-size:10px; color:#f59e0b; font-weight:600;">(Düzenlendi)</span>' : '') 
+                : '<span style="color:#e53e3e;">⚠️ Çekilemedi</span>';
+        }
+
+        if(document.getElementById('lbl_eur_val')) {
+            document.getElementById('lbl_eur_val').innerHTML = activeEurRate 
+                ? '₺' + fmt(activeEurRate) + (eurIsEdited ? ' <span style="font-size:10px; color:#f59e0b; font-weight:600;">(Düzenlendi)</span>' : '') 
+                : '<span style="color:#e53e3e;">⚠️ Çekilemedi</span>';
+        }
+
+        if(document.getElementById('btn_reset_rate')) {
+            document.getElementById('btn_reset_rate').style.display = (usdIsEdited || eurIsEdited) ? 'inline-flex' : 'none';
+        }
+
+        if(activeUsdRate > 0 && activeEurRate > 0) {
+            if(document.getElementById('cross_rate_container')) document.getElementById('cross_rate_container').style.display = 'block';
+            if(document.getElementById('lbl_cross_rate')) document.getElementById('lbl_cross_rate').textContent = fmt(activeEurRate / activeUsdRate);
+        }
+
+        // 💾 Post işleminde veritabanına gitmesi için gizli inputları güncelle!
+        if(document.getElementById('hidden_kur_usd')) document.getElementById('hidden_kur_usd').value = usdIsEdited ? activeUsdRate : '';
+        if(document.getElementById('hidden_kur_eur')) document.getElementById('hidden_kur_eur').value = eurIsEdited ? activeEurRate : '';
+    }
+
+    // --- KUR DÜZENLEME VE SIFIRLAMA FONKSİYONLARI ---
+    window.toggleRateEdit = function(show) {
+        if(document.getElementById('kur_display_container')) document.getElementById('kur_display_container').style.display = show ? 'none' : 'flex';
+        if(document.getElementById('kur_edit_container')) document.getElementById('kur_edit_container').style.display = show ? 'flex' : 'none';
+        if(show) {
+            if(document.getElementById('input_usd_rate')) document.getElementById('input_usd_rate').focus();
+        } else {
+            if(activeUsdRate && document.getElementById('input_usd_rate')) document.getElementById('input_usd_rate').value = fmt(activeUsdRate).replace(/\./g, '');
+            if(activeEurRate && document.getElementById('input_eur_rate')) document.getElementById('input_eur_rate').value = fmt(activeEurRate).replace(/\./g, '');
+        }
+    };
+
+    window.saveRateEdit = function() {
+        const newUsd = parseNum(document.getElementById('input_usd_rate')?.value);
+        const newEur = parseNum(document.getElementById('input_eur_rate')?.value);
+        
+        if(newUsd > 0) activeUsdRate = newUsd;
+        if(newEur > 0) activeEurRate = newEur;
+
+        updateRateUI();
+        toggleRateEdit(false);
+        calculateFinancials(); 
+    };
+
+    window.resetRate = function() {
+        activeUsdRate = originalUsdRate;
+        activeEurRate = originalEurRate;
+        
+        if(originalUsdRate && document.getElementById('input_usd_rate')) document.getElementById('input_usd_rate').value = fmt(originalUsdRate).replace(/\./g, '');
+        if(originalEurRate && document.getElementById('input_eur_rate')) document.getElementById('input_eur_rate').value = fmt(originalEurRate).replace(/\./g, '');
+        
+        updateRateUI();
+        calculateFinancials();
+    };
+
+    // --- 3 SÜTUNLU GENEL HESAPLAMA ---
     function calculateFinancials() {
         const kalemPb = document.querySelector('select[name="kalem_para_birimi"]')?.value || 'TL';
         const faturaPb = document.querySelector('select[name="fatura_para_birimi"]')?.value || 'TL';
         const status = document.querySelector('select[name="status"]')?.value || '';
-        const kdvOran = parseFloat(document.querySelector('select[name="kdv_orani"]')?.value || 20);
+        const kdvInput = document.querySelector('select[name="kdv_orani"]');
+        const kdvOran = kdvInput ? parseFloat(kdvInput.value) : 20;
 
         let subtotal = 0;
         document.querySelectorAll('#itemsTable tbody tr').forEach(tr => {
-            // Virgüllü formatı (1.000,50) parse et
-            const pStr = tr.querySelector('input[name="price[]"]')?.value || '0';
-            const qStr = tr.querySelector('input[name="qty[]"]')?.value || '1';
-            const price = parseFloat(pStr.replace(/\./g, '').replace(',', '.')) || 0;
-            const qty = parseFloat(qStr.replace(/\./g, '').replace(',', '.')) || 0;
+            const priceInput = tr.querySelector('input[name="price[]"]:not([type="hidden"])') || tr.querySelector('input[name="price[]"]');
+            const qtyInput = tr.querySelector('input[name="qty[]"]:not([type="hidden"])') || tr.querySelector('input[name="qty[]"]');
+
+            const pStr = priceInput?.value || '0';
+            const qStr = qtyInput?.value || '1';
+            
+            const price = parseNum(pStr);
+            const qty = parseNum(qStr);
             subtotal += (price * qty);
         });
 
@@ -2361,49 +2503,95 @@ document.addEventListener('DOMContentLoaded', function() {
         const grandTotal = subtotal + vatAmount;
         const sym = getSymbol(kalemPb);
 
-        // --- SAĞ TARAF GÜNCELLEME ---
-        document.getElementById('lbl_subtotal').textContent = subtotal.toLocaleString('tr-TR', {minimumFractionDigits: 4}) + ' ' + sym;
-        document.getElementById('lbl_kdv_rate').textContent = kdvOran;
-        document.getElementById('lbl_vat_amount').textContent = vatAmount.toLocaleString('tr-TR', {minimumFractionDigits: 4}) + ' ' + sym;
-        document.getElementById('lbl_grand_total_display').innerHTML = grandTotal.toLocaleString('tr-TR', {minimumFractionDigits: 4}) + ' <span style="font-size:20px; color:#64748b;">' + sym + '</span>';
+        // --- 3. SÜTUN: SAĞ TARAF (Orijinal Kalem) GÜNCELLEME ---
+        if(document.getElementById('lbl_kalem_pb_title')) document.getElementById('lbl_kalem_pb_title').textContent = kalemPb;
+        if(document.getElementById('lbl_subtotal')) document.getElementById('lbl_subtotal').textContent = fmt(subtotal) + ' ' + sym;
+        if(document.getElementById('lbl_kdv_rate')) document.getElementById('lbl_kdv_rate').textContent = kdvOran;
+        if(document.getElementById('lbl_vat_amount')) document.getElementById('lbl_vat_amount').textContent = fmt(vatAmount) + ' ' + sym;
+        if(document.getElementById('lbl_grand_total_display')) document.getElementById('lbl_grand_total_display').innerHTML = fmt(grandTotal) + ' <span style="font-size:18px; color:#64748b;">' + sym + '</span>';
 
-        // --- SOL TARAF GÜNCELLEME (Kur Bölümü) ---
+        // --- 1. ve 2. SÜTUN: KUR VE ÇEVİRİ KONTROLÜ ---
         const kurSection = document.getElementById('fatura_kur_section');
+        const cevrilmisSection = document.getElementById('fatura_cevrilmis_section');
+        
         if (status === 'fatura_edildi') {
-            kurSection.style.visibility = 'visible';
+            if(kurSection) kurSection.style.visibility = 'visible';
+            if(cevrilmisSection) cevrilmisSection.style.visibility = 'visible';
+            if(document.getElementById('lbl_fatura_pb_title')) document.getElementById('lbl_fatura_pb_title').textContent = faturaPb;
+            if(document.getElementById('lbl_converted_kdv_rate')) document.getElementById('lbl_converted_kdv_rate').textContent = kdvOran;
             
-            // Başlıktaki (TL) yazısını Fatura Para Birimine göre anlık güncelle
-            document.getElementById('lbl_fatura_pb_title').textContent = faturaPb;
-            
-            // Kur eksikse uyarı ver, yanlış hesaplama yapma
-            if ((kalemPb === 'USD' && !usdRate) || (kalemPb === 'EUR' && !eurRate) || (faturaPb === 'USD' && !usdRate) || (faturaPb === 'EUR' && !eurRate)) {
-                document.getElementById('lbl_converted_total').innerHTML = '<span style="font-size:16px; color:#e53e3e; letter-spacing:0;">⚠️ Kur eksik, hesaplanamadı</span>';
+            if ((kalemPb === 'USD' && !activeUsdRate) || (kalemPb === 'EUR' && !activeEurRate) || (faturaPb === 'USD' && !activeUsdRate) || (faturaPb === 'EUR' && !activeEurRate)) {
+                if(document.getElementById('lbl_converted_total')) document.getElementById('lbl_converted_total').innerHTML = '<span style="font-size:16px; color:#e53e3e; letter-spacing:0;">⚠️ Kur eksik</span>';
+                if(document.getElementById('lbl_converted_subtotal')) document.getElementById('lbl_converted_subtotal').textContent = '—';
+                if(document.getElementById('lbl_converted_vat')) document.getElementById('lbl_converted_vat').textContent = '—';
             } else {
-                // Çapraz Kur Mantığı (Cross-Rate)
-                let tryAmount = grandTotal;
-                if (kalemPb === 'USD') tryAmount = grandTotal * usdRate;
-                else if (kalemPb === 'EUR') tryAmount = grandTotal * eurRate;
+                // Çeviri Fonksiyonu (Cross-Rate Mantığı)
+                const convertCurrency = (amount) => {
+                    let tryAmount = amount;
+                    if (kalemPb === 'USD') tryAmount = amount * activeUsdRate;
+                    else if (kalemPb === 'EUR') tryAmount = amount * activeEurRate;
 
-                let finalConverted = tryAmount;
-                if (faturaPb === 'USD') finalConverted = tryAmount / usdRate;
-                else if (faturaPb === 'EUR') finalConverted = tryAmount / eurRate;
+                    let finalConverted = tryAmount;
+                    if (faturaPb === 'USD') finalConverted = tryAmount / activeUsdRate;
+                    else if (faturaPb === 'EUR') finalConverted = tryAmount / activeEurRate;
+                    return finalConverted;
+                };
 
-                document.getElementById('lbl_converted_total').innerHTML = finalConverted.toLocaleString('tr-TR', {minimumFractionDigits: 4}) + ' <span style="font-size:20px; color:#64748b;">' + getSymbol(faturaPb) + '</span>';
+                // Tüm kalemleri (Ara Toplam, KDV, Genel Toplam) ayrı ayrı çevir
+                const cSubtotal = convertCurrency(subtotal);
+                const cVatAmount = convertCurrency(vatAmount);
+                const cGrandTotal = convertCurrency(grandTotal);
+                const fSym = getSymbol(faturaPb);
+
+                if(document.getElementById('lbl_converted_subtotal')) document.getElementById('lbl_converted_subtotal').textContent = fmt(cSubtotal) + ' ' + fSym;
+                if(document.getElementById('lbl_converted_vat')) document.getElementById('lbl_converted_vat').textContent = fmt(cVatAmount) + ' ' + fSym;
+                if(document.getElementById('lbl_converted_total')) document.getElementById('lbl_converted_total').innerHTML = fmt(cGrandTotal) + ' <span style="font-size:18px; color:#d32f2f;">' + fSym + '</span>';
             }
         } else {
-            kurSection.style.visibility = 'hidden';
+            if(kurSection) kurSection.style.visibility = 'hidden';
+            if(cevrilmisSection) cevrilmisSection.style.visibility = 'hidden';
         }
     }
 
-    // Değişimleri izle
     const form = document.querySelector('form');
-    form.addEventListener('input', calculateFinancials);
-    form.addEventListener('change', calculateFinancials);
+    if(form) {
+        form.addEventListener('input', calculateFinancials);
+        form.addEventListener('change', calculateFinancials);
+    }
     
-    // Satır eklendiğinde/silindiğinde
-    const observer = new MutationObserver(calculateFinancials);
-    observer.observe(document.querySelector('#itemsTable tbody'), { childList: true });
+    const tbody = document.querySelector('#itemsTable tbody');
+    if(tbody) {
+        const observer = new MutationObserver(calculateFinancials);
+        observer.observe(tbody, { childList: true, subtree: true });
+    }
 
-    calculateFinancials(); // Sayfa açılışında hesapla
+    // Sayfa ilk yüklendiğinde hesaplamaları ve UI'ı tetikle
+    updateRateUI();
+    calculateFinancials(); 
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Revizyon No Balon Sistemi ---
+    var revInput = document.getElementById('rev_input');
+    var revBubble = document.getElementById('rev_warning_bubble');
+    
+    if (revInput && revBubble) {
+        var hasWarned = false; 
+
+        revInput.addEventListener('input', function() {
+            // Eğer uyarı verilmediyse ve input değiştirildiyse (örn: 00 silindiyse)
+            if (!hasWarned) {
+                revBubble.style.display = 'block';
+                
+                // 4 saniye ekranda tut ve kibarca kaybet
+                setTimeout(function() {
+                    revBubble.style.display = 'none';
+                }, 4000);
+                
+                hasWarned = true; // Sadece ilk değişimde 1 kere uyarır
+            }
+        });
+    }
 });
 </script>
