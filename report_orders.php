@@ -301,11 +301,25 @@ if (isset($_GET['export']) && $_GET['export']==='csv') {
   echo "\xEF\xBB\xBF";
   $out=fopen('php://output','w');
   fputcsv($out,['Siparişi Alan','Müşteri','Proje','Sipariş Kodu','Ürün','SKU','Miktar','Birim','Birim Fiyat','Para Birimi','Satır Toplam','Sipariş Tarihi']);
-  foreach($rows as $r){ 
-      $export_sp = trim((string)($r['siparisi_alan'] ?? ''));
-      $export_sp = $export_sp === '' ? 'Belirtilmemiş' : mb_convert_case(mb_strtolower(str_replace(['I','İ'], ['ı','i'], $export_sp), 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
-      fputcsv($out,[$export_sp, $r['customer_name']??'',$r['project_name']??'',$r['order_code']??'',$r['product_name']??'',$r['sku']??'',$r['qty']??'',$r['unit_name']??'',$r['unit_price']??'',$r['currency']??'',$r['line_total']??'',$r['order_date']??'']); 
-  }
+  $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞAHİN', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
+      foreach($rows as $r){ 
+          $raw_exp_sp = trim((string)($r['siparisi_alan'] ?? ''));
+          
+          if ($raw_exp_sp === '') {
+              $export_sp = 'Belirtilmemiş';
+          } else {
+              $upper_exp_sp = mb_strtoupper(str_replace(['i', 'ı'], ['İ', 'I'], $raw_exp_sp), 'UTF-8');
+              $lower_exp_sp = mb_strtolower(str_replace(['I','İ'], ['ı','i'], $raw_exp_sp), 'UTF-8');
+              $title_exp_sp = mb_convert_case($lower_exp_sp, MB_CASE_TITLE, 'UTF-8');
+              
+              if (in_array($upper_exp_sp, $temsilciler_sabit)) {
+                  $export_sp = $title_exp_sp;
+              } else {
+                  $export_sp = $title_exp_sp . ' (Diğer)';
+              }
+          }
+          fputcsv($out,[$export_sp, $r['customer_name']??'',$r['project_name']??'',$r['order_code']??'',$r['product_name']??'',$r['sku']??'',$r['qty']??'',$r['unit_name']??'',$r['unit_price']??'',$r['currency']??'',$r['line_total']??'',$r['order_date']??'']); 
+      }
   fclose($out); exit;
 }
 
@@ -340,6 +354,9 @@ $cur_customer = []; $cur_project = []; $cur_category = [];
 // [YENİ] Satış temsilcisi (siparisi_alan) verileri
 $salesperson_orders = [];
 $processed_orders_for_sp = []; 
+$salesperson_details = []; // ⭐ YENİ: Temsilci Detay Analizi İçin 
+$sp_agg_proj = []; $sp_cur_proj = []; // Dövizli yapı için
+$sp_agg_grp = []; $sp_cur_grp = [];   // Dövizli yapı için 
 
 foreach($rows as $r){
   $amt = (float)($r['line_total'] ?? 0);
@@ -355,14 +372,22 @@ foreach($rows as $r){
   $p = trim((string)($r['project_name'] ?? 'Diğer'));  if($p==='') $p='Diğer';
   $g = trim((string)($r['product_name'] ?? 'Diğer'));  if($g==='') $g='Diğer';
   
-  // --- [YENİ] Siparişi Alan (Büyük/Küçük Harf ve Boşluk Gruplama Zekası) ---
+  // --- [YENİ] Siparişi Alan (Sabit Liste ve Diğer Gruplaması) ---
   $raw_sp = trim((string)($r['siparisi_alan'] ?? ''));
+  $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞAHİN', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
+
   if ($raw_sp === '') {
-      $sp = 'Belirtilmemiş'; // Boş siparişler koca bir "Diğer" yerine buraya düşsün
+      $sp = 'Belirtilmemiş';
   } else {
-      // Türkçe I/İ harf sorunlarını çöz, hepsini küçük harfe çevir, sonra Baş Harflerini Büyüt
+      $upper_sp = mb_strtoupper(str_replace(['i', 'ı'], ['İ', 'I'], $raw_sp), 'UTF-8');
       $lower_sp = mb_strtolower(str_replace(['I','İ'], ['ı','i'], $raw_sp), 'UTF-8');
-      $sp = mb_convert_case($lower_sp, MB_CASE_TITLE, 'UTF-8');
+      $title_sp = mb_convert_case($lower_sp, MB_CASE_TITLE, 'UTF-8');
+      
+      if (in_array($upper_sp, $temsilciler_sabit)) {
+          $sp = $title_sp;
+      } else {
+          $sp = $title_sp . ' (Diğer)';
+      }
   }
   
   $oid = $r['order_id'];
@@ -377,6 +402,33 @@ foreach($rows as $r){
   $agg_customer_try[$c] = ($agg_customer_try[$c] ?? 0) + $amt_try;
   $agg_project_try[$p]  = ($agg_project_try[$p]  ?? 0) + $amt_try;
   $agg_category_try[$g] = ($agg_category_try[$g] ?? 0) + $amt_try;
+
+  // ⭐ YENİ: Satış Temsilcisi Detay Analizi Verisi (Döviz Korumalı)
+  // 1. Projeden ne kadar kazanmış?
+  $sp_agg_proj[$sp][$p] = ($sp_agg_proj[$sp][$p] ?? 0) + $amt_try;
+  if(!isset($sp_cur_proj[$sp][$p][$cur])) $sp_cur_proj[$sp][$p][$cur] = 0;
+  $sp_cur_proj[$sp][$p][$cur] += $amt;
+  
+  // 2. Hangi ürün grubundan ne kadar satmış? (SKU Zekası ile)
+  $raw_sku  = trim($r['sku'] ?? '');
+  $family = 'DİĞER';
+  if (!empty($raw_sku)) {
+      if (strpos($raw_sku, 'RN-MLS-RAY') === 0) {
+          if (strpos($raw_sku, 'TR') !== false) $family = 'RN-MLS-RAY (TR)';
+          elseif (strpos($raw_sku, 'SR') !== false) $family = 'RN-MLS-RAY (SR)';
+          elseif (strpos($raw_sku, 'SU') !== false) $family = 'RN-MLS-RAY (SU)';
+          elseif (strpos($raw_sku, 'SA') !== false) $family = 'RN-MLS-RAY (SA)';
+          else $family = 'RN-MLS-RAY';
+      } else {
+          $parts = explode('-', $raw_sku);
+          $family = (count($parts) >= 2) ? ($parts[0] . '-' . $parts[1]) : $parts[0];
+      }
+  } elseif (strpos($g, 'RN') === 0) {
+      $family = explode(' ', $g)[0];
+  }
+  $sp_agg_grp[$sp][$family] = ($sp_agg_grp[$sp][$family] ?? 0) + $amt_try;
+  if(!isset($sp_cur_grp[$sp][$family][$cur])) $sp_cur_grp[$sp][$family][$cur] = 0;
+  $sp_cur_grp[$sp][$family][$cur] += $amt;
 
   // Ekrana basmak için ham döviz tutarlarını koru
   if(!isset($cur_customer[$c])) $cur_customer[$c]=[];
@@ -423,6 +475,12 @@ foreach($salesperson_orders as $name => $count) {
         'val' => $count,
         'try_val' => $count
     ];
+    
+    // ⭐ YENİ: Detay analizi verisini döviz bilgisiyle oluştur
+    $salesperson_details[$name] = [
+        'projects' => get_dominant_info($sp_agg_proj[$name] ?? [], $sp_cur_proj[$name] ?? []),
+        'groups'   => get_dominant_info($sp_agg_grp[$name] ?? [], $sp_cur_grp[$name] ?? [])
+    ];
 }
 
 $chart_payload = [
@@ -430,7 +488,95 @@ $chart_payload = [
   'project'     => get_dominant_info($agg_project_try, $cur_project),
   'category'    => get_dominant_info($agg_category_try, $cur_category),
   'salesperson' => $sp_formatted,
+  'salesperson_details' => $salesperson_details, // ⭐ YENİ EKLENDİ
 ];
+
+// ===============================================
+// ⭐ GELİŞTİRİLMİŞ SATIŞ TEMSİLCİSİ VERİSİ
+// ===============================================
+$salesperson_enhanced = [];
+
+foreach ($rows as $row) {
+    $raw_sp = trim($row['siparisi_alan'] ?? '');
+    $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞAHİN', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
+
+    if ($raw_sp === '') {
+        $sp = 'Belirtilmemiş';
+    } else {
+        $upper_sp = mb_strtoupper(str_replace(['i', 'ı'], ['İ', 'I'], $raw_sp), 'UTF-8');
+        $lower_sp = mb_strtolower(str_replace(['I','İ'], ['ı','i'], $raw_sp), 'UTF-8');
+        $title_sp = mb_convert_case($lower_sp, MB_CASE_TITLE, 'UTF-8');
+        
+        if (in_array($upper_sp, $temsilciler_sabit)) {
+            $sp = $title_sp;
+        } else {
+            $sp = $title_sp . ' (Diğer)';
+        }
+    }
+    
+    if (!isset($salesperson_enhanced[$sp])) {
+        $salesperson_enhanced[$sp] = [
+            'order_count' => 0,
+            'total_price_try' => 0,
+            'product_groups' => [],
+            'currency' => 'TRY',
+            'original_price' => 0,
+            'original_currency' => 'TRY',
+            'processed_orders' => [] // Aynı siparişi 2 kere saymamak için
+        ];
+    }
+    
+    $oid = $row['order_id'];
+    
+    // 1. Sipariş sayısı (Her siparişi 1 kez say)
+    if (!isset($salesperson_enhanced[$sp]['processed_orders'][$oid])) {
+        $salesperson_enhanced[$sp]['processed_orders'][$oid] = true;
+        $salesperson_enhanced[$sp]['order_count']++;
+    }
+    
+    // 2. Toplam fiyat (TL cinsinden + orijinal)
+    $subtotal = (float)($row['line_total'] ?? 0);
+    $cur = normalize_currency($row['currency'] ?? 'TRY');
+    
+    // Orijinal para biriminde toplam
+    if ($salesperson_enhanced[$sp]['original_currency'] === $cur || $salesperson_enhanced[$sp]['original_price'] == 0) {
+        $salesperson_enhanced[$sp]['original_currency'] = $cur;
+        $salesperson_enhanced[$sp]['original_price'] += $subtotal;
+    }
+    
+    // TL'ye çevir
+    $rate = 1.0;
+    if ($cur === 'USD') $rate = $usd_rate;
+    elseif ($cur === 'EUR') $rate = $eur_rate;
+    $salesperson_enhanced[$sp]['total_price_try'] += ($subtotal * $rate);
+    
+    // 3. Ürün grupları (SKU'dan)
+    $sku = trim($row['sku'] ?? '');
+    if (!empty($sku)) {
+        if (strpos($sku, 'RN-MLS-RAY') === 0) {
+            if (strpos($sku, 'TR') !== false) $group = 'RN-MLS-RAY (TR)';
+            elseif (strpos($sku, 'SR') !== false) $group = 'RN-MLS-RAY (SR)';
+            elseif (strpos($sku, 'SU') !== false) $group = 'RN-MLS-RAY (SU)';
+            elseif (strpos($sku, 'SA') !== false) $group = 'RN-MLS-RAY (SA)';
+            else $group = 'RN-MLS-RAY';
+        } else {
+            $parts = explode('-', $sku);
+            $group = (count($parts) >= 2) ? ($parts[0] . '-' . $parts[1]) : $parts[0];
+        }
+        $salesperson_enhanced[$sp]['product_groups'][$group] = true;
+    }
+}
+
+// Ürün grubu sayısını hesapla
+foreach ($salesperson_enhanced as $sp => &$data) {
+    $data['product_group_count'] = count($data['product_groups']);
+    unset($data['product_groups']);
+    unset($data['processed_orders']);
+}
+unset($data);
+
+// Mevcut chart_payload'a ekle
+$chart_payload['salesperson_enhanced'] = $salesperson_enhanced;
 
 
 include __DIR__ . '/includes/header.php';
@@ -842,8 +988,27 @@ document.addEventListener('DOMContentLoaded', function(){
   <div class="chart-panel">
     <div class="quad-grid">
       <div class="pie-card">
-        <h4>Satış Temsilcisi Dağılımı</h4>
-        <div class="pie-canvas-wrap"><canvas id="pieSalesperson"></canvas></div>
+        <h4 style="margin-bottom: 5px;">Satış Temsilcisi Dağılımı</h4>
+        <div class="chart-sort-controls" style="margin-bottom: 6px; padding: 4px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 6px; border: 1px solid #e2e8f0;">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
+            <label class="sort-option">
+              <input type="radio" name="salesperson_sort" value="order_count" checked>
+              <span>📦 Adet</span>
+            </label>
+            <label class="sort-option">
+              <input type="radio" name="salesperson_sort" value="total_price">
+              <span>💰 Fiyat</span>
+            </label>
+          </div>
+        </div>
+        
+        <div id="spPriceInfo" style="display: none; text-align: center; font-size: 10px; color: #94a3b8; font-style: italic; margin-bottom: 8px; padding: 0 10px; line-height: 1.3;">
+          *Buradaki ciro, farklı döviz cinslerinden kesilen siparişlerin güncel TCMB kuru ile TL'ye çevrilip toplanmış halidir.
+        </div>
+
+        <div class="chart-box" style="transition: opacity 0.3s ease;">
+            <div class="pie-canvas-wrap"><canvas id="pieSalesperson"></canvas></div>
+        </div>
         <div class="top5"><ul id="top5Salesperson"></ul></div>
       </div>
       <div class="pie-card">
@@ -862,6 +1027,41 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="top5"><ul id="top5Category"></ul></div>
       </div>
     </div>
+
+    <div style="margin-top: 20px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: linear-gradient(to right, #f8fafc, #ffffff);">
+       <h3 style="margin-top: 0; color: #0f172a; font-size: 16px; margin-bottom: 15px; border-bottom: 2px dashed #cbd5e1; padding-bottom: 10px;">
+           🔍 Satış Temsilcisi Performans Analizi
+       </h3>
+       <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+           <div style="flex: 1; min-width: 250px; background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;">
+               <label style="font-size: 13px; font-weight: 700; color: #475569; display:block; margin-bottom: 6px;">1. Temsilci Seçin:</label>
+               <select id="spDetailSelect" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 20px; font-weight: 600; color: #0f172a; outline: none;"></select>
+               
+               <label style="font-size: 13px; font-weight: 700; color: #475569; display:block; margin-bottom: 8px;">2. Analiz Türü:</label>
+               <div style="display: flex; flex-direction: column; gap: 10px;">
+                   <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; transition: 0.2s;">
+                       <input type="radio" name="sp_detail_type" value="projects" checked style="width: 16px; height: 16px; accent-color: #8b5cf6;">
+                       <span style="font-size: 13px; font-weight: 600; color: #334155;">📁 Projelere Göre Dağılım (Ciro)</span>
+                   </label>
+                   <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; transition: 0.2s;">
+                       <input type="radio" name="sp_detail_type" value="groups" style="width: 16px; height: 16px; accent-color: #ec4899;">
+                       <span style="font-size: 13px; font-weight: 600; color: #334155;">🏷️ Ürün Grubuna Göre (Ciro)</span>
+                   </label>
+               </div>
+           </div>
+           
+           <div style="flex: 2; min-width: 300px; display: flex; gap: 20px; align-items: center; background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;">
+               <div style="flex: 1; height: 250px; position: relative;">
+                   <canvas id="pieSpDetail"></canvas>
+               </div>
+               <div style="flex: 1; max-height: 250px; overflow-y: auto;">
+                   <h4 style="margin-top: 0; font-size: 13px; color: #64748b; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">🏆 En Yüksek İlk 5</h4>
+                   <ul id="top5SpDetail" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;"></ul>
+               </div>
+           </div>
+       </div>
+    </div>
+
   </div>
 
   <div class="table-wrap">
@@ -888,7 +1088,21 @@ document.addEventListener('DOMContentLoaded', function(){
           
           // Satici ismini formatla
           $raw_sp2 = trim((string)($r['siparisi_alan'] ?? ''));
-          $formatted_sp = $raw_sp2 === '' ? 'Belirtilmemiş' : mb_convert_case(mb_strtolower(str_replace(['I','İ'], ['ı','i'], $raw_sp2), 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+          $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞAHİN', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
+          
+          if ($raw_sp2 === '') {
+              $formatted_sp = 'Belirtilmemiş';
+          } else {
+              $upper_sp2 = mb_strtoupper(str_replace(['i', 'ı'], ['İ', 'I'], $raw_sp2), 'UTF-8');
+              $lower_sp2 = mb_strtolower(str_replace(['I','İ'], ['ı','i'], $raw_sp2), 'UTF-8');
+              $title_sp2 = mb_convert_case($lower_sp2, MB_CASE_TITLE, 'UTF-8');
+              
+              if (in_array($upper_sp2, $temsilciler_sabit)) {
+                  $formatted_sp = $title_sp2;
+              } else {
+                  $formatted_sp = $title_sp2 . ' (Diğer)';
+              }
+          }
 
           if (!isset($__orders[$__code])) {
             $__orders[$__code] = [
@@ -931,6 +1145,25 @@ document.addEventListener('DOMContentLoaded', function(){
     </table>
   </div>
 </div>
+
+<style>
+/* SATIŞ TEMSİLCİSİ SIRALAMA KONTROL STİLLERİ */
+.chart-sort-controls { user-select: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.sort-option {
+  display: inline-flex; align-items: center; gap: 3px; cursor: pointer;
+  padding: 3px 6px; border-radius: 4px; transition: all 0.2s;
+  border: 1px solid transparent; background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; overflow: hidden;
+}
+.sort-option:hover { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(59, 130, 246, 0.15); border-color: #93c5fd; }
+.sort-option input[type="radio"] { width: 11px; height: 11px; cursor: pointer; accent-color: #3b82f6; margin: 0; }
+.sort-option span { font-size: 10px; color: #475569; font-weight: 600; white-space: nowrap; }
+.sort-option:has(input:checked) {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: #1e40af; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+.sort-option:has(input:checked) span { color: #ffffff; }
+</style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 
@@ -1037,10 +1270,203 @@ document.addEventListener('DOMContentLoaded', function(){
   }
 
   // 2. HER GRAFİĞE FARKLI BİR "TEMA/BAŞLANGIÇ" RENGİ VERİYORUZ
-  renderPie('pieSalesperson', 'top5Salesperson', entriesFrom('salesperson'), 50, true); // Sarı/Yeşil (Sipariş Sayısı)
+  
+  // ================================================
+  // ⭐ SATIŞ TEMSİLCİSİ - DİNAMİK SIRALAMA
+  // ================================================
+  let salespersonChart = null;
+  function renderSalespersonChart(sortBy) {
+    const enhanced = payload.salesperson_enhanced || {};
+    let entries = Object.entries(enhanced).map(([name, data]) => {
+      let value = 0; let displayValue = 0; let suffix = '';
+      
+      if (sortBy === 'order_count') {
+        value = data.order_count || 0;
+        displayValue = value;
+        suffix = ' Sipariş';
+      } else if (sortBy === 'total_price') {
+        value = data.total_price_try || 0;
+        displayValue = value;
+        suffix = '';
+      }
+      return { name: name, value: value, displayValue: displayValue, suffix: suffix, currency: data.original_currency || 'TRY' };
+    });
+    
+    entries.sort((a, b) => b.value - a.value);
+    const labels = entries.map(e => e.name);
+    const data = entries.map(e => e.value);
+    const colors = generateColors(labels.length, 50);
+    
+    if (salespersonChart) salespersonChart.destroy();
+    
+    const ctx = document.getElementById('pieSalesperson')?.getContext('2d');
+    if (ctx && labels.length) {
+      salespersonChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#ffffff', hoverOffset: 15 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#1e293b',
+              borderColor: '#e2e8f0', borderWidth: 1, padding: 12,
+              callbacks: {
+                label: function(context) {
+                  let label = context.label || ''; let value = context.parsed; let entry = entries[context.dataIndex];
+                  if (label.length > 30) label = label.substring(0, 30) + '...';
+                  if (sortBy === 'total_price') return ' ' + label + ': ₺' + value.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                  return ' ' + label + ': ' + value + entry.suffix;
+                }
+              }
+            }
+          }, layout: { padding: 15 }
+        }
+      });
+    }
+    
+    const ul = document.getElementById('top5Salesperson');
+    if (ul) {
+      if (!entries.length) {
+        ul.innerHTML = '<li><span class="name">Veri yok</span><span class="val">—</span></li>';
+      } else {
+        const top5 = entries.slice(0, 5);
+        ul.innerHTML = top5.map(it => {
+          let displayText = sortBy === 'total_price' 
+            ? '₺' + it.displayValue.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})
+            : it.displayValue.toLocaleString('tr-TR') + it.suffix;
+          return `<li><span class="name">${it.name}</span><span class="val" style="color:#10b981; font-weight:600;">${displayText}</span></li>`;
+        }).join('');
+      }
+    }
+  }
+  
+  renderSalespersonChart('order_count');
+  document.querySelectorAll('input[name="salesperson_sort"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      if (this.checked) {
+        // ⭐ YENİ: Bilgi metnini sadece 'total_price' seçiliyse göster
+        const infoText = document.getElementById('spPriceInfo');
+        if (infoText) {
+            infoText.style.display = this.value === 'total_price' ? 'block' : 'none';
+        }
+
+        const chartBox = document.querySelector('#pieSalesperson').closest('.chart-box');
+        chartBox.style.opacity = '0.3';
+        setTimeout(() => { renderSalespersonChart(this.value); chartBox.style.opacity = '1'; }, 150);
+      }
+    });
+  });
+  // 2. HER GRAFİĞE FARKLI BİR "TEMA/BAŞLANGIÇ" RENGİ VERİYORUZ
+  // renderPie('pieSalesperson'...) kodu buradan SİLİNDİ çünkü yukarıda dinamik çiziliyor.
   renderPie('pieCustomer', 'top5Customer', entriesFrom('customer'), 200, false); // Mavi tonlarından başlar
   renderPie('pieProject',  'top5Project',  entriesFrom('project'), 280, false);  // Mor tonlarından başlar
   renderPie('pieCategory', 'top5Category', entriesFrom('category'), 340, false); // Kırmızı/Pembe tonları
+
+  // ================================================
+  // ⭐ YENİ: SATIŞ TEMSİLCİSİ DETAY ANALİZİ
+  // ================================================
+  const spDetails = payload.salesperson_details || {};
+  const spSelect = document.getElementById('spDetailSelect');
+  
+  // Select Kutusunu Doldur
+  const spList = Object.keys(spDetails).sort();
+  spList.forEach(sp => {
+      let opt = document.createElement('option');
+      opt.value = sp; opt.textContent = sp;
+      spSelect.appendChild(opt);
+  });
+  
+  // "Belirtilmemiş" harici ilk kişiyi seçili yap (DERYA gibi)
+  const firstRealSp = spList.find(s => s !== 'Belirtilmemiş') || spList[0];
+  if (firstRealSp) spSelect.value = firstRealSp;
+
+  let spDetailChart = null;
+
+  function renderSpDetailChart() {
+      const selectedSp = spSelect.value;
+      const selectedType = document.querySelector('input[name="sp_detail_type"]:checked').value;
+      const ul = document.getElementById('top5SpDetail');
+      const ctx = document.getElementById('pieSpDetail')?.getContext('2d');
+
+      if (!selectedSp || !spDetails[selectedSp]) {
+          if (spDetailChart) spDetailChart.destroy();
+          ul.innerHTML = '<li style="font-size:12px; color:#94a3b8;">Temsilci seçilmedi</li>';
+          return;
+      }
+
+      function getSymbol(c) { return c==='TRY'?'₺':(c==='USD'?'$':(c==='EUR'?'€':'')); }
+
+      const dataObj = spDetails[selectedSp][selectedType] || {};
+      let entries = Object.entries(dataObj)
+          .map(([name, info]) => ({ 
+              name: name, 
+              val: Number(info.try_val) || 0,        // Grafikte dilim büyüklüğü ve sıralama için TL
+              disp_val: Number(info.val) || 0,       // Ekranda göstermek için Orijinal Döviz
+              cur: info.cur || 'TRY' 
+          }))
+          .sort((a, b) => b.val - a.val);
+
+      const labels = entries.map(e => e.name);
+      const data = entries.map(e => e.val); // ChartJS oranlamak için TL kullanacak
+      
+      // Mor (Proje) veya Pembe (Grup) renk teması
+      const colors = generateColors(labels.length, selectedType === 'projects' ? 270 : 330); 
+
+      if (spDetailChart) spDetailChart.destroy();
+      
+      if (labels.length > 0 && ctx) {
+          spDetailChart = new Chart(ctx, {
+              type: 'doughnut',
+              data: {
+                  labels: labels,
+                  datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#ffffff', hoverOffset: 10 }]
+              },
+              options: {
+                  responsive: true, maintainAspectRatio: false,
+                  plugins: {
+                      legend: { display: false },
+                      tooltip: {
+                          backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#1e293b',
+                          borderColor: '#e2e8f0', borderWidth: 1, padding: 12,
+                          callbacks: {
+                              label: function(context) {
+                                  let lbl = context.label || '';
+                                  if (lbl.length > 30) lbl = lbl.substring(0, 30) + '...';
+                                  let entry = entries[context.dataIndex];
+                                  return ' ' + lbl + ': ' + entry.disp_val.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + getSymbol(entry.cur);
+                              }
+                          }
+                      }
+                  }, layout: { padding: 10 }
+              }
+          });
+      }
+
+      // Listeyi Çiz
+      if (!entries.length) {
+          ul.innerHTML = '<li style="font-size:12px; color:#94a3b8;">Bu kriterde kayıt bulunamadı</li>';
+      } else {
+          ul.innerHTML = entries.slice(0, 5).map(it => {
+              let txt = it.disp_val.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + getSymbol(it.cur);
+              return `<li style="display:flex; justify-content:space-between; font-size:12px; padding:8px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
+                  <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%; font-weight:600; color:#334155;">${it.name}</span>
+                  <span style="color:#10b981; font-weight:800;">${txt}</span>
+              </li>`;
+          }).join('');
+      }
+  }
+
+  // Temsilci veya Radio Button değiştiğinde grafiği güncelle
+  spSelect.addEventListener('change', renderSpDetailChart);
+  document.querySelectorAll('input[name="sp_detail_type"]').forEach(r => r.addEventListener('change', renderSpDetailChart));
+  
+  // Sayfa yüklendiğinde ilk çizimi yap
+  renderSpDetailChart();
+
 })();
 </script>
 
