@@ -314,6 +314,8 @@ $sel = [
   ($projectCol ? "$projectCol AS project_name" : "NULL AS project_name"),
   "$prodNameCol AS product_name",
   ($prodSkuCol ? "$prodSkuCol AS sku" : "NULL AS sku"),
+  "pc.name AS category_name",          // YENİ: Kategori Adı
+  "pc.macro_category AS macro_cat",    // YENİ: İç/Dış Bilgisi
   "`$itemsTable`.`$qtyCol` AS qty",
   "`$itemsTable`.`$unitCol` AS unit_name",
   "`$itemsTable`.`$unitPriceCol` AS unit_price",
@@ -324,7 +326,8 @@ $sel = [
 $joins = [
   "JOIN orders   ON orders.id = `$itemsTable`.order_id",
   "JOIN products ON products.id = `$itemsTable`.`$productIdCol`",
-  "JOIN customers ON customers.id = orders.customer_id"
+  "JOIN customers ON customers.id = orders.customer_id",
+  "LEFT JOIN product_categories pc ON pc.id = products.category_id" // YENİ: Kategori Bağlantısı
 ];
 $sql = "SELECT
   " . implode(",
@@ -437,8 +440,32 @@ foreach ($rows as $r) {
   if ($c === '') $c = 'Diğer';
   $p = trim((string)($r['project_name'] ?? 'Diğer'));
   if ($p === '') $p = 'Diğer';
-  $g = trim((string)($r['product_name'] ?? 'Diğer'));
-  if ($g === '') $g = 'Diğer';
+  
+  // --- YENİ: KATEGORİ & SKU AKILLI FALLBACK (Hem Genel Grafik Hem Temsilci İçin) ---
+  $cat_name = trim((string)($r['category_name'] ?? ''));
+  if ($cat_name !== '') {
+    $best_group = $cat_name; // Gerçek kategori varsa onu kullan
+  } else {
+    // Kategori yoksa eski tahmin yöntemini (SKU Parçalama) kullan
+    $raw_sku  = trim($r['sku'] ?? '');
+    $raw_name = trim($r['product_name'] ?? '');
+    $best_group = 'DİĞER';
+    if (!empty($raw_sku)) {
+      if (strpos($raw_sku, 'RN-MLS-RAY') === 0) {
+        if (strpos($raw_sku, 'TR') !== false) $best_group = 'RN-MLS-RAY (TR)';
+        elseif (strpos($raw_sku, 'SR') !== false) $best_group = 'RN-MLS-RAY (SR)';
+        elseif (strpos($raw_sku, 'SU') !== false) $best_group = 'RN-MLS-RAY (SU)';
+        elseif (strpos($raw_sku, 'SA') !== false) $best_group = 'RN-MLS-RAY (SA)';
+        else $best_group = 'RN-MLS-RAY';
+      } else {
+        $parts = explode('-', $raw_sku);
+        $best_group = (count($parts) >= 2) ? ($parts[0] . '-' . $parts[1]) : $parts[0];
+      }
+    } elseif (strpos($raw_name, 'RN') === 0) {
+      $best_group = explode(' ', $raw_name)[0];
+    }
+  }
+  $g = $best_group; // 1. Genel Ürün Grubu Pastası İçin
 
   // --- [YENİ] Siparişi Alan (Sabit Liste ve Diğer Gruplaması) ---
   $raw_sp = trim((string)($r['siparisi_alan'] ?? ''));
@@ -477,23 +504,15 @@ foreach ($rows as $r) {
   if (!isset($sp_cur_proj[$sp][$p][$cur])) $sp_cur_proj[$sp][$p][$cur] = 0;
   $sp_cur_proj[$sp][$p][$cur] += $amt;
 
-  // 2. Hangi ürün grubundan ne kadar satmış? (SKU Zekası ile)
-  $raw_sku  = trim($r['sku'] ?? '');
-  $family = 'DİĞER';
-  if (!empty($raw_sku)) {
-    if (strpos($raw_sku, 'RN-MLS-RAY') === 0) {
-      if (strpos($raw_sku, 'TR') !== false) $family = 'RN-MLS-RAY (TR)';
-      elseif (strpos($raw_sku, 'SR') !== false) $family = 'RN-MLS-RAY (SR)';
-      elseif (strpos($raw_sku, 'SU') !== false) $family = 'RN-MLS-RAY (SU)';
-      elseif (strpos($raw_sku, 'SA') !== false) $family = 'RN-MLS-RAY (SA)';
-      else $family = 'RN-MLS-RAY';
-    } else {
-      $parts = explode('-', $raw_sku);
-      $family = (count($parts) >= 2) ? ($parts[0] . '-' . $parts[1]) : $parts[0];
-    }
-  } elseif (strpos($g, 'RN') === 0) {
-    $family = explode(' ', $g)[0];
-  }
+  // 2. Hangi ürün grubundan ne kadar satmış? (Akıllı Kategori/SKU Fallback)
+  $family = $best_group; // Yukarıda ürettiğimiz mükemmel veriyi kullanıyoruz
+
+  // (Opsiyonel: Eğer kategori adının yanına İç/Dış etiketi de eklensin istersen:)
+  // if (!empty($r['macro_cat'])) {
+  //    $macro_label = $r['macro_cat'] == 'ic' ? 'İç' : ($r['macro_cat'] == 'dis' ? 'Dış' : 'Diğer');
+  //    $family = $family . " [" . $macro_label . "]";
+  // }
+
   $sp_agg_grp[$sp][$family] = ($sp_agg_grp[$sp][$family] ?? 0) + $amt_try;
   if (!isset($sp_cur_grp[$sp][$family][$cur])) $sp_cur_grp[$sp][$family][$cur] = 0;
   $sp_cur_grp[$sp][$family][$cur] += $amt;
@@ -621,21 +640,30 @@ foreach ($rows as $row) {
   elseif ($cur === 'EUR') $rate = $eur_rate;
   $salesperson_enhanced[$sp]['total_price_try'] += ($subtotal * $rate);
 
-  // 3. Ürün grupları (SKU'dan)
-  $sku = trim($row['sku'] ?? '');
-  if (!empty($sku)) {
-    if (strpos($sku, 'RN-MLS-RAY') === 0) {
-      if (strpos($sku, 'TR') !== false) $group = 'RN-MLS-RAY (TR)';
-      elseif (strpos($sku, 'SR') !== false) $group = 'RN-MLS-RAY (SR)';
-      elseif (strpos($sku, 'SU') !== false) $group = 'RN-MLS-RAY (SU)';
-      elseif (strpos($sku, 'SA') !== false) $group = 'RN-MLS-RAY (SA)';
-      else $group = 'RN-MLS-RAY';
-    } else {
-      $parts = explode('-', $sku);
-      $group = (count($parts) >= 2) ? ($parts[0] . '-' . $parts[1]) : $parts[0];
+  // 3. Ürün grupları (Akıllı Kategori/SKU Fallback)
+  $cat_name2 = trim((string)($row['category_name'] ?? ''));
+  if ($cat_name2 !== '') {
+    $group = $cat_name2;
+  } else {
+    $raw_sku2 = trim($row['sku'] ?? '');
+    $raw_name2 = trim($row['product_name'] ?? '');
+    $group = 'DİĞER';
+    if (!empty($raw_sku2)) {
+      if (strpos($raw_sku2, 'RN-MLS-RAY') === 0) {
+        if (strpos($raw_sku2, 'TR') !== false) $group = 'RN-MLS-RAY (TR)';
+        elseif (strpos($raw_sku2, 'SR') !== false) $group = 'RN-MLS-RAY (SR)';
+        elseif (strpos($raw_sku2, 'SU') !== false) $group = 'RN-MLS-RAY (SU)';
+        elseif (strpos($raw_sku2, 'SA') !== false) $group = 'RN-MLS-RAY (SA)';
+        else $group = 'RN-MLS-RAY';
+      } else {
+        $parts = explode('-', $raw_sku2);
+        $group = (count($parts) >= 2) ? ($parts[0] . '-' . $parts[1]) : $parts[0];
+      }
+    } elseif (strpos($raw_name2, 'RN') === 0) {
+      $group = explode(' ', $raw_name2)[0];
     }
-    $salesperson_enhanced[$sp]['product_groups'][$group] = true;
   }
+  $salesperson_enhanced[$sp]['product_groups'][$group] = true;
 }
 
 // Ürün grubu sayısını hesapla
@@ -1417,7 +1445,9 @@ include __DIR__ . '/../includes/header.php';
       allowClear: true,
       width: '100%',
       language: {
-        noResults: function() { return "Kayıt bulunamadı"; }
+        noResults: function() {
+          return "Kayıt bulunamadı";
+        }
       }
     });
 
@@ -1426,7 +1456,9 @@ include __DIR__ . '/../includes/header.php';
       allowClear: true,
       width: '100%',
       language: {
-        noResults: function() { return "Proje bulunamadı"; }
+        noResults: function() {
+          return "Proje bulunamadı";
+        }
       }
     });
 
