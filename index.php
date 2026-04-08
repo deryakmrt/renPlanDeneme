@@ -168,7 +168,7 @@ include __DIR__ . '/includes/header.php';
     
     if ($__is_admin_like): 
     ?>
-        <a href="report_orders.php" class="stretch" aria-label="Raporlar"></a>
+        <a href="/reports/sales_reps.php" class="stretch" aria-label="Raporlar"></a>
     <?php else: ?>
         <a href="#" onclick="alert('⚠️ Bu sayfaya erişim için admin yetkisi gereklidir.'); return false;" class="stretch" aria-label="Raporlar"></a>
     <?php endif; ?>

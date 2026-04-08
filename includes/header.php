@@ -306,12 +306,22 @@ require_once __DIR__ . '/helpers.php';
               <a href="lazer_kesim.php">Lazer Kesim</a>
               <a href="calendar.php?a=new">Sipariş Takvimi</a>
               <?php if (has_role('admin')): ?>
-                <a href="report_orders.php">Satış Raporları</a>
                 <a href="import_orders.php">Siparişleri İçe Aktar</a>
                 <a href="export_orders.php">Siparişleri Dışarı Aktar</a>
               <?php endif; ?>
             </div>
           </div>
+          <?php if (has_role('admin')): ?>
+          <div class="dropdown">
+            <a href="#" class="dropdown-toggle">Raporlar<span class="caret"></span></a>
+            <div class="menu">
+              <a href="/reports/sales_reps.php">👥 Ekip Performansı</a>
+              <a href="#">🏢 Müşteri İçgörüleri (Yakında)</a>
+              <a href="#">📈 Aylık Trendler (Yakında)</a>
+            </div>
+          </div>
+          <?php endif; ?>
+
           <div class="dropdown">
             <a href="#" class="dropdown-toggle">Müşteriler<span class="caret"></span></a>
             <div class="menu">
@@ -446,7 +456,8 @@ require_once __DIR__ . '/helpers.php';
           doc: '<path d="M7 3h8l5 5v13H7z"/><path d="M15 3v6h6"/><path d="M10 13h6"/><path d="M10 17h6"/>',
           folder: '<path d="M3 7h6l2 2h10v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a1 1 0 0 1 1-1z"/>',
           bag: '<path d="M6 7h12l-1 14H7L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/><path d="M9 7c0-1.66 1.34-3 3-3s3 1.34 3 3"/>',
-          search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>'
+          search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+          chart: '<path d="M18 20V10M12 20V4M6 20v-6"/><rect x="2" y="2" width="20" height="20" rx="2" ry="2"/>'
         };
 
         function pickIcon(label) {
@@ -458,6 +469,7 @@ require_once __DIR__ . '/helpers.php';
           if (t.includes('satın alma') || t.includes('satinalma') || t.includes('purchase')) return ICONS.bag;
           if (t.includes('sipariş') || t.includes('siparis')) return ICONS.folder;
           if (t.includes('ara') || t.includes('search')) return ICONS.search;
+          if (t.includes('rapor') || t.includes('analiz')) return ICONS.chart;
           return ICONS.folder;
         }
 
