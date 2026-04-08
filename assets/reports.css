@@ -80,3 +80,58 @@
 /* --- ANİMASYONLAR --- */
 .will-animate { opacity:0; transform:translateY(6px); transition:opacity .4s ease, transform .4s ease; }
 .will-animate.appear { opacity:1; transform:none; }
+/* --- YENİ: YATAY İSTATİSTİK KARTLARI (En Üst Sıra) --- */
+.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+@media (max-width: 1024px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .stat-row { grid-template-columns: 1fr; } }
+
+/* --- YENİ: YATAY FİLTRE ÇUBUĞU --- */
+.filter-bar { display: flex; flex-wrap: wrap; gap: 15px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); align-items: flex-end; margin-bottom: 20px; }
+.filter-bar .filter-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 160px; }
+.filter-bar .label { font-size: 11px; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; }
+.filter-bar .input { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; transition: all 0.2s; font-size: 13px; width: 100%; background: #fff; box-sizing: border-box;}
+.filter-bar .input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); outline: none; }
+.filter-bar .actions { display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 5px; padding-top: 15px; border-top: 1px dashed #cbd5e1; justify-content: space-between; }
+.filter-bar .actions-left { display: flex; gap: 8px; }
+
+/* --- SELECT2 (AKILLI ARAMA) ÖZEL TASARIM UYUMU --- */
+.select2-container .select2-selection--single {
+  height: 40px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  background-color: #fff !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  color: #0f172a !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: normal !important;
+  padding-left: 12px !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 38px !important;
+  right: 8px !important;
+}
+.select2-dropdown {
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+  overflow: hidden !important;
+}
+.select2-search__field {
+  border-radius: 6px !important;
+  padding: 6px 10px !important;
+}
+/* --- TABLO HİZALAMALARI --- */
+#reportTable th:nth-child(4),
+#reportTable td:nth-child(4),
+#reportTable th:nth-child(5),
+#reportTable td:nth-child(5),
+#reportTable th:nth-child(6),
+#reportTable td:nth-child(6),
+#reportTable th:nth-child(7),
+#reportTable td:nth-child(7) {
+  text-align: center !important;
+}
