@@ -316,7 +316,7 @@ require_once __DIR__ . '/helpers.php';
             <a href="#" class="dropdown-toggle">Raporlar<span class="caret"></span></a>
             <div class="menu">
               <a href="/reports/sales_reps.php">👥 Ekip Performansı</a>
-              <a href="#">🏢 Müşteri İçgörüleri (Yakında)</a>
+              <a href="/reports/production.php">🏭 Üretim ve Operasyon</a>
               <a href="#">📈 Aylık Trendler (Yakında)</a>
             </div>
           </div>
