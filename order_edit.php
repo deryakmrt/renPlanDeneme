@@ -74,12 +74,112 @@ if (method('POST')) {
 // OTOMATİK KURULUM: Veritabanında özel kur kolonları yoksa otomatik ekler (SQL hatasını önler)
   try { $db->exec("ALTER TABLE orders ADD COLUMN kur_usd DECIMAL(10,4) NULL"); } catch (Throwable $e) {}
   try { $db->exec("ALTER TABLE orders ADD COLUMN kur_eur DECIMAL(10,4) NULL"); } catch (Throwable $e) {}
+  try { $db->exec("ALTER TABLE orders ADD COLUMN fatura_toplam DECIMAL(15,4) NULL"); } catch (Throwable $e) {} // YENİ: MÜHÜR KOLONU
 
 $fields = ['order_code','customer_id','status','currency','termin_tarihi','baslangic_tarihi','bitis_tarihi','teslim_tarihi','notes',
     'siparis_veren','siparisi_alan','siparisi_giren','siparis_tarihi','fatura_tarihi','fatura_para_birimi','kalem_para_birimi','proje_adi','revizyon_no','nakliye_turu','odeme_kosulu','odeme_para_birimi','kdv_orani','kur_usd','kur_eur'];
   $data = [];
   foreach ($fields as $f) { $data[$f] = $_POST[$f] ?? null; }
   $data['customer_id'] = (int)$data['customer_id'];
+
+  // --- FATURA MÜHÜRLEME (fatura_toplam HESAPLAMASI) ---
+  if (!function_exists('_tr_money_to_float_tmp')) {
+    function _tr_money_to_float_tmp($v) {
+        if ($v === null || $v === '') return 0.0;
+        $v = trim((string)$v);
+        if (preg_match('/^\\d{1,3}(\\.\\d{3})+(,\\d+)?$/', $v)) {
+            $v = str_replace('.', '', $v); $v = str_replace(',', '.', $v);
+        } else {
+            $v = str_replace(',', '.', $v);
+        }
+        return (float)$v;
+    }
+  }
+  
+  $subt = 0.0;
+  $qtys = $_POST['qty'] ?? [];
+  $prices = $_POST['price'] ?? ($_POST['birim_fiyat'] ?? []);
+  $p_ids = $_POST['product_id'] ?? [];
+  $names = $_POST['name'] ?? [];
+  $keys_tmp = array_unique(array_merge(array_keys((array)$p_ids), array_keys((array)$names), array_keys((array)$qtys), array_keys((array)$prices)));
+  
+  foreach ($keys_tmp as $i) {
+      $pid = (int)($p_ids[$i] ?? 0);
+      $n = trim((string)($names[$i] ?? ''));
+      if (empty($pid) && trim($n) === '') continue;
+      $q = is_string($qtys[$i]??0) ? _tr_money_to_float_tmp($qtys[$i]??0) : (float)($qtys[$i]??0);
+      $p = is_string($prices[$i]??0) ? _tr_money_to_float_tmp($prices[$i]??0) : (float)($prices[$i]??0);
+      $subt += ($q * $p);
+  }
+  
+  $kdv_or = (float)($data['kdv_orani'] ?? 20);
+  $gTotal = $subt + ($subt * ($kdv_or / 100));
+  
+  $data['fatura_toplam'] = null;
+  if ($data['status'] === 'fatura_edildi') {
+      
+      // --- HATA GİDERİLDİ: Fonksiyonu HTML dosyasından çağırmak yerine bağımsız olarak burada tanımlıyoruz ---
+      if (!function_exists('tcmb_get_exchange_rate')) {
+          function tcmb_get_exchange_rate($currency, $date = null) {
+              $currency_upper = strtoupper($currency);
+              if ($currency_upper === 'TL' || $currency_upper === 'TRY') return 1.0;
+              $ctx = stream_context_create(['http' => ['timeout' => 3]]);
+              $urls_to_try = [];
+              if ($date && $date !== '0000-00-00') {
+                  $ts = strtotime($date);
+                  if ($ts > time()) $ts = time();
+                  if ($ts > 0) {
+                      for ($i = 0; $i <= 5; $i++) {
+                          $check_ts = strtotime("-{$i} day", $ts);
+                          if (date('N', $check_ts) >= 6) continue;
+                          $Ym = date('Ym', $check_ts);
+                          $dmY = date('dmY', $check_ts);
+                          if (date('Y-m-d', $check_ts) === date('Y-m-d')) {
+                              $urls_to_try[] = 'https://www.tcmb.gov.tr/kurlar/today.xml';
+                          } else {
+                              $urls_to_try[] = "https://www.tcmb.gov.tr/kurlar/{$Ym}/{$dmY}.xml";
+                          }
+                      }
+                  }
+              }
+              $urls_to_try[] = 'https://www.tcmb.gov.tr/kurlar/today.xml';
+              foreach (array_unique($urls_to_try) as $url) {
+                  $xml_data = @file_get_contents($url, false, $ctx);
+                  if (!$xml_data) continue;
+                  $xml = @simplexml_load_string($xml_data);
+                  if (!$xml) continue;
+                  foreach ($xml->Currency as $item) {
+                      if ((string)$item['CurrencyCode'] === $currency_upper) {
+                          $rate = (float)$item->ForexSelling;
+                          if ($rate <= 0) $rate = (float)$item->BanknoteSelling;
+                          if ($rate > 0) return $rate;
+                      }
+                  }
+              }
+              return null; 
+          }
+      }
+
+      $kalem_pb = $data['kalem_para_birimi'] ?? 'TL';
+      $fatura_pb = $data['fatura_para_birimi'] ?? 'TL';
+      
+      $kur_usd = (float)($data['kur_usd'] ?? 0);
+      if ($kur_usd <= 0) $kur_usd = (float)tcmb_get_exchange_rate('USD', $data['fatura_tarihi']);
+      
+      $kur_eur = (float)($data['kur_eur'] ?? 0);
+      if ($kur_eur <= 0) $kur_eur = (float)tcmb_get_exchange_rate('EUR', $data['fatura_tarihi']);
+      
+      $tryAmt = $gTotal;
+      if ($kalem_pb === 'USD' && $kur_usd > 0) $tryAmt = $gTotal * $kur_usd;
+      elseif ($kalem_pb === 'EUR' && $kur_eur > 0) $tryAmt = $gTotal * $kur_eur;
+      
+      $fnl = $tryAmt;
+      if ($fatura_pb === 'USD' && $kur_usd > 0) $fnl = $tryAmt / $kur_usd;
+      elseif ($fatura_pb === 'EUR' && $kur_eur > 0) $fnl = $tryAmt / $kur_eur;
+      
+      $data['fatura_toplam'] = round($fnl, 4);
+  }
+  // ----------------------------------------------------
 
   // --- YETKİ KONTROLÜ: ASKIYA ALMA / ÇIKARMA KORUMASI ---
   $is_admin = in_array(current_user()['role'] ?? '', ['admin', 'sistem_yoneticisi']);
@@ -96,11 +196,11 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
   // ---------------------------------------------------------
 
   $up = $db->prepare("UPDATE orders SET order_code=?, customer_id=?, status=?, currency=?, termin_tarihi=?, baslangic_tarihi=?, bitis_tarihi=?, teslim_tarihi=?, notes=?,
-                       siparis_veren=?, siparisi_alan=?, siparisi_giren=?, siparis_tarihi=?, fatura_tarihi=?, fatura_para_birimi=?, kalem_para_birimi=?, proje_adi=?, revizyon_no=?, nakliye_turu=?, odeme_kosulu=?, odeme_para_birimi=?, kdv_orani=?, kur_usd=?, kur_eur=?
+                       siparis_veren=?, siparisi_alan=?, siparisi_giren=?, siparis_tarihi=?, fatura_tarihi=?, fatura_para_birimi=?, kalem_para_birimi=?, proje_adi=?, revizyon_no=?, nakliye_turu=?, odeme_kosulu=?, odeme_para_birimi=?, kdv_orani=?, kur_usd=?, kur_eur=?, fatura_toplam=?
                       WHERE id=?");
   $up->execute([
     $data['order_code'],$data['customer_id'],$data['status'],$data['currency'],$data['termin_tarihi'],$data['baslangic_tarihi'],$data['bitis_tarihi'],$data['teslim_tarihi'],$data['notes'],
-    $data['siparis_veren'],$data['siparisi_alan'],$data['siparisi_giren'],$data['siparis_tarihi'],$data['fatura_tarihi'],$data['fatura_para_birimi'],$data['kalem_para_birimi'],$data['proje_adi'],$data['revizyon_no'],$data['nakliye_turu'],$data['odeme_kosulu'],$data['odeme_para_birimi'], $data['kdv_orani'], $data['kur_usd'], $data['kur_eur'],
+    $data['siparis_veren'],$data['siparisi_alan'],$data['siparisi_giren'],$data['siparis_tarihi'],$data['fatura_tarihi'],$data['fatura_para_birimi'],$data['kalem_para_birimi'],$data['proje_adi'],$data['revizyon_no'],$data['nakliye_turu'],$data['odeme_kosulu'],$data['odeme_para_birimi'], $data['kdv_orani'], $data['kur_usd'], $data['kur_eur'], $data['fatura_toplam'],
     $id
   ]);
 

@@ -308,6 +308,13 @@ $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 
 $sel = [
   "orders.id AS order_id",
+  "orders.status AS order_status",
+  "orders.kalem_para_birimi AS kalem_para_birimi",
+  "orders.fatura_para_birimi AS fatura_para_birimi",
+  "orders.kur_usd AS kur_usd",
+  "orders.kur_eur AS kur_eur",
+  "orders.fatura_toplam AS fatura_toplam",
+  "orders.kdv_orani AS kdv_orani",
   "$siparisiAlanCol AS siparisi_alan",
   "$custNameCol AS customer_name",
   "$orderCodeCol AS order_code",
@@ -396,8 +403,8 @@ try {
     $tcmb = @simplexml_load_string($xml_data);
     if ($tcmb) {
       foreach ($tcmb->Currency as $c) {
-        if ((string)$c['CurrencyCode'] === 'USD') $usd_rate = (float)$c->ForexBuying;
-        if ((string)$c['CurrencyCode'] === 'EUR') $eur_rate = (float)$c->ForexBuying;
+        if ((string)$c['CurrencyCode'] === 'USD') $usd_rate = (float)$c->ForexSelling;
+        if ((string)$c['CurrencyCode'] === 'EUR') $eur_rate = (float)$c->ForexSelling;
       }
     }
   }
@@ -408,6 +415,16 @@ try {
 if ($usd_rate <= 1.0) $usd_rate = 36.50;
 if ($eur_rate <= 1.0) $eur_rate = 38.00;
 // -----------------------------
+
+// --- YENİ: Siparişlerin toplam kalem maliyetlerini (KDV'li) önceden hesapla ki, 
+// mühürlü fatura toplamını satırlara tam oranlayabilelim (kur_usd 0 olsa bile kusursuz çalışır) ---
+$order_kalem_totals = [];
+foreach ($rows as $r) {
+    $oid = $r['order_id'];
+    $raw = (float)($r['line_total'] ?? 0);
+    $kdv = isset($r['kdv_orani']) ? (float)$r['kdv_orani'] : 20;
+    $order_kalem_totals[$oid] = ($order_kalem_totals[$oid] ?? 0) + ($raw * (1 + ($kdv / 100)));
+}
 
 // Grafikler için TL Bazlı Toplamlar ve Ekranda Gösterilecek Ham Toplamlar
 $agg_customer_try = [];
@@ -427,21 +444,41 @@ $sp_agg_grp = [];
 $sp_cur_grp = [];   // Dövizli yapı için 
 
 foreach ($rows as $r) {
-  $amt = (float)($r['line_total'] ?? 0);
-  $cur = normalize_currency($r['currency'] ?? '—');
+  $raw_amt = (float)($r['line_total'] ?? 0);
+  $kdv_orani = isset($r['kdv_orani']) ? (float)$r['kdv_orani'] : 20;
+  $raw_amt_kdvli = $raw_amt * (1 + ($kdv_orani / 100)); // 🚀 GRAFİKLERE KDV DAHİL EDİLDİ!
+
+  $is_invoiced = (mb_strtolower(trim((string)($r['order_status'] ?? '')), 'UTF-8') === 'fatura_edildi' || mb_strtolower(trim((string)($r['order_status'] ?? '')), 'UTF-8') === 'fatura edildi');
+  $fatura_toplam_muhur = (float)($r['fatura_toplam'] ?? 0);
+
+  if ($is_invoiced && $fatura_toplam_muhur > 0) {
+    // 1. SİPARİŞ MÜHÜRLÜYSE: Kalemin faturadaki tam oranını (hissesini) bul ve mühürlü toplamdan al!
+    $raw_cur = !empty($r['fatura_para_birimi']) ? $r['fatura_para_birimi'] : 'TL';
+    $order_kalem_total = $order_kalem_totals[$oid] ?? 1;
+    if ($order_kalem_total <= 0) $order_kalem_total = 1;
+    
+    $oran = $raw_amt_kdvli / $order_kalem_total;
+    $amt = $fatura_toplam_muhur * $oran; // Mühürlü rakamdan payına düşen net ciro (KDV Dahil)
+  } else {
+    // 2. MÜHÜRSÜZ VEYA AÇIK SİPARİŞ (Kendi saf KDV'li fiyatını kullan)
+    $raw_cur = !empty($r['kalem_para_birimi']) ? $r['kalem_para_birimi'] : ($r['currency'] ?? '—');
+    $amt = $raw_amt_kdvli;
+  }
+
+  $cur = normalize_currency($raw_cur);
 
   $rate = 1.0;
   if ($cur === 'USD') $rate = $usd_rate;
   elseif ($cur === 'EUR') $rate = $eur_rate;
 
   $amt_try = $amt * $rate; // Grafik ve sıralama için TL karşılığı
-
+  
   $c = trim((string)($r['customer_name'] ?? 'Diğer'));
   if ($c === '') $c = 'Diğer';
   $p = trim((string)($r['project_name'] ?? 'Diğer'));
   if ($p === '') $p = 'Diğer';
-  
-  // --- YENİ: KATEGORİ & SKU AKILLI FALLBACK (Hem Genel Grafik Hem Temsilci İçin) ---
+
+  // --- YENİ: KATEGORİ & SKU AKILLI FALLBACK ---
   $cat_name = trim((string)($r['category_name'] ?? ''));
   if ($cat_name !== '') {
     $best_group = $cat_name; // Gerçek kategori varsa onu kullan
@@ -586,6 +623,7 @@ $chart_payload = [
 // ===============================================
 $salesperson_enhanced = [];
 
+// Eksik olan Döngü (foreach) Geri Geldi!
 foreach ($rows as $row) {
   $raw_sp = trim($row['siparisi_alan'] ?? '');
   $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞAHİN', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
@@ -604,6 +642,7 @@ foreach ($rows as $row) {
     }
   }
 
+  // Eksik olan Tanımlama (Initialization) Geri Geldi!
   if (!isset($salesperson_enhanced[$sp])) {
     $salesperson_enhanced[$sp] = [
       'order_count' => 0,
@@ -612,7 +651,7 @@ foreach ($rows as $row) {
       'currency' => 'TRY',
       'original_price' => 0,
       'original_currency' => 'TRY',
-      'processed_orders' => [] // Aynı siparişi 2 kere saymamak için
+      'processed_orders' => [] 
     ];
   }
 
@@ -624,9 +663,26 @@ foreach ($rows as $row) {
     $salesperson_enhanced[$sp]['order_count']++;
   }
 
-  // 2. Toplam fiyat (TL cinsinden + orijinal)
-  $subtotal = (float)($row['line_total'] ?? 0);
-  $cur = normalize_currency($row['currency'] ?? 'TRY');
+  // 2. Toplam fiyat (KDV Dahil hesaplama)
+  $raw_amt2 = (float)($row['line_total'] ?? 0);
+  $kdv_orani2 = isset($row['kdv_orani']) ? (float)$row['kdv_orani'] : 20;
+  $raw_amt_kdvli2 = $raw_amt2 * (1 + ($kdv_orani2 / 100));
+
+  $is_invoiced2 = (mb_strtolower(trim((string)($row['order_status'] ?? '')), 'UTF-8') === 'fatura_edildi' || mb_strtolower(trim((string)($row['order_status'] ?? '')), 'UTF-8') === 'fatura edildi');
+  $fatura_toplam_muhur2 = (float)($row['fatura_toplam'] ?? 0);
+
+  if ($is_invoiced2 && $fatura_toplam_muhur2 > 0) {
+    $raw_cur2 = !empty($row['fatura_para_birimi']) ? $row['fatura_para_birimi'] : 'TL';
+    $order_kalem_total2 = $order_kalem_totals[$oid] ?? 1;
+    if ($order_kalem_total2 <= 0) $order_kalem_total2 = 1;
+    
+    $oran2 = $raw_amt_kdvli2 / $order_kalem_total2;
+    $subtotal = $fatura_toplam_muhur2 * $oran2; // Mühürlü orandan gelen net KDV'li rakam
+    $cur = normalize_currency($raw_cur2);
+  } else {
+    $subtotal = $raw_amt_kdvli2;
+    $cur = normalize_currency(!empty($row['kalem_para_birimi']) ? $row['kalem_para_birimi'] : ($row['currency'] ?? 'TRY'));
+  }
 
   // Orijinal para biriminde toplam
   if ($salesperson_enhanced[$sp]['original_currency'] === $cur || $salesperson_enhanced[$sp]['original_price'] == 0) {
@@ -665,6 +721,7 @@ foreach ($rows as $row) {
   }
   $salesperson_enhanced[$sp]['product_groups'][$group] = true;
 }
+// <-- Döngü Burada Kapanır
 
 // Ürün grubu sayısını hesapla
 foreach ($salesperson_enhanced as $sp => &$data) {
@@ -684,7 +741,7 @@ include __DIR__ . '/../includes/header.php';
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
-<h2 style="margin:0 0 14px 2px">Satış Raporları</h2>
+<h2 style="margin:0 0 14px 2px">Satış ve Finans İstatistikleri</h2>
 
 <?php if ($queryError): ?>
   <div class="alert alert-danger" style="margin:8px 0;background:#fff1f2;border:1px solid #fecdd3;padding:10px;border-radius:8px"><?= h($queryError) ?></div>
@@ -700,7 +757,9 @@ include __DIR__ . '/../includes/header.php';
   endforeach; ?>
 
   <div class="stat-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-color:#bbf7d0; border-radius: 12px; display:flex; flex-direction:column; justify-content:center; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.1);">
-    <h4 style="color:#166534; font-size:12px; font-weight:700; text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; gap:5px;"><span>💱</span> Güncel Kur (TCMB)</h4>
+    <h4 style="color:#166534; font-size:12px; font-weight:700; text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; gap:5px;">
+      <span>💱</span> Güncel Kur <span style="font-size:10px; opacity:0.8; margin-left:4px;">(TCMB Satış)</span>
+    </h4>
     <div style="display:flex; justify-content:space-between; align-items:center; padding: 0 5px;">
       <div>
         <div style="font-size:10px; color: #15803d; font-weight:600; opacity:0.8;">USD / TRY</div>
@@ -920,6 +979,22 @@ include __DIR__ . '/../includes/header.php';
         }
 
         if (!isset($__orders[$__code])) {
+          $is_inv = (mb_strtolower(trim((string)($r['order_status'] ?? '')), 'UTF-8') === 'fatura_edildi' || mb_strtolower(trim((string)($r['order_status'] ?? '')), 'UTF-8') === 'fatura edildi');
+          $f_toplam = (float)($r['fatura_toplam'] ?? 0);
+          $kdv_rate = isset($r['kdv_orani']) ? (float)$r['kdv_orani'] : 20;
+
+          if ($is_inv && $f_toplam > 0) {
+            $row_cur = !empty($r['fatura_para_birimi']) ? $r['fatura_para_birimi'] : ($r['currency'] ?? '');
+            $subtotal_val = 0.0;
+            $genel_toplam_val = $f_toplam; // Mühürlü Genel Toplam
+            $is_sealed = true;
+          } else {
+            $row_cur = !empty($r['kalem_para_birimi']) ? $r['kalem_para_birimi'] : ($r['currency'] ?? '');
+            $subtotal_val = 0.0;
+            $genel_toplam_val = 0.0;
+            $is_sealed = false;
+          }
+
           $__orders[$__code] = [
             'order_id'      => $r['order_id'] ?? null,
             'order_date'    => $r['order_date'] ?? '',
@@ -927,11 +1002,18 @@ include __DIR__ . '/../includes/header.php';
             'customer_name' => $r['customer_name'] ?? '',
             'project_name'  => $r['project_name'] ?? '',
             'order_code'    => $__code,
-            'currency'      => $r['currency'] ?? '',
-            'subtotal'      => 0.0,
+            'currency'      => $row_cur,
+            'subtotal'      => $subtotal_val,
+            'genel_toplam'  => $genel_toplam_val,
+            'kdv_rate'      => $kdv_rate,
+            'is_sealed'     => $is_sealed
           ];
         }
-        $__orders[$__code]['subtotal'] += (float)($r['line_total'] ?? 0);
+
+        // Eğer mühürlü değilse alt kalemleri toplayarak git (Sadece KDV'siz kısmı topla, yazdırırken kdv eklenecek)
+        if (!$__orders[$__code]['is_sealed']) {
+          $__orders[$__code]['subtotal'] += (float)($r['line_total'] ?? 0);
+        }
       }
       // Yazdır
       if (empty($__orders)):
@@ -940,8 +1022,19 @@ include __DIR__ . '/../includes/header.php';
           <td style="text-align:center;" colspan="8" class="ta-center muted">Kayıt bulunamadı.</td>
         </tr>
         <?php else: foreach ($__orders as $__o):
-          $__kdv = $__o['subtotal'] * $__vatRate;
-          $__genel = $__o['subtotal'] + $__kdv;
+          $kdv_carpan = $__o['kdv_rate'] / 100;
+          
+          if ($__o['is_sealed']) {
+              // Mühürlü sistemde KDV'yi TERSTEN hesapla
+              $__genel = $__o['genel_toplam'];
+              $__kdv = $__genel - ($__genel / (1 + $kdv_carpan));
+              $__ara = $__genel - $__kdv;
+          } else {
+              // Mühürsüz sistemde (Normal akış)
+              $__ara = $__o['subtotal'];
+              $__kdv = $__ara * $kdv_carpan;
+              $__genel = $__ara + $__kdv;
+          }
 
           // Satici ismine gore renk ver (Bos ise kirmizi olsun)
           $sp_color = $__o['siparisi_alan'] === 'Belirtilmemiş' ? 'color:#ef4444; font-style:italic;' : 'color:#0f172a; font-weight:600;';
@@ -952,9 +1045,9 @@ include __DIR__ . '/../includes/header.php';
             <td><?= h($__o['customer_name']) ?></td>
             <td><?= h($__o['project_name']) ?></td>
             <td style="text-align:center;" class="ta-center"><a href="order_view.php?id=<?= (int)($__o['order_id'] ?? 0) ?>" class="badge"><?= h($__o['order_code']) ?></a></td>
-            <td class="ta-center"><?= fmt_tr_money($__o['subtotal']) ?> <?= h($__o['currency']) ?></td>
+            <td class="ta-center"><?= fmt_tr_money($__ara) ?> <?= h($__o['currency']) ?></td>
             <td class="ta-center"><?= fmt_tr_money($__kdv) ?> <?= h($__o['currency']) ?></td>
-            <td class="ta-center"><?= fmt_tr_money($__genel) ?> <?= h($__o['currency']) ?></td>
+            <td class="ta-center" style="font-weight:bold; color:#166534;"><?= fmt_tr_money($__genel) ?> <?= h($__o['currency']) ?></td>
           </tr>
       <?php endforeach;
       endif; ?>
@@ -1172,14 +1265,19 @@ include __DIR__ . '/../includes/header.php';
           ul.innerHTML = '<li><span class="name">Veri yok</span><span class="val">—</span></li>';
         } else {
           const top5 = entries.slice(0, 5);
-          ul.innerHTML = top5.map(it => {
+          ul.innerHTML = top5.map((it, idx) => {
             let displayText = sortBy === 'total_price' ?
               '₺' + it.displayValue.toLocaleString('tr-TR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
               }) :
               it.displayValue.toLocaleString('tr-TR') + it.suffix;
-            return `<li><span class="name">${it.name}</span><span class="val" style="color:#10b981; font-weight:600;">${displayText}</span></li>`;
+
+            // 👑 Sadece birinciye isimden önce taç ekle (Yazısız/Sade)
+            let crown = (idx === 0) ? '<span style="margin-right:6px; display:inline-block; transform:scale(1.2);">👑</span>' : '';
+            let nameStyle = (idx === 0) ? 'font-weight:700; color:#1e293b;' : '';
+
+            return `<li><span class="name" style="${nameStyle}">${crown}${it.name}</span><span class="val" style="color:#10b981; font-weight:600;">${displayText}</span></li>`;
           }).join('');
         }
       }
