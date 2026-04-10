@@ -1,17 +1,14 @@
 <?php
 // app/Models/ReportModel.php
 
-class ReportModel
-{
-    private $db;
+class ReportModel {
+    private \PDO $db; // <-- Tip belirtildi
 
-    public function __construct($db)
-    {
+    public function __construct(\PDO $db) { // <-- Tip belirtildi
         $this->db = $db;
     }
 
-    public function getSalesData($filters)
-    {
+    public function getSalesData(array $filters): array { // <-- Girdi ve Çıktı tipi belirtildi
         $where = [];
         $args = [];
 
