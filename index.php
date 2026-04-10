@@ -287,17 +287,17 @@ include __DIR__ . '/includes/header.php';
 
   <?php if (($role ?? '') !== 'musteri'): ?>
     <?php if ($role !== 'muhasebe'): ?>
-    <div class="tile t-blue">
-      <a href="products.php" class="stretch" aria-label="Ürünler"></a>
-      <div class="icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M3 7.5 12 3l9 4.5-9 4.5L3 7.5Z" stroke="currentColor" stroke-width="1.6" />
-          <path d="M12 21V12M21 7.5V16.5L12 21 3 16.5V7.5" stroke="currentColor" stroke-width="1.6" />
-        </svg>
+      <div class="tile t-blue">
+        <a href="products.php" class="stretch" aria-label="Ürünler"></a>
+        <div class="icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M3 7.5 12 3l9 4.5-9 4.5L3 7.5Z" stroke="currentColor" stroke-width="1.6" />
+            <path d="M12 21V12M21 7.5V16.5L12 21 3 16.5V7.5" stroke="currentColor" stroke-width="1.6" />
+          </svg>
+        </div>
+        <div class="title">Ürün</div>
+        <div class="value"><?= (int)$pc ?></div>
       </div>
-      <div class="title">Ürün</div>
-      <div class="value"><?= (int)$pc ?></div>
-    </div>
     <?php endif; ?>
     <div class="tile t-teal">
       <a href="customers.php" class="stretch" aria-label="Müşteriler"></a>
@@ -311,28 +311,28 @@ include __DIR__ . '/includes/header.php';
       <div class="value"><?= (int)$cc ?></div>
     </div>
     <?php if ($role !== 'muhasebe'): ?>
-    <div class="tile t-green">
-      <a href="#" class="stretch" aria-label="Faturalar"></a>
-      <div class="icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M8 3h8a2 2 0 0 1 2 2v13l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" />
-          <path d="M9 7h6M9 11h6" stroke="currentColor" stroke-width="1.6" />
-        </svg>
+      <div class="tile t-green">
+        <a href="#" class="stretch" aria-label="Faturalar"></a>
+        <div class="icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M8 3h8a2 2 0 0 1 2 2v13l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" />
+            <path d="M9 7h6M9 11h6" stroke="currentColor" stroke-width="1.6" />
+          </svg>
+        </div>
+        <div class="title">Faturalar</div>
+        <div class="value">—</div>
       </div>
-      <div class="title">Faturalar</div>
-      <div class="value">—</div>
-    </div>
-    <div class="tile t-orange">
-      <a href="#" class="stretch" aria-label="Stok"></a>
-      <div class="icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M4 4h16v12H4z" stroke="currentColor" stroke-width="1.6" />
-          <path d="M7 8h10M7 12h10" stroke="currentColor" stroke-width="1.6" />
-        </svg>
+      <div class="tile t-orange">
+        <a href="#" class="stretch" aria-label="Stok"></a>
+        <div class="icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M4 4h16v12H4z" stroke="currentColor" stroke-width="1.6" />
+            <path d="M7 8h10M7 12h10" stroke="currentColor" stroke-width="1.6" />
+          </svg>
+        </div>
+        <div class="title">Stok</div>
+        <div class="value">—</div>
       </div>
-      <div class="title">Stok</div>
-      <div class="value">—</div>
-    </div>
     <?php endif; ?>
     <div class="tile t-purple">
       <?php if (in_array($role, ['admin', 'sistem_yoneticisi', 'muhasebe'], true)): ?>
@@ -409,7 +409,8 @@ if (!in_array($role, ['muhasebe'])):
         ) AS note_datetime_str
       FROM orders o
       LEFT JOIN customers c ON c.id = o.customer_id
-      WHERE o.notes IS NOT NULL AND TRIM(o.notes) <> ''
+      WHERE o.notes IS NOT NULL AND TRIM(o.notes) <> '' 
+      " . ($role === 'uretim' ? " AND o.status != 'fatura_edildi' " : "") . "
       ORDER BY 
         -- Tarih/saat string'ini MySQL datetime'a çevir ve sırala
         -- Format: \"05.02.2026 12:47\" → datetime
@@ -428,6 +429,7 @@ if (!in_array($role, ['muhasebe'])):
       FROM orders o
       LEFT JOIN customers c ON c.id = o.customer_id
       WHERE o.notes IS NOT NULL AND TRIM(o.notes) <> ''
+      " . ($role === 'uretim' ? " AND o.status != 'fatura_edildi' " : "") . "
       ORDER BY o.created_at DESC
       LIMIT 10
     ");

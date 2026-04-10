@@ -109,7 +109,7 @@ include __DIR__ . '/../../../includes/header.php';
     <label class="label">💱 Para Birimi</label>
     <select name="currency" class="input">
       <option value="">— Tümü —</option>
-      <?php foreach (['TRY', 'USD', 'EUR'] as $cur): $sel = ($filters['currency'] && normalize_currency($filters['currency']) === $cur) ? 'selected' : ''; ?>
+      <?php foreach (['TRY', 'USD', 'EUR'] as $cur): $sel = ($filters['currency'] && trim($filters['currency']) === $cur) ? 'selected' : ''; ?>
         <option value="<?= $cur ?>" <?= $sel ?>><?= $cur ?></option>
       <?php endforeach; ?>
     </select>
@@ -268,7 +268,7 @@ include __DIR__ . '/../../../includes/header.php';
             $genel_toplam_val = $f_toplam; // Mühürlü Genel Toplam
             $is_sealed = true;
           } else {
-            $row_cur = !empty($r['kalem_para_birimi']) ? $r['kalem_para_birimi'] : ($r['currency'] ?? '');
+            $row_cur = !empty($r['order_currency']) ? $r['order_currency'] : ($r['currency'] ?? '');
             $subtotal_val = 0.0;
             $genel_toplam_val = 0.0;
             $is_sealed = false;

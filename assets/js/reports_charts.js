@@ -1,16 +1,12 @@
 /**
  * ==============================================================================
- * RENPLAN ERP - SATIŞ VE FİNANS GRAFİKLERİ (CHART.JS)
+ * RENPLAN ERP - SATIŞ VE FİNANS GRAFİKLERİ (CHART.JS) - V3 (TAMAMEN USD)
  * ==============================================================================
  */
 (function() {
-  // PHP'den gelen veriyi Global "window" objesinden alıyoruz
   const payload = window.CHART_PAYLOAD;
+  if (!payload) return;
 
-  if (!payload) return; // Veri yoksa çökmesini engelle
-
-  // 1. CANLI ÜRETİM SAHASINDAKİ MATEMATİKSEL RENK ALGORİTMASI
-  // Yan yana gelen dilimler asla birbirine benzemez (+45 derece atlar)
   function generateColors(count, hueStart) {
     let colors = [];
     for (let i = 0; i < count; i++) {
@@ -20,81 +16,60 @@
     return colors;
   }
 
+  // Döviz Sembolü
+  function symbol(cur) {
+    return cur === 'TRY' ? '₺' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : cur));
+  }
+
+  // Genel (Müşteri, Proje, Kategori) verilerini USD'ye zorla!
   function entriesFrom(group) {
     const items = (payload && payload[group]) || {};
     return Object.entries(items)
-      .map(([name, info]) => ({
-        name: name,
-        val: Number(info.try_val) || 0, // Grafik için TL
-        disp_val: Number(info.val) || 0, // Liste için Orijinal Döviz
-        cur: info.cur || ''
-      }))
+      .map(([name, info]) => {
+        // ⭐ YENİ: Rakamı USD al (yoksa try_val veya val), sembolü de kesinlikle USD yap!
+        let val = Number(info.usd_val) || Number(info.try_val) || Number(info.val) || 0;
+        return {
+          name: name,
+          val: val,         // Grafikteki dilim büyüklüğü
+          disp_val: val,    // Listedeki gösterim rakamı
+          cur: 'USD'        // Zorunlu Dolar sembolü
+        };
+      })
       .sort((a, b) => b.val - a.val);
   }
 
-  function symbol(cur) {
-    return cur === 'TRY' ? '₺' : (cur === 'USD' ? '$' : (cur === 'EUR' ? '€' : ''));
-  }
-
+  // Genel Pie Chart Çizimi
   function renderPie(canvasId, listId, entries, startHue, isCount = false) {
     const labels = entries.map(e => e.name);
     const data = entries.map(e => e.val);
-
     const colors = generateColors(labels.length, startHue);
 
     const ctx = document.getElementById(canvasId)?.getContext('2d');
     if (ctx && labels.length) {
       new Chart(ctx, {
         type: 'doughnut',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: colors,
-            borderWidth: 2,
-            borderColor: '#ffffff',
-            hoverOffset: 15
-          }]
-        },
+        data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#ffffff', hoverOffset: 15 }] },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          responsive: true, maintainAspectRatio: false,
           plugins: {
-            legend: {
-              display: false
-            },
+            legend: { display: false },
             tooltip: {
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              titleColor: '#1e293b',
-              bodyColor: '#1e293b',
-              borderColor: '#e2e8f0',
-              borderWidth: 1,
-              padding: 12,
+              backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#1e293b',
+              borderColor: '#e2e8f0', borderWidth: 1, padding: 12,
               callbacks: {
                 label: function(context) {
                   let label = context.label || '';
+                  if (label.length > 30) label = label.substring(0, 30) + '...';
                   let value = context.parsed;
-
-                  let maxLength = 30;
-                  if (label.length > maxLength) {
-                    label = label.substring(0, maxLength) + '...';
-                  }
-
-                  if (isCount) {
-                    return ' ' + label + ': ' + value + ' Sipariş';
-                  } else {
-                    return ' ' + label + ': ₺' + value.toLocaleString('tr-TR', {
-                      minimumFractionDigits: 4,
-                      maximumFractionDigits: 4
-                    });
-                  }
+                  let entry = entries[context.dataIndex]; 
+                  
+                  if (isCount) return ' ' + label + ': ' + value + ' Sipariş';
+                  // ⭐ YENİ: Tooltip'te Dolar sembolü göster
+                  return ' ' + label + ': ' + symbol(entry.cur) + ' ' + value.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 }
               }
             }
-          },
-          layout: {
-            padding: 15
-          }
+          }, layout: { padding: 15 }
         }
       });
     }
@@ -104,16 +79,10 @@
       if (!entries.length) {
         ul.innerHTML = '<li><span class="name">Veri yok</span><span class="val">—</span></li>';
       } else {
-        const top5 = entries.slice(0, 5);
-        ul.innerHTML = top5.map(it => {
-          if (isCount) {
-            return `<li><span class="name">${it.name}</span><span class="val" style="color:#10b981;">${it.disp_val} Adet</span></li>`;
-          } else {
-            return `<li><span class="name">${it.name}</span><span class="val">${it.disp_val.toLocaleString('tr-TR', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2
-            })} ${symbol(it.cur)}</span></li>`;
-          }
+        ul.innerHTML = entries.slice(0, 5).map(it => {
+          if (isCount) return `<li><span class="name">${it.name}</span><span class="val" style="color:#10b981;">${it.disp_val} Adet</span></li>`;
+          // ⭐ YENİ: Listedeki elemanlara Dolar sembolü göster
+          return `<li><span class="name">${it.name}</span><span class="val">${symbol(it.cur)} ${it.disp_val.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></li>`;
         }).join('');
       }
     }
@@ -136,16 +105,12 @@
         displayValue = value;
         suffix = ' Sipariş';
       } else if (sortBy === 'total_price') {
-        value = data.total_price_try || 0;
+        value = data.total_price_usd || data.total_price_try || 0; 
         displayValue = value;
         suffix = '';
       }
       return {
-        name: name,
-        value: value,
-        displayValue: displayValue,
-        suffix: suffix,
-        currency: data.original_currency || 'TRY'
+        name: name, value: value, displayValue: displayValue, suffix: suffix, currency: sortBy === 'total_price' ? 'USD' : ''
       };
     });
 
@@ -160,48 +125,26 @@
     if (ctx && labels.length) {
       salespersonChart = new Chart(ctx, {
         type: 'doughnut',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: colors,
-            borderWidth: 2,
-            borderColor: '#ffffff',
-            hoverOffset: 15
-          }]
-        },
+        data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#ffffff', hoverOffset: 15 }] },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          responsive: true, maintainAspectRatio: false,
           plugins: {
-            legend: {
-              display: false
-            },
+            legend: { display: false },
             tooltip: {
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              titleColor: '#1e293b',
-              bodyColor: '#1e293b',
-              borderColor: '#e2e8f0',
-              borderWidth: 1,
-              padding: 12,
+              backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#1e293b',
+              borderColor: '#e2e8f0', borderWidth: 1, padding: 12,
               callbacks: {
                 label: function(context) {
                   let label = context.label || '';
                   let value = context.parsed;
                   let entry = entries[context.dataIndex];
                   if (label.length > 30) label = label.substring(0, 30) + '...';
-                  if (sortBy === 'total_price') return ' ' + label + ': ₺' + value.toLocaleString('tr-TR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  });
+                  if (sortBy === 'total_price') return ' ' + label + ': ' + symbol(entry.currency) + ' ' + value.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                   return ' ' + label + ': ' + value + entry.suffix;
                 }
               }
             }
-          },
-          layout: {
-            padding: 15
-          }
+          }, layout: { padding: 15 }
         }
       });
     }
@@ -211,13 +154,9 @@
       if (!entries.length) {
         ul.innerHTML = '<li><span class="name">Veri yok</span><span class="val">—</span></li>';
       } else {
-        const top5 = entries.slice(0, 5);
-        ul.innerHTML = top5.map((it, idx) => {
+        ul.innerHTML = entries.slice(0, 5).map((it, idx) => {
           let displayText = sortBy === 'total_price' ?
-            '₺' + it.displayValue.toLocaleString('tr-TR', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2
-            }) :
+            symbol(it.currency) + ' ' + it.displayValue.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) :
             it.displayValue.toLocaleString('tr-TR') + it.suffix;
 
           let crown = (idx === 0) ? '<span style="margin-right:6px; display:inline-block; transform:scale(1.2);">👑</span>' : '';
@@ -229,15 +168,12 @@
     }
   }
 
-  // Olay Dinleyicileri (Event Listeners)
   renderSalespersonChart('order_count');
   document.querySelectorAll('input[name="salesperson_sort"]').forEach(function(radio) {
     radio.addEventListener('change', function() {
       if (this.checked) {
         const infoText = document.getElementById('spPriceInfo');
-        if (infoText) {
-          infoText.style.display = this.value === 'total_price' ? 'block' : 'none';
-        }
+        if (infoText) infoText.style.display = this.value === 'total_price' ? 'block' : 'none';
 
         const chartBox = document.querySelector('#pieSalesperson').closest('.chart-box');
         chartBox.style.opacity = '0.3';
@@ -262,12 +198,8 @@
   if (spSelect) {
     const spList = Object.keys(spDetails).sort();
     spList.forEach(sp => {
-      let opt = document.createElement('option');
-      opt.value = sp;
-      opt.textContent = sp;
-      spSelect.appendChild(opt);
+      let opt = document.createElement('option'); opt.value = sp; opt.textContent = sp; spSelect.appendChild(opt);
     });
-
     const firstRealSp = spList.find(s => s !== 'Belirtilmemiş') || spList[0];
     if (firstRealSp) spSelect.value = firstRealSp;
   }
@@ -287,23 +219,22 @@
       return;
     }
 
-    function getSymbol(c) {
-      return c === 'TRY' ? '₺' : (c === 'USD' ? '$' : (c === 'EUR' ? '€' : ''));
-    }
-
     const dataObj = spDetails[selectedSp][selectedType] || {};
     let entries = Object.entries(dataObj)
-      .map(([name, info]) => ({
-        name: name,
-        val: Number(info.try_val) || 0,
-        disp_val: Number(info.val) || 0,
-        cur: info.cur || 'TRY'
-      }))
+      .map(([name, info]) => {
+        // ⭐ YENİ: Alt detay analizlerini de USD'ye zorla!
+        let val = Number(info.usd_val) || Number(info.try_val) || Number(info.val) || 0;
+        return {
+          name: name,
+          val: val,
+          disp_val: val,
+          cur: 'USD'
+        };
+      })
       .sort((a, b) => b.val - a.val);
 
     const labels = entries.map(e => e.name);
     const data = entries.map(e => e.val);
-
     const colors = generateColors(labels.length, selectedType === 'projects' ? 270 : 330);
 
     if (spDetailChart) spDetailChart.destroy();
@@ -311,46 +242,24 @@
     if (labels.length > 0 && ctx) {
       spDetailChart = new Chart(ctx, {
         type: 'doughnut',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: data,
-            backgroundColor: colors,
-            borderWidth: 2,
-            borderColor: '#ffffff',
-            hoverOffset: 10
-          }]
-        },
+        data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 2, borderColor: '#ffffff', hoverOffset: 10 }] },
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
+          responsive: true, maintainAspectRatio: false,
           plugins: {
-            legend: {
-              display: false
-            },
+            legend: { display: false },
             tooltip: {
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              titleColor: '#1e293b',
-              bodyColor: '#1e293b',
-              borderColor: '#e2e8f0',
-              borderWidth: 1,
-              padding: 12,
+              backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#1e293b',
+              borderColor: '#e2e8f0', borderWidth: 1, padding: 12,
               callbacks: {
                 label: function(context) {
                   let lbl = context.label || '';
                   if (lbl.length > 30) lbl = lbl.substring(0, 30) + '...';
                   let entry = entries[context.dataIndex];
-                  return ' ' + lbl + ': ' + entry.disp_val.toLocaleString('tr-TR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  }) + ' ' + getSymbol(entry.cur);
+                  return ' ' + lbl + ': ' + symbol(entry.cur) + ' ' + entry.disp_val.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 }
               }
             }
-          },
-          layout: {
-            padding: 10
-          }
+          }, layout: { padding: 10 }
         }
       });
     }
@@ -360,10 +269,7 @@
         ul.innerHTML = '<li style="font-size:12px; color:#94a3b8;">Bu kriterde kayıt bulunamadı</li>';
       } else {
         ul.innerHTML = entries.slice(0, 5).map(it => {
-          let txt = it.disp_val.toLocaleString('tr-TR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-          }) + ' ' + getSymbol(it.cur);
+          let txt = symbol(it.cur) + ' ' + it.disp_val.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
           return `<li style="display:flex; justify-content:space-between; font-size:12px; padding:8px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
                     <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%; font-weight:600; color:#334155;">${it.name}</span>
                     <span style="color:#10b981; font-weight:800;">${txt}</span>

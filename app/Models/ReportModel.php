@@ -101,6 +101,31 @@ class ReportModel {
                 $projectCol = null;
             }
         }
+        // YENİ: Sipariş Ana Para Birimi Tespiti
+        $currCol = 'orders.currency';
+        try {
+            $this->db->query("SELECT orders.currency FROM orders LIMIT 0");
+        } catch (Throwable $e) {
+            try {
+                $this->db->query("SELECT orders.odeme_para_birimi FROM orders LIMIT 0");
+                $currCol = 'orders.odeme_para_birimi';
+            } catch (Throwable $e2) {
+                $currCol = null;
+            }
+        }
+
+        // YENİ: Sipariş Genel Toplam Tespiti
+        $genelTopCol = 'orders.genel_toplam';
+        try {
+            $this->db->query("SELECT orders.genel_toplam FROM orders LIMIT 0");
+        } catch (Throwable $e) {
+            try {
+                $this->db->query("SELECT orders.total_price FROM orders LIMIT 0");
+                $genelTopCol = 'orders.total_price';
+            } catch (Throwable $e2) {
+                $genelTopCol = null;
+            }
+        }
         try {
             $this->db->query("SELECT orders.currency FROM orders LIMIT 0");
         } catch (Throwable $e) {
@@ -202,7 +227,10 @@ class ReportModel {
         $selCols = [
             "orders.id AS order_id",
             "orders.status AS order_status",
+            "orders.fatura_tarihi AS fatura_tarihi",
             "orders.kalem_para_birimi AS kalem_para_birimi",
+            ($currCol ? "$currCol AS order_currency" : "NULL AS order_currency"),
+            ($genelTopCol ? "$genelTopCol AS order_genel_toplam" : "0 AS order_genel_toplam"),
             "orders.fatura_para_birimi AS fatura_para_birimi",
             "orders.kur_usd AS kur_usd",
             "orders.kur_eur AS kur_eur",
