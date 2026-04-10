@@ -472,6 +472,10 @@ $cu_role = $cu['role'] ?? '';
 if (!in_array($cu_role, ['admin', 'sistem_yoneticisi'])) {
   $sql .= " AND o.status != 'taslak_gizli'";
 }
+// Üretim kalkanı: fatura_edildi siparişleri göremez
+if ($cu_role === 'uretim') {
+  $sql .= " AND o.status != 'fatura_edildi'";
+}
 
 // Müşteri kalkanı
 if ($cu_role === 'musteri') {
@@ -535,6 +539,9 @@ $cu_role = $cu['role'] ?? '';
 
 if (!in_array($cu_role, ['admin', 'sistem_yoneticisi'])) {
   $__cnt_sql .= " AND o.status != 'taslak_gizli'";
+}
+if ($cu_role === 'uretim') {
+  $__cnt_sql .= " AND o.status != 'fatura_edildi'";
 }
 
 if ($cu_role === 'musteri') {
@@ -757,6 +764,9 @@ $__isAll = ($status === '' || $status === null);
         <div class="status-quick-filter" style="font-size:14px" style="color:#000; font-size:14px; font-size:.95rem;">
           <?php
           $ordered_statuses = ['', 'revize', 'tedarik', 'sac lazer', 'boru lazer', 'kaynak', 'boya', 'elektrik montaj', 'test', 'paketleme', 'sevkiyat', 'teslim edildi', 'fatura_edildi', 'askiya_alindi'];
+          if ($cu_role === 'uretim') {
+            $ordered_statuses = array_diff($ordered_statuses, ['fatura_edildi']);
+          }
           if ((current_user()['role'] ?? '') === 'muhasebe') {
             $ordered_statuses = ['', 'teslim edildi', 'fatura_edildi'];
           }
