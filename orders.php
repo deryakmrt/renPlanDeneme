@@ -8,7 +8,7 @@ $db = pdo();
 $action = $_GET['a'] ?? 'list';
 // --- Müşteri Güvenliği ---
 if ((current_user()['role'] ?? '') === 'musteri' && in_array($action, ['new', 'edit', 'delete', 'bulk_update'])) {
-    die('Bu işlem için yetkiniz bulunmamaktadır.');
+  die('Bu işlem için yetkiniz bulunmamaktadır.');
 }
 // -------------------------
 // 🔴 Tüm siparişleri sil (POST, transaction)
@@ -470,17 +470,22 @@ $cu_role = $cu['role'] ?? '';
 
 // Taslak kalkanı herkese (Admin/SistemYöneticisi hariç) uygula
 if (!in_array($cu_role, ['admin', 'sistem_yoneticisi'])) {
-    $sql .= " AND o.status != 'taslak_gizli'";
+  $sql .= " AND o.status != 'taslak_gizli'";
 }
 
 // Müşteri kalkanı
 if ($cu_role === 'musteri') {
-    $linked = $cu['linked_customer'] ?? '';
-    if ($linked !== '') {
-        $sql .= " AND c.name = " . $db->quote($linked);
-    } else {
-        $sql .= " AND 1=0 "; 
-    }
+  $linked = $cu['linked_customer'] ?? '';
+  if ($linked !== '') {
+    $sql .= " AND c.name = " . $db->quote($linked);
+  } else {
+    $sql .= " AND 1=0 ";
+  }
+}
+
+// Muhasebe kalkanı
+if ($cu_role === 'muhasebe') {
+  $sql .= " AND o.status IN ('teslim edildi', 'fatura_edildi')";
 }
 // -------------------------------------
 
@@ -529,16 +534,21 @@ $cu = current_user();
 $cu_role = $cu['role'] ?? '';
 
 if (!in_array($cu_role, ['admin', 'sistem_yoneticisi'])) {
-    $__cnt_sql .= " AND o.status != 'taslak_gizli'";
+  $__cnt_sql .= " AND o.status != 'taslak_gizli'";
 }
 
 if ($cu_role === 'musteri') {
-    $linked = $cu['linked_customer'] ?? '';
-    if ($linked !== '') {
-        $__cnt_sql .= " AND c.name = " . $db->quote($linked);
-    } else {
-        $__cnt_sql .= " AND 1=0 ";
-    }
+  $linked = $cu['linked_customer'] ?? '';
+  if ($linked !== '') {
+    $__cnt_sql .= " AND c.name = " . $db->quote($linked);
+  } else {
+    $__cnt_sql .= " AND 1=0 ";
+  }
+}
+
+// Muhasebe kalkanı
+if ($cu_role === 'muhasebe') {
+  $__cnt_sql .= " AND o.status IN ('teslim edildi', 'fatura_edildi')";
 }
 // -------------------------------------
 if ($q !== '') {
@@ -614,7 +624,12 @@ $stmt->execute($params);
 
       <select name="status" class="select-dashboard">
         <option value="">Durum (Tümü)</option>
-        <?php foreach (['tedarik' => 'Tedarik', 'sac lazer' => 'Sac Lazer', 'boru lazer' => 'Boru Lazer', 'kaynak' => 'Kaynak', 'boya' => 'Boya', 'elektrik montaj' => 'Elektrik Montaj', 'test' => 'Test', 'paketleme' => 'Paketleme', 'sevkiyat' => 'Sevkiyat', 'teslim edildi' => 'Teslim Edildi'] as $k => $v): ?>
+        <?php
+        $select_statuses = ['tedarik' => 'Tedarik', 'sac lazer' => 'Sac Lazer', 'boru lazer' => 'Boru Lazer', 'kaynak' => 'Kaynak', 'boya' => 'Boya', 'elektrik montaj' => 'Elektrik Montaj', 'test' => 'Test', 'paketleme' => 'Paketleme', 'sevkiyat' => 'Sevkiyat', 'teslim edildi' => 'Teslim Edildi'];
+        if ((current_user()['role'] ?? '') === 'muhasebe') {
+          $select_statuses = ['teslim edildi' => 'Teslim Edildi', 'fatura_edildi' => 'Fatura Edildi'];
+        }
+        foreach ($select_statuses as $k => $v): ?>
           <option value="<?= h($k) ?>" <?= $status === $k ? 'selected' : '' ?>><?= h($v) ?></option>
         <?php endforeach; ?>
       </select>
@@ -742,6 +757,9 @@ $__isAll = ($status === '' || $status === null);
         <div class="status-quick-filter" style="font-size:14px" style="color:#000; font-size:14px; font-size:.95rem;">
           <?php
           $ordered_statuses = ['', 'revize', 'tedarik', 'sac lazer', 'boru lazer', 'kaynak', 'boya', 'elektrik montaj', 'test', 'paketleme', 'sevkiyat', 'teslim edildi', 'fatura_edildi', 'askiya_alindi'];
+          if ((current_user()['role'] ?? '') === 'muhasebe') {
+            $ordered_statuses = ['', 'teslim edildi', 'fatura_edildi'];
+          }
           $first = true;
           foreach ($ordered_statuses as $sk) {
             $label = $status_labels[$sk] ?? ($sk ?: 'Tümü');
@@ -817,6 +835,9 @@ $__isAll = ($status === '' || $status === null);
       <div class="status-quick-filter" style="font-size:14px" style="color:#000; font-size:14px; font-size:.95rem;">
         <?php
         $ordered_statuses = ['', 'revize', 'tedarik', 'sac lazer', 'boru lazer', 'kaynak', 'boya', 'elektrik montaj', 'test', 'paketleme', 'sevkiyat', 'teslim edildi', 'fatura_edildi', 'askiya_alindi'];
+        if ((current_user()['role'] ?? '') === 'muhasebe') {
+          $ordered_statuses = ['', 'teslim edildi', 'fatura_edildi'];
+        }
         $first = true;
         foreach ($ordered_statuses as $sk) {
           $label = $status_labels[$sk] ?? ($sk ?: 'Tümü');
@@ -1341,57 +1362,57 @@ $__isAll = ($status === '' || $status === null);
               </div>
 
               <?php if ($___role !== 'musteri'): ?>
-              <a class="btn" href="order_pdf_uretim.php?id=<?= (int)$o['id'] ?>" target="_blank" title="ÜSTF"
-                style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background: #dcfce7; color: #16a34a; border:1px solid #bbf7d0; font-size:13px; font-weight:800;">ÜSTF</a>
+                <a class="btn" href="order_pdf_uretim.php?id=<?= (int)$o['id'] ?>" target="_blank" title="ÜSTF"
+                  style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background: #dcfce7; color: #16a34a; border:1px solid #bbf7d0; font-size:13px; font-weight:800;">ÜSTF</a>
               <?php endif; ?>
 
               <?php if ($___role !== 'musteri'): ?>
-              <div style="grid-column: 1; width:100%;">
-                <?php
-                $___is_admin = ($___role === 'admin');
-                $___is_sys_mgr = ($___role === 'sistem_yoneticisi');
-                $___show_delete = $___is_admin;
-                $___remaining_sec = 0;
-                $___remaining_pct = 0;
+                <div style="grid-column: 1; width:100%;">
+                  <?php
+                  $___is_admin = ($___role === 'admin');
+                  $___is_sys_mgr = ($___role === 'sistem_yoneticisi');
+                  $___show_delete = $___is_admin;
+                  $___remaining_sec = 0;
+                  $___remaining_pct = 0;
 
-                if ($___is_sys_mgr && !$___is_admin && !empty($o['created_at']) && $o['created_at'] !== '0000-00-00 00:00:00') {
-                  try {
-                    $___elapsed = time() - (new DateTime($o['created_at']))->getTimestamp();
-                    $___remaining_sec = max(0, 180 - $___elapsed);
-                    if ($___remaining_sec > 0) {
-                      $___show_delete = true;
-                      $___remaining_pct = ($___remaining_sec / 180) * 100;
+                  if ($___is_sys_mgr && !$___is_admin && !empty($o['created_at']) && $o['created_at'] !== '0000-00-00 00:00:00') {
+                    try {
+                      $___elapsed = time() - (new DateTime($o['created_at']))->getTimestamp();
+                      $___remaining_sec = max(0, 180 - $___elapsed);
+                      if ($___remaining_sec > 0) {
+                        $___show_delete = true;
+                        $___remaining_pct = ($___remaining_sec / 180) * 100;
+                      }
+                    } catch (Exception $e) {
                     }
-                  } catch (Exception $e) {
                   }
-                }
 
-                if ($___show_delete):
-                  if ($___is_admin): ?>
-                    <a class="btn" href="order_delete.php?id=<?= (int)$o['id'] ?>&confirm=EVET" onclick="return confirm('Silmek istediğinize emin misiniz?');" title="Sil"
-                      style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background:#fff; border:1px solid #e1e5eaff; color:#ef4444;">
-                      <span style="font-size:15px;">🗑️</span>
-                    </a>
-                  <?php else:
-                    $___tm = sprintf('%d:%02d', floor($___remaining_sec / 60), $___remaining_sec % 60); ?>
-                    <a class="btn btn-delete-timer" href="order_delete.php?id=<?= (int)$o['id'] ?>&confirm=EVET" data-remaining="<?= (int)$___remaining_sec ?>" onclick="return confirm('Silmek istiyor musunuz?');"
-                      style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; font-size:9px; --timer-pct:<?= number_format($___remaining_pct, 2) ?>%">
-                      <?= $___tm ?>
-                    </a>
+                  if ($___show_delete):
+                    if ($___is_admin): ?>
+                      <a class="btn" href="order_delete.php?id=<?= (int)$o['id'] ?>&confirm=EVET" onclick="return confirm('Silmek istediğinize emin misiniz?');" title="Sil"
+                        style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background:#fff; border:1px solid #e1e5eaff; color:#ef4444;">
+                        <span style="font-size:15px;">🗑️</span>
+                      </a>
+                    <?php else:
+                      $___tm = sprintf('%d:%02d', floor($___remaining_sec / 60), $___remaining_sec % 60); ?>
+                      <a class="btn btn-delete-timer" href="order_delete.php?id=<?= (int)$o['id'] ?>&confirm=EVET" data-remaining="<?= (int)$___remaining_sec ?>" onclick="return confirm('Silmek istiyor musunuz?');"
+                        style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; font-size:9px; --timer-pct:<?= number_format($___remaining_pct, 2) ?>%">
+                        <?= $___tm ?>
+                      </a>
+                    <?php endif; ?>
                   <?php endif; ?>
-                <?php endif; ?>
-              </div>
+                </div>
 
-              <div style="grid-column: 2; width:100%;">
-                <?php if (!empty($o['customer_email'])): ?>
-                  <a class="btn" href="order_send_mail.php?id=<?= (int)$o['id'] ?>" title="Mail Gönder"
-                    style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background:#fff; border:1px solid #e1e5eaff; color:#d97706;">
-                    <span style="font-size:15px;">📧</span>
-                  </a>
-                <?php else: ?>
-                  <span class="btn disabled" style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; border:1px solid #f3f4f6; color: #e5e7eb; background:#fff;">📧</span>
-                <?php endif; ?>
-              </div>
+                <div style="grid-column: 2; width:100%;">
+                  <?php if (!empty($o['customer_email'])): ?>
+                    <a class="btn" href="order_send_mail.php?id=<?= (int)$o['id'] ?>" title="Mail Gönder"
+                      style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background:#fff; border:1px solid #e1e5eaff; color:#d97706;">
+                      <span style="font-size:15px;">📧</span>
+                    </a>
+                  <?php else: ?>
+                    <span class="btn disabled" style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; border:1px solid #f3f4f6; color: #e5e7eb; background:#fff;">📧</span>
+                  <?php endif; ?>
+                </div>
               <?php endif; ?>
 
             </div>

@@ -265,7 +265,7 @@ require_once __DIR__ . '/helpers.php';
 </head>
 
 <body class="renv2">
-  <!-- HEADER FILE: <?= __FILE__ ?> | ROLE: <?= h(current_role()) ?> -->
+
 
   <!-- renPlan v2 Leftbar -->
   <aside class="renv2-leftbar" id="renv2Leftbar">
@@ -282,44 +282,48 @@ require_once __DIR__ . '/helpers.php';
     </a>
     <div class="menu-toggle">☰</div>
     <?php if (current_user()): ?>
-      <?php if (has_role('admin') || has_role('sistem_yoneticisi')): ?>
+      <?php if (has_role('admin') || has_role('sistem_yoneticisi') || has_role('muhasebe')): ?>
         <div class="menu-list">
           <a href="index.php">Panel</a>
-          <div class="dropdown">
-            <a href="#" class="dropdown-toggle">Ürünler<span class="caret"></span></a>
-            <div class="menu">
-              <a href="products.php">Ürünler</a>
-              <a href="products.php?a=new">Ürün Ekle</a>
-              <a href="taxonomies.php?t=brands">Markalar</a>
-              <a href="taxonomies.php?t=categories">Kategoriler</a>
-              <a href="attributes.php">Öznitelikler</a>
-              <?php if (has_role('admin')): ?>
-                <a href="import_products.php">Ürünleri İçe Aktar</a>
-                <a href="export_products.php">Ürünleri Dışa Aktar</a>
-              <?php endif; ?>
+          <?php if (!has_role('muhasebe')): ?>
+            <div class="dropdown">
+              <a href="#" class="dropdown-toggle">Ürünler<span class="caret"></span></a>
+              <div class="menu">
+                <a href="products.php">Ürünler</a>
+                <a href="products.php?a=new">Ürün Ekle</a>
+                <a href="taxonomies.php?t=brands">Markalar</a>
+                <a href="taxonomies.php?t=categories">Kategoriler</a>
+                <a href="attributes.php">Öznitelikler</a>
+                <?php if (has_role('admin')): ?>
+                  <a href="import_products.php">Ürünleri İçe Aktar</a>
+                  <a href="export_products.php">Ürünleri Dışa Aktar</a>
+                <?php endif; ?>
+              </div>
             </div>
-          </div>
+          <?php endif; ?>
           <div class="dropdown">
             <a href="#" class="dropdown-toggle">Siparişler<span class="caret"></span></a>
             <div class="menu">
               <a href="orders.php">Siparişler</a>
-              <a href="lazer_kesim.php">Lazer Kesim</a>
-              <a href="calendar.php?a=new">Sipariş Takvimi</a>
+              <?php if (!has_role('muhasebe')): ?>
+                <a href="lazer_kesim.php">Lazer Kesim</a>
+                <a href="calendar.php?a=new">Sipariş Takvimi</a>
+              <?php endif; ?>
               <?php if (has_role('admin')): ?>
                 <a href="import_orders.php">Siparişleri İçe Aktar</a>
                 <a href="export_orders.php">Siparişleri Dışarı Aktar</a>
               <?php endif; ?>
             </div>
           </div>
-          <?php if (has_role('admin')): ?>
-          <div class="dropdown">
-            <a href="#" class="dropdown-toggle">Raporlar<span class="caret"></span></a>
-            <div class="menu">
-              <a href="/reports/sales_reps.php">Satış ve Finans İstatistikleri</a>
-              <a href="/reports/production.php">Canlı Üretim Sahası</a>
-              <a href="#">Aylık Trendler (Yakında)</a>
+          <?php if (has_role('admin') || has_role('muhasebe')): ?>
+            <div class="dropdown">
+              <a href="#" class="dropdown-toggle">Raporlar<span class="caret"></span></a>
+              <div class="menu">
+                <a href="/reports/sales_reps.php">Satış ve Finans İstatistikleri</a>
+                <a href="/reports/production.php">Canlı Üretim Sahası</a>
+                <a href="#">Aylık Trendler (Yakında)</a>
+              </div>
             </div>
-          </div>
           <?php endif; ?>
 
           <div class="dropdown">
@@ -332,6 +336,7 @@ require_once __DIR__ . '/helpers.php';
               <?php endif; ?>
             </div>
           </div>
+          <?php if (!has_role('muhasebe')): ?>
           <div class="dropdown">
             <a href="#" class="dropdown-toggle">Satın Alma<span class="caret"></span></a>
             <div class="menu">
@@ -342,6 +347,7 @@ require_once __DIR__ . '/helpers.php';
               <?php endif; ?>
             </div>
           </div>
+          <?php endif; ?>
           <?php if (has_role('admin')): ?>
             <div class="dropdown">
               <a href="#" class="dropdown-toggle">Yönetim<span class="caret"></span></a>
@@ -515,7 +521,9 @@ require_once __DIR__ . '/helpers.php';
           var titleEl = dd.querySelector('.dropdown-toggle');
           if (!titleEl) return;
           var title = titleEl.textContent.trim();
-          var links = Array.from(dd.querySelectorAll('.menu a'));
+          var links = Array.from(dd.querySelectorAll('.menu a')).filter(function(a) {
+            return a.getAttribute('href') && a.getAttribute('href') !== '#';
+          });
 
           var tile = document.createElement('a');
           tile.href = '#';
@@ -539,9 +547,9 @@ require_once __DIR__ . '/helpers.php';
           if (links.length === 0) {
             var href = titleEl.getAttribute('href');
             if (href && href !== '#') {
+              tile.href = href;
               tile.addEventListener('click', function(e) {
-                e.preventDefault();
-                window.location.href = href;
+                e.stopPropagation();
               });
             } else {
               tile.addEventListener('click', function(e) {

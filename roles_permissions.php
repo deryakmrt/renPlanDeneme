@@ -21,6 +21,16 @@ ini_set('display_errors','1'); ini_set('display_startup_errors','1'); error_repo
 $has_header = false; $has_footer = false;
 if (is_file(__DIR__.'/includes/header.php')) { require __DIR__ . '/includes/header.php'; $has_header = true; }
 if (!function_exists('pdo')) { require_once __DIR__ . '/db.php'; }
+// --- 🔒 YETKİ KALKANI ---
+$__role = current_user()['role'] ?? '';
+if (!in_array($__role, ['admin'])) {
+    die('<div style="margin:50px auto; max-width:500px; padding:30px; background:#fff1f2; border:2px solid #fda4af; border-radius:12px; color:#e11d48; font-family:sans-serif; text-align:center; box-shadow:0 10px 25px rgba(225,29,72,0.1);">
+          <h2 style="margin-top:0; font-size:24px;">⛔ YETKİSİZ ERİŞİM</h2>
+          <p style="font-size:15px; line-height:1.5;">Bu sayfayı görüntülemek için yeterli yetkiniz bulunmamaktadır.</p>
+          <a href="index.php" style="display:inline-block; margin-top:15px; padding:10px 20px; background:#e11d48; color:#fff; text-decoration:none; border-radius:6px; font-weight:bold;">Panele Dön</a>
+         </div>');
+}
+// ------------------------
 if (!function_exists('pdo')) { die('pdo() bulunamadı. db.php gerekli.'); }
 $pdo = pdo();
 
