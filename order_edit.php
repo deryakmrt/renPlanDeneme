@@ -4,10 +4,10 @@ require_once __DIR__ . '/includes/audit_log.php';
 
 // ==== AUDIT HELPERS (guarded) ====
 if (!function_exists('AUD_normS')) {
-  function AUD_normS($s){ $s=(string)$s; $s=str_replace(array("\r","\n","\t")," ",$s); $s=preg_replace('/\s+/u',' ',$s); return trim($s); }
+  function AUD_normS(string $s): string { $s=str_replace(array("\r","\n","\t")," ",$s); $s=preg_replace('/\s+/u',' ',$s); return trim($s); }
 }
 if (!function_exists('AUD_normF')) {
-  function AUD_normF($s){
+  function AUD_normF(string $s): string {
     $s=(string)$s;
     if (strpos($s, ',') !== false && strpos($s, '.') !== false) { $s=str_replace('.','', $s); $s=str_replace(',', '.', $s); }
     else { $s=str_replace(',', '.', $s); }
@@ -19,7 +19,7 @@ if (!function_exists('AUD_normF')) {
 }
 if (!function_exists('AUD_core')) {
   // Core identity: product_id|name|unit (ID-agnostic). This avoids false add/remove when row IDs change.
-  function AUD_core($r){
+  function AUD_core(array $r): string {
     $pid = AUD_normS(isset($r['product_id']) ? $r['product_id'] : '');
     $nm  = AUD_normS(isset($r['name']) ? $r['name'] : '');
     $un  = AUD_normS(isset($r['unit']) ? $r['unit'] : '');
@@ -27,7 +27,7 @@ if (!function_exists('AUD_core')) {
   }
 }
 if (!function_exists('AUD_full')) {
-  function AUD_full($r){
+  function AUD_full(array $r): string {
     return AUD_core($r).'|Q='.AUD_normF(isset($r['qty'])?$r['qty']:'').'|P='.AUD_normF(isset($r['price'])?$r['price']:'');
   }
 }
@@ -84,7 +84,7 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
 
   // --- FATURA MÜHÜRLEME (fatura_toplam HESAPLAMASI) ---
   if (!function_exists('_tr_money_to_float_tmp')) {
-    function _tr_money_to_float_tmp($v) {
+    function _tr_money_to_float_tmp(mixed $v): float {
         if ($v === null || $v === '') return 0.0;
         $v = trim((string)$v);
         if (preg_match('/^\\d{1,3}(\\.\\d{3})+(,\\d+)?$/', $v)) {
@@ -120,7 +120,7 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
       
       // --- HATA GİDERİLDİ: Fonksiyonu HTML dosyasından çağırmak yerine bağımsız olarak burada tanımlıyoruz ---
       if (!function_exists('tcmb_get_exchange_rate')) {
-          function tcmb_get_exchange_rate($currency, $date = null) {
+          function tcmb_get_exchange_rate(string $currency, ?string $date = null) {
               $currency_upper = strtoupper($currency);
               if ($currency_upper === 'TL' || $currency_upper === 'TRY') return 1.0;
               $ctx = stream_context_create(['http' => ['timeout' => 3]]);
@@ -208,7 +208,7 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
   $db->prepare("DELETE FROM order_items WHERE order_id=?")->execute([$id]);
 
   // --- Robust items save (supports price[] or birim_fiyat[], associative indexes) ---
-  function _tr_money_to_float($v) {
+  function _tr_money_to_float(mixed $v): float {
     if ($v === null || $v === '') return 0.0;
     $v = trim((string)$v);
     // If format like 1.234,56 -> remove thousands and use dot decimal

@@ -1,9 +1,20 @@
 <?php
 // includes/order_form.php
 // Beklenen: $mode ('new'|'edit'), $order (assoc), $customers, $products, $items
+
+/**
+ * Dışarıdan inject edilen değişkenler (include eden sayfa tarafından sağlanır).
+ *
+ * @var string $mode      'new' veya 'edit'
+ * @var array  $order     Sipariş satırı (DB'den gelen assoc array)
+ * @var array  $customers Müşteri listesi
+ * @var array  $products  Ürün listesi
+ * @var array  $items     Sipariş kalemleri
+ * @var \PDO   $db        Veritabanı bağlantısı
+ */
 // 🟢 YENİ: TCMB Kur Çekme Fonksiyonu (DÜZELTİLMİŞ & GÜVENLİ)
 if (!function_exists('tcmb_get_exchange_rate')) {
-  function tcmb_get_exchange_rate($currency, $date = null) {
+  function tcmb_get_exchange_rate(string $currency, ?string $date = null) {
     $currency_upper = strtoupper($currency);
     if ($currency_upper === 'TL' || $currency_upper === 'TRY') return 1.0;
 
@@ -323,7 +334,7 @@ input[name^="price["] {
       <div class="g-auto g-tarih">
         <?php
         // Geçersiz tarih filtresi: "0000-00-00" ve boş değerleri temizle
-        function safe_date_val($val) {
+        function safe_date_val(?string $val): string {
             if (empty($val) || $val === '0000-00-00' || $val === '0000-00-00 00:00:00') return '';
             // Sadece geçerli Y-m-d formatında döndür
             $ts = strtotime($val);

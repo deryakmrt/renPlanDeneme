@@ -1,8 +1,15 @@
 <?php ob_start(); ?>
 <link rel="stylesheet" href="/assets/orders.css?v=1.0.0">
 <?php
+// __orders_page_link: Intelephense için PHP bloğunun en üstünde düz tanım
+function __orders_page_link(int $p, string $base): string
+{
+  return $base . (strpos($base, '?') !== false ? '&' : '?') . 'page=' . $p;
+}
+
 require_once __DIR__ . '/includes/helpers.php';
 require_login();
+
 
 $db = pdo();
 $action = $_GET['a'] ?? 'list';
@@ -215,10 +222,7 @@ if ($action === 'new' || $action === 'edit') {
               <a class="btn primary" href="order_pdf.php?id=<?= (int)$order['id'] ?>" title="STF PDF" aria-label="STF PDF">STF</a>
             <?php endif; ?>
             <a class="btn btn-ustf" href="order_pdf_uretim.php?id=<?= (int)$order['id'] ?>" title="ÜSTF PDF" aria-label="ÜSTF PDF">ÜSTF</a>
-            <a class="btn" href="order_send_mail.php?id=<?= isset($o) ? (int)$o['id'] : (int)$order['id'] ?>" title="Mail" aria-label="Mail">Mail</a>
-            <a class="btn" href="order_send_mail.php?id=<?= (int)$o['id'] ?>" title="E-posta gönder" aria-label="E-posta gönder"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
-                <path d="M3 5h18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm0 2v.217l9 5.4 9-5.4V7H3zm18 10V9.383l-8.553 5.132a2 2 0 0 1-1.894 0L2 9.383V17h19z" />
-              </svg></a>
+            <a class="btn" href="order_send_mail.php?id=<?= (int)$order['id'] ?>" title="Mail" aria-label="Mail">Mail</a>
             <a class="btn" href="order_send_mail.php?id=<?= (int)$order['id'] ?>" title="E-posta gönder" aria-label="E-posta gönder"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
                 <path d="M3 5h18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm0 2v.217l9 5.4 9-5.4V7H3zm18 10V9.383l-8.553 5.132a2 2 0 0 1-1.894 0L2 9.383V17a0 0 0 0 0 0 0h19z" />
               </svg></a>
@@ -350,7 +354,7 @@ if ($action === 'new' || $action === 'edit') {
                 <td><input name="price[]" type="number" step="0.01" value="<?= h($it['price'] ?? '0') ?>"></td>
                 <td><input name="urun_ozeti[]" value="<?= h($it['urun_ozeti'] ?? '') ?>"></td>
                 <td><input name="kullanim_alani[]" value="<?= h($it['kullanim_alani'] ?? '') ?>"></td>
-                <td class="right"><button type="button" class="btn" onclick="delRow(this)">Sil</button> <a class="btn btn-ustf" href="order_pdf_uretim.php?id=<?= (int)$o['id'] ?>" title="ÜSTF PDF" aria-label="ÜSTF PDF" target="_blank" rel="noopener noreferrer">ÜSTF</a>
+                <td class="right"><button type="button" class="btn" onclick="delRow(this)">Sil</button> <a class="btn btn-ustf" href="order_pdf_uretim.php?id=<?= (int)$order['id'] ?>" title="ÜSTF PDF" aria-label="ÜSTF PDF" target="_blank" rel="noopener noreferrer">ÜSTF</a>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -367,21 +371,6 @@ if ($action === 'new' || $action === 'edit') {
           }
         </style>
         <!-- === /Üretim Durumu hızlı filtre === -->
-        <?php if (($action ?? 'list') === 'list' && ($total_pages ?? 1) > 1):
-          $qs = $_GET;
-          unset($qs['page']);
-          $base = 'orders.php?' . http_build_query($qs);
-          function page_link($p, $base)
-          {
-            return $base . (strpos($base, '?') !== false ? '&' : '?') . 'page=' . $p;
-          }
-        ?>
-          <div class="row" style="color:#000; font-size:14px; margin:12px 0; gap:6px; display:flex; align-items:center; flex-wrap:wrap;">
-            <a class="btn" href="<?= page_link(max(1, $page - 1), $base) ?>">&laquo; Önceki</a>
-            <span>Sayfa <?= (int)$page ?> / <?= (int)$total_pages ?></span>
-            <a class="btn" href="<?= page_link(min($total_pages, $page + 1), $base) ?>">Sonraki &raquo;</a>
-          </div>
-        <?php endif; ?>
 
       </div>
 
@@ -424,7 +413,7 @@ if ($action === 'new' || $action === 'edit') {
         <td><input name="price[]" type="number" step="0.01" value="0"></td>
         <td><input name="urun_ozeti[]"></td>
         <td><input name="kullanim_alani[]"></td>
-        <td class="right"><button type="button" class="btn" onclick="delRow(this)">Sil</button>  <a class="btn btn-ustf" href="order_pdf_uretim.php?id=<?= (int)$o['id'] ?>" title="ÜSTF PDF" aria-label="ÜSTF PDF" target="_blank" rel="noopener noreferrer">ÜSTF</a>
+        <td class="right"><button type="button" class="btn" onclick="delRow(this)">Sil</button>  <a class="btn btn-ustf" href="order_pdf_uretim.php?id=<?= (int)$order['id'] ?>" title="ÜSTF PDF" aria-label="ÜSTF PDF" target="_blank" rel="noopener noreferrer">ÜSTF</a>
       </td>
       `;
       document.querySelector('#itemsTable').appendChild(tr);
@@ -590,7 +579,7 @@ foreach ($status_counts as $k => $__v) {
 }
 
 if (!function_exists('__orders_status_link')) {
-  function __orders_status_link($value)
+  function __orders_status_link(string $value)
   {
     $qs = $_GET;
     unset($qs['page']);
@@ -707,7 +696,7 @@ while ($__r = $__cnt_stmt->fetch(PDO::FETCH_ASSOC)) {
   $__total_in_scope += $v;
 }
 if (!function_exists('__orders_status_link2')) {
-  function __orders_status_link2($value)
+  function __orders_status_link2(string $value)
   {
     $qs = $_GET;
     unset($qs['page']);
@@ -742,12 +731,6 @@ $__isAll = ($status === '' || $status === null);
       $qs = $_GET;
       unset($qs['page']);
       $base = 'orders.php' . (empty($qs) ? '' : ('?' . http_build_query($qs)));
-      if (!function_exists('__orders_page_link')) {
-        function __orders_page_link($p, $base)
-        {
-          return $base . (strpos($base, '?') !== false ? '&' : '?') . 'page=' . (int)$p;
-        }
-      }
       $first_link = __orders_page_link(1, $base);
       $prev_link  = __orders_page_link(max(1, $page - 1), $base);
       $next_link  = __orders_page_link(min($total_pages, $page + 1), $base);
@@ -799,12 +782,6 @@ $__isAll = ($status === '' || $status === null);
         $qs = $_GET;
         unset($qs['page']);
         $base = 'orders.php' . (empty($qs) ? '' : ('?' . http_build_query($qs)));
-        if (!function_exists('__orders_page_link')) {
-          function __orders_page_link($p, $base)
-          {
-            return $base . (strpos($base, '?') !== false ? '&' : '?') . 'page=' . (int)$p;
-          }
-        }
         $total_pages = max(1, (int)($total_pages ?? 1));
         $page = max(1, (int)($page ?? 1));
         $window = 2;
@@ -926,7 +903,7 @@ $__isAll = ($status === '' || $status === null);
       ];
 
       // === Üretim durumu kapsül bileşeni (scoped) ===
-      function __wpstat_icon_svg($key)
+      function __wpstat_icon_svg(string $key)
       {
         switch ($key) {
           case 'box':
@@ -953,7 +930,7 @@ $__isAll = ($status === '' || $status === null);
             return '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>';
         }
       }
-      function __wpstat_icon_key($status)
+      function __wpstat_icon_key(string $status)
       {
         switch ($status) {
           case 'tedarik':
@@ -985,7 +962,7 @@ $__isAll = ($status === '' || $status === null);
         }
       }
 
-      function __wpstat_class_by_pct($pct)
+      function __wpstat_class_by_pct(float $pct)
       {
         if ($pct <= 10) return 'wpstat-red';
         if ($pct <= 20) return 'wpstat-orange';
@@ -999,7 +976,7 @@ $__isAll = ($status === '' || $status === null);
         return 'wpstat-done';
       }
 
-      function render_status_pill($status_raw)
+      function render_status_pill(string $status_raw)
       {
         $map = [
           'tedarik' => 1,
@@ -1064,7 +1041,7 @@ $__isAll = ($status === '' || $status === null);
       <?php return ob_get_clean();
       }
 
-      function progress_color_by_pct($pct)
+      function progress_color_by_pct(float $pct)
       {
         if ($pct >= 100) return '#22c55e';       // green
         if ($pct >= 90)  return '#16a34a';       // darker green
@@ -1075,7 +1052,7 @@ $__isAll = ($status === '' || $status === null);
       ?>
 
       <?php
-      function fmt_date_dmy($s)
+      function fmt_date_dmy(?string $s)
       {
         if (!$s || $s === '0000-00-00' || strtolower((string)$s) === 'null') {
           return '—';
@@ -1087,7 +1064,7 @@ $__isAll = ($status === '' || $status === null);
       ?>
       <!--================================================ -->
       <?php
-      function bitis_badge_html($bitis = null, $termin = null)
+      function bitis_badge_html(?string $bitis = null, ?string $termin = null)
       {
         // Wrapper style: 2-row grid (badge + date), fixed height so dates align across columns
         $wrapStyle = 'display:grid;grid-template-rows:1fr auto;row-gap:4px;height:48px;align-items:end;justify-items:center';
@@ -1131,7 +1108,7 @@ $__isAll = ($status === '' || $status === null);
       <!--================================================ -->
       <?php
       // Bitiş + 14 gün kuralını hesaplayan YENİ fonksiyon
-      function teslim_badge_html($teslim, $bitis)
+      function teslim_badge_html(?string $teslim, ?string $bitis)
       {
         // Wrapper style: 2-row grid (badge + date), fixed height so dates align across columns
         $wrapStyle = 'display:grid;grid-template-rows:1fr auto;row-gap:4px;height:48px;align-items:end;justify-items:center';
@@ -1206,7 +1183,7 @@ $__isAll = ($status === '' || $status === null);
       <!--================================================ -->
       <?php
       // Bitiş'e göre gecikmeyi kontrol eden GÜNCELLENMİŞ fonksiyon
-      function termin_badge_html($termin, $teslim = null, $bitis = null)
+      function termin_badge_html(?string $termin, ?string $teslim = null, ?string $bitis = null)
       { // <-- 3. parametre $bitis eklendi
         // Wrapper style
         $wrapStyle = 'display:grid;grid-template-rows:1fr auto;row-gap:4px;height:48px;align-items:end;justify-items:center';
@@ -1452,12 +1429,6 @@ $__isAll = ($status === '' || $status === null);
       $qs = $_GET;
       unset($qs['page']);
       $base = 'orders.php' . (empty($qs) ? '' : ('?' . http_build_query($qs)));
-      if (!function_exists('__orders_page_link')) {
-        function __orders_page_link($p, $base)
-        {
-          return $base . (strpos($base, '?') !== false ? '&' : '?') . 'page=' . (int)$p;
-        }
-      }
       $first_link = __orders_page_link(1, $base);
       $prev_link  = __orders_page_link(max(1, $page - 1), $base);
       $next_link  = __orders_page_link(min($total_pages, $page + 1), $base);
