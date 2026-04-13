@@ -39,10 +39,6 @@ function method($m){ return $_SERVER['REQUEST_METHOD'] === strtoupper($m); }
 if (session_status() !== PHP_SESSION_ACTIVE) { @session_start(); }
 if (empty($_SESSION['csrf'])) { $_SESSION['csrf'] = bin2hex(random_bytes(16)); }
 
-// CSRF - Her iki kullanım şeklini de destekleyen versiyon
-if (session_status() !== PHP_SESSION_ACTIVE) { @session_start(); }
-if (empty($_SESSION['csrf'])) { $_SESSION['csrf'] = bin2hex(random_bytes(16)); }
-
 // Basit kullanım için (login.php gibi)
 function csrf_input() {
     echo '<input type="hidden" name="csrf" value="' . h($_SESSION['csrf']) . '">';
@@ -257,7 +253,7 @@ if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['uid'])) {
     $cu_role = $_SESSION['urole'] ?? '';
     if ($cu_role === 'musteri') {
         // Müşterinin URL'den girebileceği izinli sayfalar:
-        $allowed_pages = ['index.php', 'orders.php', 'order_view.php', 'logout.php', 'login.php', 'order_edit.php', 'order_pdf.php'];
+        $allowed_pages = ['index.php', 'orders.php', 'order_view.php', 'logout.php', 'login.php', 'order_edit.php', 'order_pdf.php',  'order_pdf_uretim.php'];
         $current_file = basename($_SERVER['SCRIPT_NAME']);
         
         if (!in_array($current_file, $allowed_pages)) {
