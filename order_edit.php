@@ -351,6 +351,105 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
     audit_log_action('update','orders',$id,$AUD_before,$AUD_after,$AUD_extra);
   }
 
+  // --- OTOMATİK DURUM BİLDİRİMİ: teslim edildi → muhasebe | fatura_edildi → admin/sistem_yoneticisi ---
+  $___new_status = $data['status'] ?? '';
+  $___old_status = $AUD_beforeOrder ? ($AUD_beforeOrder['status'] ?? '') : '';
+
+  if (
+    in_array($___new_status, ['teslim edildi', 'fatura_edildi'], true) &&
+    $___old_status !== $___new_status
+  ) {
+    try {
+      require_once __DIR__ . '/mailing/mailer.php';
+
+      if ($___new_status === 'teslim edildi') {
+        $___target_roles = ['muhasebe'];
+        $___status_label = 'Teslim Edildi';
+        $___event_key    = 'order_teslim_edildi';
+      } else {
+        $___target_roles = ['admin', 'sistem_yoneticisi'];
+        $___status_label = 'Fatura Edildi';
+        $___event_key    = 'order_fatura_edildi';
+      }
+
+      // Hedef rollerdeki aktif kullanıcıların e-postalarını çek
+      $___in_ph  = implode(',', array_fill(0, count($___target_roles), '?'));
+      $___usr_st = $db->prepare("SELECT email FROM users WHERE role IN ($___in_ph) AND email IS NOT NULL AND email != '' AND is_active = 1");
+      $___usr_st->execute($___target_roles);
+      $___toList = [];
+      foreach ($___usr_st->fetchAll(PDO::FETCH_COLUMN) as $___em) {
+        if (filter_var(trim($___em), FILTER_VALIDATE_EMAIL)) {
+          $___toList[] = trim($___em);
+        }
+      }
+
+      // Alıcı bulunamadıysa logla ve geç
+      if (empty($___toList)) {
+        error_log("[durum_bildirim] Alici bulunamadi. event={$___event_key} siparis_id={$id} roller=" . implode(',', $___target_roles));
+      } else {
+        // Sipariş + müşteri bilgilerini taze çek
+        $___notif_st = $db->prepare("SELECT o.*, c.name AS customer_name FROM orders o LEFT JOIN customers c ON c.id=o.customer_id WHERE o.id=?");
+        $___notif_st->execute([$id]);
+        $___notif_ord = $___notif_st->fetch(PDO::FETCH_ASSOC);
+
+        $___order_code = $___notif_ord['order_code'] ?? '';
+        $___proje_adi  = $___notif_ord['proje_adi']  ?? '';
+        $___cust_name  = $___notif_ord['customer_name'] ?? '';
+        $___changed_by = '';
+        if (function_exists('current_user')) {
+          $___cu2 = current_user();
+          $___changed_by = $___cu2['name'] ?? $___cu2['username'] ?? '';
+        }
+
+        $___scheme2   = (!empty($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http'));
+        $___view_url2 = $___scheme2 . '://' . $_SERVER['HTTP_HOST'] . '/order_view.php?id=' . $id;
+
+        $___subject_n = "Siparis {$___status_label}: {$___order_code}" . ($___proje_adi ? " - {$___proje_adi}" : '');
+
+        $___html_n = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Arial,sans-serif;font-size:14px;color:#333;max-width:600px;margin:0 auto;padding:20px;">'
+          . '<h2 style="color:#1d4ed8;">Siparis Durumu Guncellendi</h2>'
+          . '<table style="width:100%;border-collapse:collapse;margin-top:12px;">'
+          . '<tr><td style="padding:6px 0;font-weight:bold;width:160px;">Yeni Durum:</td><td><span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-weight:bold;">' . htmlspecialchars($___status_label, ENT_QUOTES, 'UTF-8') . '</span></td></tr>'
+          . '<tr><td style="padding:6px 0;font-weight:bold;">Siparis Kodu:</td><td>' . htmlspecialchars($___order_code, ENT_QUOTES, 'UTF-8') . '</td></tr>'
+          . '<tr><td style="padding:6px 0;font-weight:bold;">Proje Adi:</td><td>' . htmlspecialchars($___proje_adi ?: '-', ENT_QUOTES, 'UTF-8') . '</td></tr>'
+          . '<tr><td style="padding:6px 0;font-weight:bold;">Musteri:</td><td>' . htmlspecialchars($___cust_name ?: '-', ENT_QUOTES, 'UTF-8') . '</td></tr>'
+          . '<tr><td style="padding:6px 0;font-weight:bold;">Guncelleyen:</td><td>' . htmlspecialchars($___changed_by ?: '-', ENT_QUOTES, 'UTF-8') . '</td></tr>'
+          . '</table>'
+          . '<p style="margin-top:20px;"><a href="' . htmlspecialchars($___view_url2, ENT_QUOTES, 'UTF-8') . '" style="background:#1d4ed8;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;">Siparisi Goruntule</a></p>'
+          . '</body></html>';
+
+        $___text_n = "Siparis Durumu Guncellendi\nYeni Durum: {$___status_label}\nSiparis Kodu: {$___order_code}\nProje: " . ($___proje_adi ?: '-') . "\nMusteri: " . ($___cust_name ?: '-') . "\nGuncelleyen: " . ($___changed_by ?: '-') . "\nLink: {$___view_url2}";
+
+        [$___mail_ok, $___mail_err] = rp_send_mail($___subject_n, $___html_n, $___text_n, $___toList, [], [], null);
+
+        // mail_log tablosuna INSERT IGNORE ile yaz (unique key ihlalini önler)
+        try {
+          $db->exec("CREATE TABLE IF NOT EXISTS mail_log (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            event VARCHAR(64) NOT NULL,
+            entity_id BIGINT UNSIGNED NOT NULL,
+            to_emails TEXT NOT NULL,
+            cc_emails TEXT NULL,
+            bcc_emails TEXT NULL,
+            subject VARCHAR(255) NOT NULL,
+            status ENUM('sent','error') NOT NULL,
+            error TEXT NULL,
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+          )");
+          $___log_st = $db->prepare("INSERT IGNORE INTO mail_log (event, entity_id, to_emails, cc_emails, bcc_emails, subject, status, error) VALUES (?, ?, ?, '', '', ?, ?, ?)");
+          $___log_st->execute([$___event_key, $id, implode(',', $___toList), $___subject_n, $___mail_ok ? 'sent' : 'error', $___mail_err]);
+        } catch (Throwable $___le) {
+          error_log('[durum_bildirim] mail_log yazma hatasi: ' . $___le->getMessage());
+        }
+
+        error_log("[durum_bildirim] event={$___event_key} siparis_id={$id} to=" . implode(',', $___toList) . " ok=" . ($___mail_ok ? '1' : '0') . " err={$___mail_err}");
+      }
+    } catch (Throwable $___me) {
+      error_log('[durum_bildirim] HATA: ' . $___me->getMessage() . ' | ' . $___me->getFile() . ':' . $___me->getLine());
+    }
+  }
+  // -----------------------------------------------------------------------
+
   // --- YENİ EKLENEN KISIM: SADECE YAYINLA BUTONUNA BASILDIYSA MAİL AT ---
   if (isset($_POST['yayinla_butonu'])) {
       try {
@@ -589,25 +688,6 @@ include __DIR__ . '/includes/order_form.php'; ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
-  // Ek PDF butonu (para alanlarına dokunmaz)
-  try {
-    function addAfter(node, newNode){ node.parentNode.insertBefore(newNode, node.nextSibling); }
-    var pdfButtons = Array.from(document.querySelectorAll('a.btn, a[class*=btn]')).filter(function(a){
-      var t = (a.textContent || '').trim().toLowerCase();
-      return t === 'görüntüle pdf' || t === 'goruntule pdf' || t === 'stf';
-    });
-    pdfButtons.forEach(function(pdf){
-      var prod = document.createElement('a');
-      prod.className = 'btn';
-      prod.setAttribute('target','_blank');
-      prod.setAttribute('rel','noopener');
-      prod.setAttribute('href','http://renplan.ditetra.com/order_pdf_uretim.php?id=<?= (int)$id ?>');
-      prod.setAttribute('style','background-color:#16a34a;border-color:#15803d;color:#fff');
-      prod.textContent = 'Üretim Föyü';
-      addAfter(pdf, prod);
-    });
-  } catch(e){}
-
   // Sunucudan gelen kalemler
   var _itemsFromPHP = <?php
     $___json_items = [];

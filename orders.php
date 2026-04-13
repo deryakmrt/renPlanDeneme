@@ -1390,6 +1390,7 @@ $__isAll = ($status === '' || $status === null);
                   <?php endif; ?>
                 </div>
 
+                <?php if (in_array($___role, ['admin', 'sistem_yoneticisi'], true)): ?>
                 <div style="grid-column: 2; width:100%;">
                   <?php if (!empty($o['customer_email'])): ?>
                     <a class="btn" href="order_send_mail.php?id=<?= (int)$o['id'] ?>" title="Mail Gönder"
@@ -1400,6 +1401,7 @@ $__isAll = ($status === '' || $status === null);
                     <span class="btn disabled" style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; border:1px solid #f3f4f6; color: #e5e7eb; background:#fff;">📧</span>
                   <?php endif; ?>
                 </div>
+                <?php endif; ?>
               <?php endif; ?>
 
             </div>
