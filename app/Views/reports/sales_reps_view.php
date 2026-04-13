@@ -137,17 +137,17 @@ include __DIR__ . '/../../../includes/header.php';
       <div class="chart-sort-controls" style="margin-bottom: 6px; padding: 4px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 6px; border: 1px solid #e2e8f0;">
         <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
           <label class="sort-option">
-            <input type="radio" name="salesperson_sort" value="order_count" checked>
+            <input type="radio" name="salesperson_sort" value="order_count">
             <span>📦 Adet</span>
           </label>
           <label class="sort-option">
-            <input type="radio" name="salesperson_sort" value="total_price">
+            <input type="radio" name="salesperson_sort" value="total_price" checked>
             <span>💰 Fiyat</span>
           </label>
         </div>
       </div>
 
-      <div id="spPriceInfo" style="display: none; text-align: center; font-size: 10px; color: #94a3b8; font-style: italic; margin-bottom: 8px; padding: 0 10px; line-height: 1.3;">
+      <div id="spPriceInfo" style="display: block; text-align: center; font-size: 10px; color: #94a3b8; font-style: italic; margin-bottom: 8px; padding: 0 10px; line-height: 1.3;">
         *Buradaki ciro, farklı döviz cinslerinden kesilen siparişlerin güncel TCMB kuru ile TL'ye çevrilip toplanmış halidir.
       </div>
 
