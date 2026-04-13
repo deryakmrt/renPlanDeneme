@@ -321,7 +321,7 @@ require_once __DIR__ . '/helpers.php';
               <div class="menu">
                 <a href="/reports/sales_reps.php">Satış ve Finans İstatistikleri</a>
                 <a href="/reports/production.php">Canlı Üretim Sahası</a>
-                <a href="orders.php?status=fatura_edildi">Faturalar</a>
+                 <a href="faturalar.php">Faturalar</a>
               </div>
             </div>
           <?php endif; ?>
