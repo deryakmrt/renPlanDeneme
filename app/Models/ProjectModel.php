@@ -17,11 +17,33 @@ class ProjectModel
                 p.name,
                 p.aciklama,
                 p.created_at,
-                COUNT(DISTINCT o.id)                AS order_count,
-                COALESCE(SUM(oi.qty * oi.price), 0) AS total_amount
+                COUNT(o.id) AS order_count,
+                COALESCE(SUM(
+                    (SELECT COALESCE(SUM(oi.qty * oi.price), 0)
+                     FROM order_items oi WHERE oi.order_id = o.id)
+                ), 0) AS total_amount,
+                JSON_ARRAYAGG(
+                    CASE WHEN o.id IS NOT NULL THEN
+                        JSON_OBJECT(
+                            'fatura_toplam',      COALESCE(o.fatura_toplam, 0),
+                            'fatura_para_birimi', COALESCE(o.fatura_para_birimi, ''),
+                            'fatura_tarihi',      COALESCE(o.fatura_tarihi, ''),
+                            'order_currency',     COALESCE(o.currency, 'TL'),
+                            'kalem_para_birimi',  COALESCE(o.kalem_para_birimi, ''),
+                            'kur_usd',            COALESCE(o.kur_usd, 0),
+                            'kur_eur',            COALESCE(o.kur_eur, 0),
+                            'order_date',         COALESCE(o.created_at, ''),
+                            'status',             COALESCE(o.status, ''),
+                            'order_genel_toplam', COALESCE(o.fatura_toplam, 0),
+                            'order_total',        (
+                                SELECT COALESCE(SUM(oi2.qty * oi2.price * (1 + COALESCE(o.kdv_orani, 20) / 100)), 0)
+                                FROM order_items oi2 WHERE oi2.order_id = o.id
+                            )
+                        )
+                    ELSE NULL END
+                ) AS orders_json
             FROM projects p
-            LEFT JOIN orders o       ON o.project_id = p.id
-            LEFT JOIN order_items oi ON oi.order_id  = o.id
+            LEFT JOIN orders o ON o.project_id = p.id
             GROUP BY p.id
             ORDER BY p.created_at DESC
         ")->fetchAll();

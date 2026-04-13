@@ -55,8 +55,13 @@
         <?php endif; ?>
 
         <?php foreach ($projects as $p):
+            // USD toplamı varsa onu göster (proje_detay ile tutarlı), yoksa TRY'ye düş
+            $usd        = isset($p['total_usd']) ? (float)$p['total_usd'] : null;
             $amount     = (float)$p['total_amount'];
-            $fmt_amount = number_format($amount, 2, ',', '.');
+            $has_usd    = $usd !== null && $usd > 0;
+            $disp_val   = $has_usd ? $usd : $amount;
+            $disp_sym   = $has_usd ? '$' : '₺';
+            $fmt_amount = number_format($disp_val, 4, ',', '.');
         ?>
         <a href="proje_detay.php?id=<?= (int)$p['id'] ?>" class="proj-card">
             <div class="proj-card-title">
@@ -73,7 +78,7 @@
                 </div>
                 <div class="proj-meta-item">
                     <span class="proj-meta-label">Toplam Tutar</span>
-                    <span class="proj-meta-val orange"><?= $amount > 0 ? '₺'.$fmt_amount : '—' ?></span>
+                    <span class="proj-meta-val orange"><?= $disp_val > 0 ? $disp_sym.$fmt_amount : '—' ?></span>
                 </div>
                 <div class="proj-meta-item">
                     <span class="proj-meta-label">Oluşturulma</span>
