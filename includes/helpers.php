@@ -253,7 +253,7 @@ if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['uid'])) {
     $cu_role = $_SESSION['urole'] ?? '';
     if ($cu_role === 'musteri') {
         // Müşterinin URL'den girebileceği izinli sayfalar:
-        $allowed_pages = ['index.php', 'orders.php', 'order_view.php', 'logout.php', 'login.php', 'order_edit.php', 'order_pdf.php',  'order_pdf_uretim.php'];
+        $allowed_pages = ['index.php', 'orders.php', 'order_view.php', 'logout.php', 'login.php', 'order_edit.php', 'order_pdf.php'];
         $current_file = basename($_SERVER['SCRIPT_NAME']);
         
         if (!in_array($current_file, $allowed_pages)) {
