@@ -306,6 +306,9 @@ require_once __DIR__ . '/helpers.php';
             <div class="menu">
               <a href="orders.php">Siparişler</a>
               <?php if (!has_role('muhasebe')): ?>
+                <a href="projeler.php" class="<?= basename($_SERVER['PHP_SELF']) == 'projeler.php' ? 'active' : '' ?>">
+                  <i class="fas fa-project-diagram"></i> Projeler
+                </a>
                 <a href="lazer_kesim.php">Lazer Kesim</a>
                 <a href="calendar.php?a=new">Sipariş Takvimi</a>
               <?php endif; ?>
@@ -321,7 +324,7 @@ require_once __DIR__ . '/helpers.php';
               <div class="menu">
                 <a href="/reports/sales_reps.php">Satış ve Finans İstatistikleri</a>
                 <a href="/reports/production.php">Canlı Üretim Sahası</a>
-                 <a href="faturalar.php">Faturalar</a>
+                <a href="faturalar.php">Faturalar</a>
               </div>
             </div>
           <?php endif; ?>
@@ -337,16 +340,16 @@ require_once __DIR__ . '/helpers.php';
             </div>
           </div>
           <?php if (!has_role('muhasebe')): ?>
-          <div class="dropdown">
-            <a href="#" class="dropdown-toggle">Satın Alma<span class="caret"></span></a>
-            <div class="menu">
-              <a href="satinalma-sys/talepler.php">Talepler</a>
-              <a href="satinalma-sys/talep_olustur.php">Talep Oluştur</a>
-              <?php if (has_role('admin')): ?>
-                <a href="satinalma-sys/satinalma_rapor.php">Satın Alma Raporu</a>
-              <?php endif; ?>
+            <div class="dropdown">
+              <a href="#" class="dropdown-toggle">Satın Alma<span class="caret"></span></a>
+              <div class="menu">
+                <a href="satinalma-sys/talepler.php">Talepler</a>
+                <a href="satinalma-sys/talep_olustur.php">Talep Oluştur</a>
+                <?php if (has_role('admin')): ?>
+                  <a href="satinalma-sys/satinalma_rapor.php">Satın Alma Raporu</a>
+                <?php endif; ?>
+              </div>
             </div>
-          </div>
           <?php endif; ?>
           <?php if (has_role('admin')): ?>
             <div class="dropdown">

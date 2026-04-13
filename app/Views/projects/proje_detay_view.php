@@ -1,6 +1,8 @@
 <?php
 // app/Views/projects/proje_detay_view.php
-// Değişkenler: $proje, $bound_orders, $unbound_orders, $grand_total, $can_edit, $sq, $pid
+// Değişkenler: $proje, $bound_orders, $unbound_orders,
+//              $grand_total_try, $grand_total_usd, $grand_total (uyumluluk),
+//              $rates, $can_edit, $sq, $pid
 
 function prj_status_color(string $s): string {
     $map = [
@@ -21,6 +23,40 @@ function prj_status_label(string $s): string {
     ];
     return $map[$s] ?? $s;
 }
+
+// Para birimi sembolü
+function prj_cur_sym(string $cur): string {
+    return match($cur) { 'USD' => '$', 'EUR' => '€', default => '₺' };
+}
+
+// Tutar satırı: orijinal + USD karşılığı
+function prj_amount_html(array $o): string
+{
+    $cur    = $o['_cur']        ?? 'TRY';
+    $amt    = $o['_amount']     ?? 0;
+    $usd    = $o['_amount_usd'] ?? 0;
+    $inv    = $o['_is_invoiced'] ?? false;
+    $sym    = prj_cur_sym($cur);
+    $fmt    = fn($v) => number_format($v, 2, ',', '.');
+
+    $badge = $inv
+        ? '<span style="font-size:9px;background:#7e22ce;color:#fff;padding:1px 5px;border-radius:4px;vertical-align:middle;margin-left:4px;">FATURA</span>'
+        : '<span style="font-size:9px;background:#f59e0b;color:#fff;padding:1px 5px;border-radius:4px;vertical-align:middle;margin-left:4px;">AÇIK</span>';
+
+    if ($cur === 'USD') {
+        // Zaten dolar, TRY çevirisi göster
+        $try_hint = '';
+    } else {
+        // Alt satırda USD göster
+        $try_hint = '<div style="font-size:11px;color:#64748b;font-weight:500;margin-top:2px;">≈ $' . $fmt($usd) . '</div>';
+    }
+
+    return '<div style="text-align:right;">'
+         . '<span style="font-weight:700;">' . $sym . $fmt($amt) . '</span>'
+         . $badge
+         . $try_hint
+         . '</div>';
+}
 ?>
 
 <style>
@@ -30,6 +66,7 @@ function prj_status_label(string $s): string {
 .prj-sum-label { font-size:11px; text-transform:uppercase; color:#94a3b8; font-weight:600; letter-spacing:.5px; }
 .prj-sum-val   { font-size:20px; font-weight:800; color:#0f172a; margin-top:4px; }
 .prj-sum-val.orange { color:#ee7422; }
+.prj-sum-sub   { font-size:12px; color:#64748b; font-weight:500; margin-top:3px; }
 .prj-table { width:100%; border-collapse:collapse; font-size:13px; }
 .prj-table th { background:#f8fafc; color:#64748b; font-weight:600; padding:10px 12px; text-align:left; border-bottom:2px solid #e2e8f0; }
 .prj-table td { padding:10px 12px; border-bottom:1px solid #f1f5f9; vertical-align:middle; color:#0f172a; }
@@ -44,6 +81,7 @@ function prj_status_label(string $s): string {
 .edit-form input, .edit-form textarea { border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:13px; width:100%; box-sizing:border-box; }
 .edit-form textarea { min-height:60px; resize:vertical; }
 .section-title { font-size:15px; font-weight:700; color:#0f172a; margin:0 0 12px; }
+.kur-info { font-size:11px; color:#94a3b8; margin-top:2px; }
 </style>
 
 <div class="prj-wrap">
@@ -73,8 +111,14 @@ function prj_status_label(string $s): string {
             <div class="prj-sum-val"><?= count($bound_orders) ?></div>
         </div>
         <div class="prj-sum-card">
-            <div class="prj-sum-label">Toplam Tutar</div>
-            <div class="prj-sum-val orange">₺<?= number_format($grand_total, 2, ',', '.') ?></div>
+            <div class="prj-sum-label">Toplam (USD)</div>
+            <div class="prj-sum-val orange">$<?= number_format($grand_total_usd, 4, ',', '.') ?></div>
+            <div class="prj-sum-sub">≈ ₺<?= number_format($grand_total_try, 4, ',', '.') ?></div>
+        </div>
+        <div class="prj-sum-card">
+            <div class="prj-sum-label">Güncel Kur</div>
+            <div class="prj-sum-val" style="font-size:15px;">$<?= number_format($rates['USD'], 4, ',', '.') ?></div>
+            <div class="prj-sum-sub">€<?= number_format($rates['EUR'], 4, ',', '.') ?></div>
         </div>
         <div class="prj-sum-card">
             <div class="prj-sum-label">Oluşturulma</div>
@@ -98,6 +142,7 @@ function prj_status_label(string $s): string {
                             <th>Proje Adı</th>
                             <th>Durum</th>
                             <th style="text-align:right;">Tutar</th>
+                            <th style="text-align:right;">USD</th>
                             <?php if ($can_edit): ?><th></th><?php endif; ?>
                         </tr>
                     </thead>
@@ -116,8 +161,22 @@ function prj_status_label(string $s): string {
                                     <?= h(prj_status_label($o['status'])) ?>
                                 </span>
                             </td>
-                            <td style="text-align:right; font-weight:700;">
-                                ₺<?= number_format((float)$o['order_total'], 2, ',', '.') ?>
+                            <td style="text-align:right;">
+                                <?php
+                                    $cur = $o['_cur'] ?? 'TRY';
+                                    $sym = prj_cur_sym($cur);
+                                    $amt = $o['_amount'] ?? 0;
+                                    $inv = $o['_is_invoiced'] ?? false;
+                                ?>
+                                <span style="font-weight:700;"><?= $sym . number_format($amt, 4, ',', '.') ?></span>
+                                <?php if ($inv): ?>
+                                    <span style="font-size:9px;background:#7e22ce;color:#fff;padding:1px 5px;border-radius:4px;vertical-align:middle;display:inline-block;margin-left:2px;">F</span>
+                                <?php else: ?>
+                                    <span style="font-size:9px;background:#f59e0b;color:#fff;padding:1px 5px;border-radius:4px;vertical-align:middle;display:inline-block;margin-left:2px;">A</span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="text-align:right; color:#64748b; font-size:12px;">
+                                $<?= number_format($o['_amount_usd'] ?? 0, 4, ',', '.') ?>
                             </td>
                             <?php if ($can_edit): ?>
                             <td>
@@ -134,15 +193,37 @@ function prj_status_label(string $s): string {
                         <?php endforeach; ?>
                     </tbody>
                     <tfoot>
-                        <tr>
-                            <td colspan="<?= $can_edit ? 4 : 3 ?>" style="text-align:right; font-weight:700; color:#64748b; font-size:12px; padding:10px 12px;">TOPLAM</td>
-                            <td style="text-align:right; font-weight:800; color:#ee7422; font-size:15px; padding:10px 12px;">
-                                ₺<?= number_format($grand_total, 2, ',', '.') ?>
+                        <tr style="border-top:2px solid #e2e8f0; background:#fafafa;">
+                            <td colspan="2" style="padding:14px 12px;">
+                                <?php
+                                    $inv_count  = count(array_filter($bound_orders, fn($x) => $x['_is_invoiced']));
+                                    $open_count = count($bound_orders) - $inv_count;
+                                ?>
+                                <div style="display:flex; gap:14px; font-size:12px; font-weight:700;">
+                                    <?php if ($inv_count):  ?>
+                                        <span><span style="color:#7e22ce;">●</span> <?= $inv_count ?> fatura</span>
+                                    <?php endif; ?>
+                                    <?php if ($open_count): ?>
+                                        <span><span style="color:#f59e0b;">●</span> <?= $open_count ?> açık</span>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td colspan="2" style="text-align:right; font-weight:700; color:#64748b; font-size:12px; padding:14px 12px; white-space:nowrap;">TOPLAM</td>
+                            <td style="text-align:right; font-weight:800; color:#ee7422; font-size:15px; padding:14px 12px; white-space:nowrap;">
+                                $<?= number_format($grand_total_usd, 4, ',', '.') ?>
+                                <div style="font-size:11px; color:#64748b; font-weight:500; margin-top:3px;">≈ ₺<?= number_format($grand_total_try, 4, ',', '.') ?></div>
                             </td>
                             <?php if ($can_edit): ?><td></td><?php endif; ?>
                         </tr>
                     </tfoot>
                 </table>
+
+                <!-- Kur bilgisi notu -->
+                <p class="kur-info" style="margin-top:8px; padding:0 4px;">
+                    ℹ️ Fatura edilmiş siparişlerde fatura kuru (veya TCMB tarihsel) kullanılır. Açık siparişlerde güncel TCMB kuru ($<?= number_format($rates['USD'], 4, ',', '.') ?> / ₺) esas alınır.
+                    <span style="background:#7e22ce;color:#fff;padding:1px 5px;border-radius:4px;font-size:9px;vertical-align:middle;">F</span> = Faturalı &nbsp;
+                    <span style="background:#f59e0b;color:#fff;padding:1px 5px;border-radius:4px;font-size:9px;vertical-align:middle;">A</span> = Açık sipariş
+                </p>
             <?php endif; ?>
         </div>
 
@@ -215,4 +296,4 @@ function prj_status_label(string $s): string {
         </form>
     </div>
 </div>
-<?php endif; ?>
+<?php endif; ?>9+8-*098765432

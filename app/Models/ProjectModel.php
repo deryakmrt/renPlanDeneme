@@ -54,11 +54,35 @@ class ProjectModel
                  ->execute([$id]);
     }
 
+    /**
+     * Projeye bağlı siparişleri kur bilgileriyle birlikte çeker.
+     * order_total: kalem bazlı ham toplam (KDV dahil)
+     * order_genel_toplam, fatura_toplam, fatura_para_birimi, kur_usd, kur_eur,
+     * fatura_tarihi, order_date, order_currency, status → USD hesabı için gerekli
+     */
     public function boundOrders(int $projectId): array
     {
         $st = $this->db->prepare("
-            SELECT o.*, c.name AS customer_name,
-                   COALESCE(SUM(oi.qty * oi.price), 0) AS order_total
+            SELECT
+                o.id,
+                o.order_code,
+                o.proje_adi,
+                o.status,
+                o.created_at          AS order_date,
+                o.currency            AS order_currency,
+                o.fatura_toplam       AS order_genel_toplam,
+                o.fatura_toplam,
+                o.fatura_para_birimi,
+                o.fatura_tarihi,
+                o.kur_usd,
+                o.kur_eur,
+                o.kalem_para_birimi,
+                o.kdv_orani,
+                c.name                AS customer_name,
+                COALESCE(
+                    SUM(oi.qty * oi.price * (1 + COALESCE(o.kdv_orani, 20) / 100)),
+                    0
+                )                     AS order_total
             FROM orders o
             LEFT JOIN customers c    ON c.id       = o.customer_id
             LEFT JOIN order_items oi ON oi.order_id = o.id
