@@ -41,7 +41,7 @@ $completed_orders = $db->query("SELECT COUNT(*) FROM orders" . $where_clause . "
 // Son 5 Sipariş (Müşteriler için ana sayfa mini tablosu)
 $recent_orders = [];
 if ($role === 'musteri' && $linked_customer !== '') {
-  $recent_orders = $db->query("SELECT id, order_code, proje_adi, status, termin_tarihi FROM orders" . $where_clause . " ORDER BY id DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+  $recent_orders = $db->query("SELECT id, order_code, proje_adi, status, termin_tarihi FROM orders" . $where_clause . " ORDER BY id DESC LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
 }
 
 include __DIR__ . '/includes/header.php';
@@ -354,7 +354,7 @@ include __DIR__ . '/includes/header.php';
 
 <?php
 // --- MUHASEBE KALKANI BAŞLANGICI ---
-if (!in_array($role, ['muhasebe'])):
+if (!in_array($role, ['muhasebe', 'musteri'])):
 ?>
 
   <div class="quick-actions mt">
@@ -558,21 +558,23 @@ if (!in_array($role, ['muhasebe'])):
   ?>
 
   <div class="widgets">
-    <div class="widget">
-      <h4>Son Siparişler</h4>
-      <ul class="list">
-        <?php foreach ($lastOrders as $o): ?>
-          <li>
-            <span>#<?= (int)$o['id'] ?> · <?= htmlspecialchars($o['customer_name'] ?: ('Müşteri #' . (int)$o['customer_id'])) ?></span>
-            <a class="badge" href="order_edit.php?id=<?= (int)$o['id'] ?>">Aç</a>
-          </li>
-        <?php endforeach; ?>
-        <?php if (!$lastOrders): ?>
-          <li><span>Henüz sipariş yok</span></li>
-        <?php endif; ?>
-      </ul>
-      <a class="see-all" href="orders.php">Tümünü Gör →</a>
-    </div>
+    <?php if ($role !== 'musteri'): ?>
+      <div class="widget">
+        <h4>Son Siparişler</h4>
+        <ul class="list">
+          <?php foreach ($lastOrders as $o): ?>
+            <li>
+              <span>#<?= (int)$o['id'] ?> · <?= htmlspecialchars($o['customer_name'] ?: ('Müşteri #' . (int)$o['customer_id'])) ?></span>
+              <a class="badge" href="order_edit.php?id=<?= (int)$o['id'] ?>">Aç</a>
+            </li>
+          <?php endforeach; ?>
+          <?php if (!$lastOrders): ?>
+            <li><span>Henüz sipariş yok</span></li>
+          <?php endif; ?>
+        </ul>
+        <a class="see-all" href="orders.php">Tümünü Gör →</a>
+      </div>
+    <?php endif; ?>
 
     <?php
     // --- MÜŞTERİ VE MUHASEBE KALKANI BAŞLANGICI ---
@@ -627,54 +629,63 @@ if (!in_array($role, ['muhasebe'])):
         </ul>
         <a class="see-all" href="orders.php?filter=yaklasan">Tümünü Gör →</a>
       </div>
-  </div>
+    <?php endif; // --- WİDGET KALKANI SONU --- 
+    ?>
+  </div> <?php if (!in_array($role, ['musteri', 'muhasebe'])): ?>
+    <div class="mt">
+      <?php define('CAL_EMBED', true);
+            define('CAL_EMBED_STYLES', true);
+            include __DIR__ . '/calendar.php'; ?>
+    </div>
+  <?php endif; // Muhasebe kalkani BÜYÜTÜLDÜ VE BURADA KAPANDI 
+  ?>
 
-  <!-- Embedded calendar -->
-  <div class="mt">
-    <?php define('CAL_EMBED', true);
-      define('CAL_EMBED_STYLES', true);
-      include __DIR__ . '/calendar.php'; ?>
-  </div>
-
-<?php endif; // Muhasebe kalkani BÜYÜTÜLDÜ VE BURADA KAPANDI 
-?>
 <?php endif; // muhasebe tile kalkani (satır 186) 
 ?>
 
 <?php if (($role ?? '') === 'musteri' && !empty($recent_orders)): ?>
-  <div class="card mt" style="margin-top: 30px; border-top: 4px solid #f97316;">
-    <h3 style="margin-top: 0; color: #1e293b; font-size: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 15px;">🔍 Son Siparişlerinizin Durumu</h3>
-    <div class="table-responsive">
-      <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
-        <thead>
-          <tr style="background: #f8fafc; color: #64748b;">
-            <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Sipariş Kodu</th>
-            <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Proje Adı</th>
-            <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Güncel Durum</th>
-            <th style="padding: 10px; border-bottom: 2px solid #e2e8f0; text-align: right;">İşlem</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($recent_orders as $ro): ?>
-            <tr style="border-bottom: 1px solid #f1f5f9;">
-              <td style="padding: 10px; font-weight: bold; color: #0f172a;"><?= h($ro['order_code']) ?></td>
-              <td style="padding: 10px; color: #475569;"><?= h($ro['proje_adi']) ?></td>
-              <td style="padding: 10px;">
-                <span style="background: #e0f2fe; color: #0284c7; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase;">
-                  <?= h(str_replace('_', ' ', $ro['status'])) ?>
-                </span>
-              </td>
-              <td style="padding: 10px; text-align: right;">
-                <a href="order_view.php?id=<?= $ro['id'] ?>" style="color: #ea580c; text-decoration: none; font-weight: bold; font-size: 13px;">Görüntüle ↗</a>
-              </td>
+  <div style="grid-column: 1 / -1; margin-top: 30px;">
+    <div class="card mt" style="margin-top: 30px; border-top: 4px solid #f97316; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border-radius: 12px; padding: 20px; width: 100%; box-sizing: border-box;">
+      <h3 style="margin-top: 0; color: #1e293b; font-size: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <span>🔍 Son Siparişlerinizin Durumu</span>
+      </h3>
+      <div class="table-responsive">
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          <thead>
+            <tr style="background: #f8fafc; color: #64748b; text-align: left;">
+              <th style="padding: 14px 10px; border-bottom: 2px solid #e2e8f0; width: 25%;">Sipariş Kodu</th>
+              <th style="padding: 14px 10px; border-bottom: 2px solid #e2e8f0; width: 35%;">Proje Adı</th>
+              <th style="padding: 14px 10px; border-bottom: 2px solid #e2e8f0; width: 20%; text-align: center;">Güncel Durum</th>
+              <th style="padding: 14px 10px; border-bottom: 2px solid #e2e8f0; width: 20%; text-align: right;">İşlem</th>
             </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <?php foreach ($recent_orders as $ro): ?>
+              <tr style="border-bottom: 1px solid #f1f5f9; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='transparent'">
+                <td style="padding: 16px 10px; font-weight: 700; color: #0f172a;"><?= h($ro['order_code']) ?></td>
+                <td style="padding: 16px 10px; color: #475569;">
+                  <?= !empty(trim($ro['proje_adi'] ?? '')) ? h($ro['proje_adi']) : '<span style="color:#cbd5e1; font-style:italic; font-size: 13px;">Belirtilmemiş</span>' ?>
+                </td>
+                <td style="padding: 16px 10px; text-align: center;">
+                  <span style="background: #e0f2fe; color: #0284c7; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <?= h(str_replace('_', ' ', $ro['status'])) ?>
+                  </span>
+                </td>
+                <td style="padding: 16px 10px; text-align: right;">
+                  <a href="order_view.php?id=<?= $ro['id'] ?>" style="display: inline-block; background: #fff7ed; color: #ea580c; text-decoration: none; font-weight: 700; font-size: 13px; padding: 8px 16px; border-radius: 8px; border: 1px solid #fed7aa; transition: 0.2s;" onmouseover="this.style.background='#ffedd5'" onmouseout="this.style.background='#fff7ed'">
+                    Görüntüle ↗
+                  </a>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+      <div style="text-align: center; margin-top: 25px;">
+        <a href="orders.php" style="display: inline-block; color: #475569; background: #f1f5f9; padding: 10px 24px; border-radius: 8px; font-size: 13px; text-decoration: none; font-weight: 600; border: 1px solid #e2e8f0; transition: 0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+          Tüm Siparişlerimi Gör &rarr;
+        </a>
+      </div>
     </div>
-    <div style="text-align: center; margin-top: 15px;">
-      <a href="orders.php" style="color: #64748b; font-size: 13px; text-decoration: none; font-weight: 600;">Tüm Siparişlerimi Gör &rarr;</a>
-    </div>
-  </div>
-<?php endif; ?>
-<?php include __DIR__ . '/includes/footer.php'; ?>
+  <?php endif; ?>
+  <?php include __DIR__ . '/includes/footer.php'; ?>
