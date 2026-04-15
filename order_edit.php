@@ -4,13 +4,23 @@ require_once __DIR__ . '/includes/audit_log.php';
 
 // ==== AUDIT HELPERS (guarded) ====
 if (!function_exists('AUD_normS')) {
-  function AUD_normS(string $s): string { $s=str_replace(array("\r","\n","\t")," ",$s); $s=preg_replace('/\s+/u',' ',$s); return trim($s); }
+  function AUD_normS(string $s): string
+  {
+    $s = str_replace(array("\r", "\n", "\t"), " ", $s);
+    $s = preg_replace('/\s+/u', ' ', $s);
+    return trim($s);
+  }
 }
 if (!function_exists('AUD_normF')) {
-  function AUD_normF(string $s): string {
-    $s=(string)$s;
-    if (strpos($s, ',') !== false && strpos($s, '.') !== false) { $s=str_replace('.','', $s); $s=str_replace(',', '.', $s); }
-    else { $s=str_replace(',', '.', $s); }
+  function AUD_normF(string $s): string
+  {
+    $s = (string)$s;
+    if (strpos($s, ',') !== false && strpos($s, '.') !== false) {
+      $s = str_replace('.', '', $s);
+      $s = str_replace(',', '.', $s);
+    } else {
+      $s = str_replace(',', '.', $s);
+    }
     if ($s === '' || $s === '-') return '0';
     $n = (float)$s;
     $out = rtrim(rtrim(sprintf('%.8F', $n), '0'), '.');
@@ -19,16 +29,18 @@ if (!function_exists('AUD_normF')) {
 }
 if (!function_exists('AUD_core')) {
   // Core identity: product_id|name|unit (ID-agnostic). This avoids false add/remove when row IDs change.
-  function AUD_core(array $r): string {
+  function AUD_core(array $r): string
+  {
     $pid = AUD_normS(isset($r['product_id']) ? $r['product_id'] : '');
     $nm  = AUD_normS(isset($r['name']) ? $r['name'] : '');
     $un  = AUD_normS(isset($r['unit']) ? $r['unit'] : '');
-    return $pid.'|'.$nm.'|'.$un;
+    return $pid . '|' . $nm . '|' . $un;
   }
 }
 if (!function_exists('AUD_full')) {
-  function AUD_full(array $r): string {
-    return AUD_core($r).'|Q='.AUD_normF(isset($r['qty'])?$r['qty']:'').'|P='.AUD_normF(isset($r['price'])?$r['price']:'');
+  function AUD_full(array $r): string
+  {
+    return AUD_core($r) . '|Q=' . AUD_normF(isset($r['qty']) ? $r['qty'] : '') . '|P=' . AUD_normF(isset($r['price']) ? $r['price'] : '');
   }
 }
 // ==== /AUDIT HELPERS ====
@@ -46,7 +58,8 @@ if (!$order) redirect('orders.php');
 
 if (method('POST')) {
   /*AUDIT_BEFORE*/
-  $AUD_beforeOrder = null; $AUD_beforeItems = array();
+  $AUD_beforeOrder = null;
+  $AUD_beforeItems = array();
   try {
     $AUD_stB1 = $db->prepare("SELECT * FROM orders WHERE id=?");
     $AUD_stB1->execute(array($id));
@@ -55,129 +68,174 @@ if (method('POST')) {
     $AUD_stB2 = $db->prepare("SELECT id, product_id, name, unit, qty, price, urun_ozeti, kullanim_alani FROM order_items WHERE order_id=? ORDER BY id ASC");
     $AUD_stB2->execute(array($id));
     $AUD_beforeItems = $AUD_stB2->fetchAll(PDO::FETCH_ASSOC);
-  } catch (Exception $e) { $AUD_beforeOrder = null; $AUD_beforeItems = array(); }
-// --- YAYINLA BUTONU TIKLANDI MI? ---
+  } catch (Exception $e) {
+    $AUD_beforeOrder = null;
+    $AUD_beforeItems = array();
+  }
+  // --- YAYINLA BUTONU TIKLANDI MI? ---
   if (isset($_POST['yayinla_butonu'])) {
-      $_POST['status'] = 'tedarik'; // Durumu 'tedarik' yap ve herkese aç
+    $_POST['status'] = 'tedarik'; // Durumu 'tedarik' yap ve herkese aç
   }
   // -----------------------------------
 
   csrf_check();
-  
-    // Para birimi uyumluluk haritalama
-    if (isset($_POST['odeme_para_birimi'])) {
-        $__tmp_odeme = $_POST['odeme_para_birimi'];
-        if ($__tmp_odeme === 'TL') { $_POST['currency'] = 'TRY'; }
-        elseif ($__tmp_odeme === 'EUR') { $_POST['currency'] = 'EUR'; }
-        elseif ($__tmp_odeme === 'USD') { $_POST['currency'] = 'USD'; }
-    }
-// OTOMATİK KURULUM: Veritabanında özel kur kolonları yoksa otomatik ekler (SQL hatasını önler)
-  try { $db->exec("ALTER TABLE orders ADD COLUMN kur_usd DECIMAL(10,4) NULL"); } catch (Throwable $e) {}
-  try { $db->exec("ALTER TABLE orders ADD COLUMN kur_eur DECIMAL(10,4) NULL"); } catch (Throwable $e) {}
-  try { $db->exec("ALTER TABLE orders ADD COLUMN fatura_toplam DECIMAL(15,4) NULL"); } catch (Throwable $e) {} // YENİ: MÜHÜR KOLONU
 
-$fields = ['order_code','customer_id','status','currency','termin_tarihi','baslangic_tarihi','bitis_tarihi','teslim_tarihi','notes',
-    'siparis_veren','siparisi_alan','siparisi_giren','siparis_tarihi','fatura_tarihi','fatura_para_birimi','kalem_para_birimi','proje_adi','revizyon_no','nakliye_turu','odeme_kosulu','odeme_para_birimi','kdv_orani','kur_usd','kur_eur'];
+  // Para birimi uyumluluk haritalama
+  if (isset($_POST['odeme_para_birimi'])) {
+    $__tmp_odeme = $_POST['odeme_para_birimi'];
+    if ($__tmp_odeme === 'TL') {
+      $_POST['currency'] = 'TRY';
+    } elseif ($__tmp_odeme === 'EUR') {
+      $_POST['currency'] = 'EUR';
+    } elseif ($__tmp_odeme === 'USD') {
+      $_POST['currency'] = 'USD';
+    }
+  }
+  // OTOMATİK KURULUM: Veritabanında özel kur kolonları yoksa otomatik ekler (SQL hatasını önler)
+  try {
+    $db->exec("ALTER TABLE orders ADD COLUMN kur_usd DECIMAL(10,4) NULL");
+  } catch (Throwable $e) {
+  }
+  try {
+    $db->exec("ALTER TABLE orders ADD COLUMN kur_eur DECIMAL(10,4) NULL");
+  } catch (Throwable $e) {
+  }
+  try {
+    $db->exec("ALTER TABLE orders ADD COLUMN fatura_toplam DECIMAL(15,4) NULL");
+  } catch (Throwable $e) {
+  } // YENİ: MÜHÜR KOLONU
+
+  $fields = [
+    'order_code',
+    'customer_id',
+    'status',
+    'currency',
+    'termin_tarihi',
+    'baslangic_tarihi',
+    'bitis_tarihi',
+    'teslim_tarihi',
+    'notes',
+    'siparis_veren',
+    'siparisi_alan',
+    'siparisi_giren',
+    'siparis_tarihi',
+    'fatura_tarihi',
+    'fatura_para_birimi',
+    'kalem_para_birimi',
+    'proje_adi',
+    'revizyon_no',
+    'nakliye_turu',
+    'odeme_kosulu',
+    'odeme_para_birimi',
+    'kdv_orani',
+    'kur_usd',
+    'kur_eur'
+  ];
   $data = [];
-  foreach ($fields as $f) { $data[$f] = $_POST[$f] ?? null; }
+  foreach ($fields as $f) {
+    $data[$f] = $_POST[$f] ?? null;
+  }
   $data['customer_id'] = (int)$data['customer_id'];
 
   // --- FATURA MÜHÜRLEME (fatura_toplam HESAPLAMASI) ---
   if (!function_exists('_tr_money_to_float_tmp')) {
-    function _tr_money_to_float_tmp(mixed $v): float {
-        if ($v === null || $v === '') return 0.0;
-        $v = trim((string)$v);
-        if (preg_match('/^\\d{1,3}(\\.\\d{3})+(,\\d+)?$/', $v)) {
-            $v = str_replace('.', '', $v); $v = str_replace(',', '.', $v);
-        } else {
-            $v = str_replace(',', '.', $v);
-        }
-        return (float)$v;
+    function _tr_money_to_float_tmp(mixed $v): float
+    {
+      if ($v === null || $v === '') return 0.0;
+      $v = trim((string)$v);
+      if (preg_match('/^\\d{1,3}(\\.\\d{3})+(,\\d+)?$/', $v)) {
+        $v = str_replace('.', '', $v);
+        $v = str_replace(',', '.', $v);
+      } else {
+        $v = str_replace(',', '.', $v);
+      }
+      return (float)$v;
     }
   }
-  
+
   $subt = 0.0;
   $qtys = $_POST['qty'] ?? [];
   $prices = $_POST['price'] ?? ($_POST['birim_fiyat'] ?? []);
   $p_ids = $_POST['product_id'] ?? [];
   $names = $_POST['name'] ?? [];
   $keys_tmp = array_unique(array_merge(array_keys((array)$p_ids), array_keys((array)$names), array_keys((array)$qtys), array_keys((array)$prices)));
-  
+
   foreach ($keys_tmp as $i) {
-      $pid = (int)($p_ids[$i] ?? 0);
-      $n = trim((string)($names[$i] ?? ''));
-      if (empty($pid) && trim($n) === '') continue;
-      $q = is_string($qtys[$i]??0) ? _tr_money_to_float_tmp($qtys[$i]??0) : (float)($qtys[$i]??0);
-      $p = is_string($prices[$i]??0) ? _tr_money_to_float_tmp($prices[$i]??0) : (float)($prices[$i]??0);
-      $subt += ($q * $p);
+    $pid = (int)($p_ids[$i] ?? 0);
+    $n = trim((string)($names[$i] ?? ''));
+    if (empty($pid) && trim($n) === '') continue;
+    $q = is_string($qtys[$i] ?? 0) ? _tr_money_to_float_tmp($qtys[$i] ?? 0) : (float)($qtys[$i] ?? 0);
+    $p = is_string($prices[$i] ?? 0) ? _tr_money_to_float_tmp($prices[$i] ?? 0) : (float)($prices[$i] ?? 0);
+    $subt += ($q * $p);
   }
-  
+
   $kdv_or = (float)($data['kdv_orani'] ?? 20);
   $gTotal = $subt + ($subt * ($kdv_or / 100));
-  
+
   $data['fatura_toplam'] = null;
   if ($data['status'] === 'fatura_edildi') {
-      
-      // --- HATA GİDERİLDİ: Fonksiyonu HTML dosyasından çağırmak yerine bağımsız olarak burada tanımlıyoruz ---
-      if (!function_exists('tcmb_get_exchange_rate')) {
-          function tcmb_get_exchange_rate(string $currency, ?string $date = null) {
-              $currency_upper = strtoupper($currency);
-              if ($currency_upper === 'TL' || $currency_upper === 'TRY') return 1.0;
-              $ctx = stream_context_create(['http' => ['timeout' => 3]]);
-              $urls_to_try = [];
-              if ($date && $date !== '0000-00-00') {
-                  $ts = strtotime($date);
-                  if ($ts > time()) $ts = time();
-                  if ($ts > 0) {
-                      for ($i = 0; $i <= 5; $i++) {
-                          $check_ts = strtotime("-{$i} day", $ts);
-                          if (date('N', $check_ts) >= 6) continue;
-                          $Ym = date('Ym', $check_ts);
-                          $dmY = date('dmY', $check_ts);
-                          if (date('Y-m-d', $check_ts) === date('Y-m-d')) {
-                              $urls_to_try[] = 'https://www.tcmb.gov.tr/kurlar/today.xml';
-                          } else {
-                              $urls_to_try[] = "https://www.tcmb.gov.tr/kurlar/{$Ym}/{$dmY}.xml";
-                          }
-                      }
-                  }
-              }
-              $urls_to_try[] = 'https://www.tcmb.gov.tr/kurlar/today.xml';
-              foreach (array_unique($urls_to_try) as $url) {
-                  $xml_data = @file_get_contents($url, false, $ctx);
-                  if (!$xml_data) continue;
-                  $xml = @simplexml_load_string($xml_data);
-                  if (!$xml) continue;
-                  foreach ($xml->Currency as $item) {
-                      if ((string)$item['CurrencyCode'] === $currency_upper) {
-                          $rate = (float)$item->ForexSelling;
-                          if ($rate <= 0) $rate = (float)$item->BanknoteSelling;
-                          if ($rate > 0) return $rate;
-                      }
-                  }
-              }
-              return null; 
-          }
-      }
 
-      $kalem_pb = $data['kalem_para_birimi'] ?? 'TL';
-      $fatura_pb = $data['fatura_para_birimi'] ?? 'TL';
-      
-      $kur_usd = (float)($data['kur_usd'] ?? 0);
-      if ($kur_usd <= 0) $kur_usd = (float)tcmb_get_exchange_rate('USD', $data['fatura_tarihi']);
-      
-      $kur_eur = (float)($data['kur_eur'] ?? 0);
-      if ($kur_eur <= 0) $kur_eur = (float)tcmb_get_exchange_rate('EUR', $data['fatura_tarihi']);
-      
-      $tryAmt = $gTotal;
-      if ($kalem_pb === 'USD' && $kur_usd > 0) $tryAmt = $gTotal * $kur_usd;
-      elseif ($kalem_pb === 'EUR' && $kur_eur > 0) $tryAmt = $gTotal * $kur_eur;
-      
-      $fnl = $tryAmt;
-      if ($fatura_pb === 'USD' && $kur_usd > 0) $fnl = $tryAmt / $kur_usd;
-      elseif ($fatura_pb === 'EUR' && $kur_eur > 0) $fnl = $tryAmt / $kur_eur;
-      
-      $data['fatura_toplam'] = round($fnl, 4);
+    // --- HATA GİDERİLDİ: Fonksiyonu HTML dosyasından çağırmak yerine bağımsız olarak burada tanımlıyoruz ---
+    if (!function_exists('tcmb_get_exchange_rate')) {
+      function tcmb_get_exchange_rate(string $currency, ?string $date = null)
+      {
+        $currency_upper = strtoupper($currency);
+        if ($currency_upper === 'TL' || $currency_upper === 'TRY') return 1.0;
+        $ctx = stream_context_create(['http' => ['timeout' => 3]]);
+        $urls_to_try = [];
+        if ($date && $date !== '0000-00-00') {
+          $ts = strtotime($date);
+          if ($ts > time()) $ts = time();
+          if ($ts > 0) {
+            for ($i = 0; $i <= 5; $i++) {
+              $check_ts = strtotime("-{$i} day", $ts);
+              if (date('N', $check_ts) >= 6) continue;
+              $Ym = date('Ym', $check_ts);
+              $dmY = date('dmY', $check_ts);
+              if (date('Y-m-d', $check_ts) === date('Y-m-d')) {
+                $urls_to_try[] = 'https://www.tcmb.gov.tr/kurlar/today.xml';
+              } else {
+                $urls_to_try[] = "https://www.tcmb.gov.tr/kurlar/{$Ym}/{$dmY}.xml";
+              }
+            }
+          }
+        }
+        $urls_to_try[] = 'https://www.tcmb.gov.tr/kurlar/today.xml';
+        foreach (array_unique($urls_to_try) as $url) {
+          $xml_data = @file_get_contents($url, false, $ctx);
+          if (!$xml_data) continue;
+          $xml = @simplexml_load_string($xml_data);
+          if (!$xml) continue;
+          foreach ($xml->Currency as $item) {
+            if ((string)$item['CurrencyCode'] === $currency_upper) {
+              $rate = (float)$item->ForexSelling;
+              if ($rate <= 0) $rate = (float)$item->BanknoteSelling;
+              if ($rate > 0) return $rate;
+            }
+          }
+        }
+        return null;
+      }
+    }
+
+    $kalem_pb = $data['kalem_para_birimi'] ?? 'TL';
+    $fatura_pb = $data['fatura_para_birimi'] ?? 'TL';
+
+    $kur_usd = (float)($data['kur_usd'] ?? 0);
+    if ($kur_usd <= 0) $kur_usd = (float)tcmb_get_exchange_rate('USD', $data['fatura_tarihi']);
+
+    $kur_eur = (float)($data['kur_eur'] ?? 0);
+    if ($kur_eur <= 0) $kur_eur = (float)tcmb_get_exchange_rate('EUR', $data['fatura_tarihi']);
+
+    $tryAmt = $gTotal;
+    if ($kalem_pb === 'USD' && $kur_usd > 0) $tryAmt = $gTotal * $kur_usd;
+    elseif ($kalem_pb === 'EUR' && $kur_eur > 0) $tryAmt = $gTotal * $kur_eur;
+
+    $fnl = $tryAmt;
+    if ($fatura_pb === 'USD' && $kur_usd > 0) $fnl = $tryAmt / $kur_usd;
+    elseif ($fatura_pb === 'EUR' && $kur_eur > 0) $fnl = $tryAmt / $kur_eur;
+
+    $data['fatura_toplam'] = round($fnl, 4);
   }
   // ----------------------------------------------------
 
@@ -186,12 +244,12 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
   $old_status = $AUD_beforeOrder ? $AUD_beforeOrder['status'] : ''; // Mevcut durumu denetim değişkeninden al
 
   if (!$is_admin) {
-      // Admin değilse;
-      if ($old_status === 'askiya_alindi') {
-          $data['status'] = 'askiya_alindi'; // Siparişi askıdan çıkaramaz, zorla geri askıya al
-      } elseif ($data['status'] === 'askiya_alindi') {
-          $data['status'] = $old_status; // Siparişi askıya alamaz, eski haline geri döndür
-      }
+    // Admin değilse;
+    if ($old_status === 'askiya_alindi') {
+      $data['status'] = 'askiya_alindi'; // Siparişi askıdan çıkaramaz, zorla geri askıya al
+    } elseif ($data['status'] === 'askiya_alindi') {
+      $data['status'] = $old_status; // Siparişi askıya alamaz, eski haline geri döndür
+    }
   }
   // ---------------------------------------------------------
 
@@ -199,8 +257,31 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
                        siparis_veren=?, siparisi_alan=?, siparisi_giren=?, siparis_tarihi=?, fatura_tarihi=?, fatura_para_birimi=?, kalem_para_birimi=?, proje_adi=?, revizyon_no=?, nakliye_turu=?, odeme_kosulu=?, odeme_para_birimi=?, kdv_orani=?, kur_usd=?, kur_eur=?, fatura_toplam=?
                       WHERE id=?");
   $up->execute([
-    $data['order_code'],$data['customer_id'],$data['status'],$data['currency'],$data['termin_tarihi'],$data['baslangic_tarihi'],$data['bitis_tarihi'],$data['teslim_tarihi'],$data['notes'],
-    $data['siparis_veren'],$data['siparisi_alan'],$data['siparisi_giren'],$data['siparis_tarihi'],$data['fatura_tarihi'],$data['fatura_para_birimi'],$data['kalem_para_birimi'],$data['proje_adi'],$data['revizyon_no'],$data['nakliye_turu'],$data['odeme_kosulu'],$data['odeme_para_birimi'], $data['kdv_orani'], $data['kur_usd'], $data['kur_eur'], $data['fatura_toplam'],
+    $data['order_code'],
+    $data['customer_id'],
+    $data['status'],
+    $data['currency'],
+    $data['termin_tarihi'],
+    $data['baslangic_tarihi'],
+    $data['bitis_tarihi'],
+    $data['teslim_tarihi'],
+    $data['notes'],
+    $data['siparis_veren'],
+    $data['siparisi_alan'],
+    $data['siparisi_giren'],
+    $data['siparis_tarihi'],
+    $data['fatura_tarihi'],
+    $data['fatura_para_birimi'],
+    $data['kalem_para_birimi'],
+    $data['proje_adi'],
+    $data['revizyon_no'],
+    $data['nakliye_turu'],
+    $data['odeme_kosulu'],
+    $data['odeme_para_birimi'],
+    $data['kdv_orani'],
+    $data['kur_usd'],
+    $data['kur_eur'],
+    $data['fatura_toplam'],
     $id
   ]);
 
@@ -208,19 +289,20 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
   $db->prepare("DELETE FROM order_items WHERE order_id=?")->execute([$id]);
 
   // --- Robust items save (supports price[] or birim_fiyat[], associative indexes) ---
-  function _tr_money_to_float(mixed $v): float {
+  function _tr_money_to_float(mixed $v): float
+  {
     if ($v === null || $v === '') return 0.0;
     $v = trim((string)$v);
     // If format like 1.234,56 -> remove thousands and use dot decimal
     if (preg_match('/^\\d{1,3}(\\.\\d{3})+(,\\d+)?$/', $v)) {
-        $v = str_replace('.', '', $v);
-        $v = str_replace(',', '.', $v);
+      $v = str_replace('.', '', $v);
+      $v = str_replace(',', '.', $v);
     } else {
-        // Otherwise: just convert comma to dot (keep existing dot!)
-        $v = str_replace(',', '.', $v);
+      // Otherwise: just convert comma to dot (keep existing dot!)
+      $v = str_replace(',', '.', $v);
     }
     return (float)$v;
-}
+  }
 
 
   $p_ids  = $_POST['product_id']     ?? [];
@@ -274,7 +356,7 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
     $insIt->execute([$id, $pid, $n, $unit, $qty, $price, $uo, $ka]);
   }
 
-  
+
   /*AUDIT_AFTER*/
   try {
     $AUD_stA1 = $db->prepare("SELECT * FROM orders WHERE id=?");
@@ -284,7 +366,10 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
     $AUD_stA2 = $db->prepare("SELECT id, product_id, name, unit, qty, price, urun_ozeti, kullanim_alani FROM order_items WHERE order_id=? ORDER BY id ASC");
     $AUD_stA2->execute(array($id));
     $AUD_afterItems = $AUD_stA2->fetchAll(PDO::FETCH_ASSOC);
-  } catch (Exception $e) { $AUD_afterOrder = null; $AUD_afterItems = array(); }
+  } catch (Exception $e) {
+    $AUD_afterOrder = null;
+    $AUD_afterItems = array();
+  }
 
   // ORDER FIELD DIFFS (all except id/created_at)
   $AUD_orderFieldDiffs = array();
@@ -294,15 +379,29 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
       if ($AUD_k === 'id' || $AUD_k === 'created_at') continue;
       $AUD_v1 = isset($AUD_beforeOrder[$AUD_k]) ? trim((string)$AUD_beforeOrder[$AUD_k]) : '';
       $AUD_v2 = isset($AUD_afterOrder[$AUD_k]) ? trim((string)$AUD_afterOrder[$AUD_k]) : '';
-      if ($AUD_v1 !== $AUD_v2) { $AUD_orderFieldDiffs[$AUD_k] = array('from'=>$AUD_v1, 'to'=>$AUD_v2); }
+      if ($AUD_v1 !== $AUD_v2) {
+        $AUD_orderFieldDiffs[$AUD_k] = array('from' => $AUD_v1, 'to' => $AUD_v2);
+      }
     }
   }
 
   // ITEMS DIFF (ID-agnostic, exact-first, then core; multiset-aware)
-  $AUD_B = array(); foreach ((array)$AUD_beforeItems as $AUD_r) { $k = AUD_core($AUD_r); if (!isset($AUD_B[$k])) $AUD_B[$k] = array(); $AUD_B[$k][] = $AUD_r; }
-  $AUD_A = array(); foreach ((array)$AUD_afterItems as $AUD_r)  { $k = AUD_core($AUD_r); if (!isset($AUD_A[$k])) $AUD_A[$k] = array(); $AUD_A[$k][] = $AUD_r; }
+  $AUD_B = array();
+  foreach ((array)$AUD_beforeItems as $AUD_r) {
+    $k = AUD_core($AUD_r);
+    if (!isset($AUD_B[$k])) $AUD_B[$k] = array();
+    $AUD_B[$k][] = $AUD_r;
+  }
+  $AUD_A = array();
+  foreach ((array)$AUD_afterItems as $AUD_r) {
+    $k = AUD_core($AUD_r);
+    if (!isset($AUD_A[$k])) $AUD_A[$k] = array();
+    $AUD_A[$k][] = $AUD_r;
+  }
 
-  $AUD_added = array(); $AUD_removed = array(); $AUD_updated = array();
+  $AUD_added = array();
+  $AUD_removed = array();
+  $AUD_updated = array();
   $AUD_all = array_unique(array_merge(array_keys($AUD_B), array_keys($AUD_A)));
   foreach ($AUD_all as $AUD_k) {
     $AUD_bRows = isset($AUD_B[$AUD_k]) ? $AUD_B[$AUD_k] : array();
@@ -310,45 +409,69 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
     $AUD_used = array();
 
     foreach ($AUD_bRows as $AUD_br) {
-      $AUD_exact = -1; $AUD_upd = -1;
+      $AUD_exact = -1;
+      $AUD_upd = -1;
       // exact match (including qty/price) -> unchanged
-      foreach ($AUD_aRows as $AUD_i=>$AUD_ar) {
+      foreach ($AUD_aRows as $AUD_i => $AUD_ar) {
         if (isset($AUD_used[$AUD_i])) continue;
-        if (AUD_full($AUD_ar) === AUD_full($AUD_br)) { $AUD_used[$AUD_i] = 1; $AUD_exact = $AUD_i; break; }
+        if (AUD_full($AUD_ar) === AUD_full($AUD_br)) {
+          $AUD_used[$AUD_i] = 1;
+          $AUD_exact = $AUD_i;
+          break;
+        }
       }
       if ($AUD_exact !== -1) continue;
 
       // same core -> updated fields
-      foreach ($AUD_aRows as $AUD_i=>$AUD_ar) {
+      foreach ($AUD_aRows as $AUD_i => $AUD_ar) {
         if (isset($AUD_used[$AUD_i])) continue;
         if (AUD_core($AUD_ar) === AUD_core($AUD_br)) {
-          $AUD_used[$AUD_i] = 1; $AUD_upd = $AUD_i;
+          $AUD_used[$AUD_i] = 1;
+          $AUD_upd = $AUD_i;
           $AUD_chg = array();
-          $AUD_va = AUD_normF(isset($AUD_br['qty'])?$AUD_br['qty']:''); $AUD_vb = AUD_normF(isset($AUD_ar['qty'])?$AUD_ar['qty']:'');
-          if ($AUD_va !== $AUD_vb) { $AUD_chg['qty'] = array('from'=>$AUD_va, 'to'=>$AUD_vb); }
-          $AUD_va = AUD_normF(isset($AUD_br['price'])?$AUD_br['price']:''); $AUD_vb = AUD_normF(isset($AUD_ar['price'])?$AUD_ar['price']:'');
-          if ($AUD_va !== $AUD_vb) { $AUD_chg['price'] = array('from'=>$AUD_va, 'to'=>$AUD_vb); }
-          $AUD_va = AUD_normS(isset($AUD_br['urun_ozeti'])?$AUD_br['urun_ozeti']:''); $AUD_vb = AUD_normS(isset($AUD_ar['urun_ozeti'])?$AUD_ar['urun_ozeti']:'');
-          if ($AUD_va !== $AUD_vb) { $AUD_chg['urun_ozeti'] = array('from'=>$AUD_va, 'to'=>$AUD_vb); }
-          $AUD_va = AUD_normS(isset($AUD_br['kullanim_alani'])?$AUD_br['kullanim_alani']:''); $AUD_vb = AUD_normS(isset($AUD_ar['kullanim_alani'])?$AUD_ar['kullanim_alani']:'');
-          if ($AUD_va !== $AUD_vb) { $AUD_chg['kullanim_alani'] = array('from'=>$AUD_va, 'to'=>$AUD_vb); }
+          $AUD_va = AUD_normF(isset($AUD_br['qty']) ? $AUD_br['qty'] : '');
+          $AUD_vb = AUD_normF(isset($AUD_ar['qty']) ? $AUD_ar['qty'] : '');
+          if ($AUD_va !== $AUD_vb) {
+            $AUD_chg['qty'] = array('from' => $AUD_va, 'to' => $AUD_vb);
+          }
+          $AUD_va = AUD_normF(isset($AUD_br['price']) ? $AUD_br['price'] : '');
+          $AUD_vb = AUD_normF(isset($AUD_ar['price']) ? $AUD_ar['price'] : '');
+          if ($AUD_va !== $AUD_vb) {
+            $AUD_chg['price'] = array('from' => $AUD_va, 'to' => $AUD_vb);
+          }
+          $AUD_va = AUD_normS(isset($AUD_br['urun_ozeti']) ? $AUD_br['urun_ozeti'] : '');
+          $AUD_vb = AUD_normS(isset($AUD_ar['urun_ozeti']) ? $AUD_ar['urun_ozeti'] : '');
+          if ($AUD_va !== $AUD_vb) {
+            $AUD_chg['urun_ozeti'] = array('from' => $AUD_va, 'to' => $AUD_vb);
+          }
+          $AUD_va = AUD_normS(isset($AUD_br['kullanim_alani']) ? $AUD_br['kullanim_alani'] : '');
+          $AUD_vb = AUD_normS(isset($AUD_ar['kullanim_alani']) ? $AUD_ar['kullanim_alani'] : '');
+          if ($AUD_va !== $AUD_vb) {
+            $AUD_chg['kullanim_alani'] = array('from' => $AUD_va, 'to' => $AUD_vb);
+          }
 
-          if (!empty($AUD_chg)) { $AUD_updated[] = array('name'=> AUD_normS(isset($AUD_ar['name'])?$AUD_ar['name']:''), 'changes'=>$AUD_chg); }
+          if (!empty($AUD_chg)) {
+            $AUD_updated[] = array('name' => AUD_normS(isset($AUD_ar['name']) ? $AUD_ar['name'] : ''), 'changes' => $AUD_chg);
+          }
           break;
         }
       }
 
-      if ($AUD_exact === -1 && $AUD_upd === -1) { $AUD_removed[] = $AUD_br; }
+      if ($AUD_exact === -1 && $AUD_upd === -1) {
+        $AUD_removed[] = $AUD_br;
+      }
     }
 
-    foreach ($AUD_aRows as $AUD_i=>$AUD_ar) { if (!isset($AUD_used[$AUD_i])) $AUD_added[] = $AUD_ar; }
+    foreach ($AUD_aRows as $AUD_i => $AUD_ar) {
+      if (!isset($AUD_used[$AUD_i])) $AUD_added[] = $AUD_ar;
+    }
   }
 
   if (function_exists('audit_log_action')) {
-    $AUD_before = array('order'=>$AUD_beforeOrder, 'items'=>$AUD_beforeItems);
-    $AUD_after  = array('order'=>$AUD_afterOrder,  'items'=>$AUD_afterItems);
-    $AUD_extra  = array('source'=>'order_edit.php','order_field_diffs'=>$AUD_orderFieldDiffs,'item_diffs'=>array('added'=>$AUD_added,'removed'=>$AUD_removed,'updated'=>$AUD_updated));
-    audit_log_action('update','orders',$id,$AUD_before,$AUD_after,$AUD_extra);
+    $AUD_before = array('order' => $AUD_beforeOrder, 'items' => $AUD_beforeItems);
+    $AUD_after  = array('order' => $AUD_afterOrder,  'items' => $AUD_afterItems);
+    $AUD_extra  = array('source' => 'order_edit.php', 'order_field_diffs' => $AUD_orderFieldDiffs, 'item_diffs' => array('added' => $AUD_added, 'removed' => $AUD_removed, 'updated' => $AUD_updated));
+    audit_log_action('update', 'orders', $id, $AUD_before, $AUD_after, $AUD_extra);
   }
 
   // --- OTOMATİK DURUM BİLDİRİMİ: teslim edildi → muhasebe | fatura_edildi → admin/sistem_yoneticisi ---
@@ -452,149 +575,154 @@ $fields = ['order_code','customer_id','status','currency','termin_tarihi','basla
 
   // --- YENİ EKLENEN KISIM: SADECE YAYINLA BUTONUNA BASILDIYSA MAİL AT ---
   if (isset($_POST['yayinla_butonu'])) {
-      try {
-          // Gerekli dosyaları çağır
-          require_once __DIR__ . '/mailing/notify.php';
-          require_once __DIR__ . '/mailing/mailer.php';
-          require_once __DIR__ . '/mailing/templates.php';
+    try {
+      // Gerekli dosyaları çağır
+      require_once __DIR__ . '/mailing/notify.php';
+      require_once __DIR__ . '/mailing/mailer.php';
+      require_once __DIR__ . '/mailing/templates.php';
 
-          if (function_exists('rp_sql_ensure')) rp_sql_ensure();
+      if (function_exists('rp_sql_ensure')) rp_sql_ensure();
 
-          $order_id = $id; 
+      $order_id = $id;
 
-          // Güncel veriyi veritabanından taze çek
-          $mail_ord = $db->query("SELECT * FROM orders WHERE id=$order_id")->fetch(PDO::FETCH_ASSOC);
+      // Güncel veriyi veritabanından taze çek
+      $mail_ord = $db->query("SELECT * FROM orders WHERE id=$order_id")->fetch(PDO::FETCH_ASSOC);
 
-          if ($mail_ord) {
-              // 1. Reply-To Belirle
-              $___reply_to = null;
-              $___cu_email = null;
-              if (function_exists('current_user')) {
-                  $___cu = current_user();
-                  if (!empty($___cu['email'])) $___cu_email = $___cu['email'];
-              }
-              if (isset($_SESSION['user_email']) && $_SESSION['user_email']) $___cu_email = $_SESSION['user_email'];
-              if ($___cu_email && filter_var($___cu_email, FILTER_VALIDATE_EMAIL)) $___reply_to = $___cu_email;
+      if ($mail_ord) {
+        // 1. Reply-To Belirle
+        $___reply_to = null;
+        $___cu_email = null;
+        if (function_exists('current_user')) {
+          $___cu = current_user();
+          if (!empty($___cu['email'])) $___cu_email = $___cu['email'];
+        }
+        if (isset($_SESSION['user_email']) && $_SESSION['user_email']) $___cu_email = $_SESSION['user_email'];
+        if ($___cu_email && filter_var($___cu_email, FILTER_VALIDATE_EMAIL)) $___reply_to = $___cu_email;
 
-              // 2. Müşteri Bilgilerini Çek
-              $customer_name = ''; $customer_email = ''; $customer_phone = ''; $billing_address = ''; $shipping_address = '';
-              if (!empty($mail_ord['customer_id'])) {
-                  $cst = $db->prepare("SELECT name, email, phone, billing_address, shipping_address FROM customers WHERE id=? LIMIT 1");
-                  $cst->execute([$mail_ord['customer_id']]);
-                  if ($c = $cst->fetch(PDO::FETCH_ASSOC)) {
-                      $customer_name = $c['name'] ?? '';
-                      $customer_email = $c['email'] ?? '';
-                      $customer_phone = $c['phone'] ?? '';
-                      $billing_address = $c['billing_address'] ?? '';
-                      $shipping_address = $c['shipping_address'] ?? '';
-                  }
-              }
-
-              // 3. Kalemleri Çek
-              $items_mail = [];
-              $it = $db->prepare("SELECT oi.*, p.sku, p.image FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=? ORDER BY oi.id ASC");
-              $it->execute([$order_id]);
-              $items_mail = $it->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
-              // 4. Görsel Linki İçin Base URL
-              $scheme = (!empty($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http'));
-              $base_url = $scheme . '://' . $_SERVER['HTTP_HOST'];
-
-              $fix_image_url = function ($img) use ($base_url) {
-                  $img = trim($img ?? '');
-                  if (empty($img)) return '';
-                  if (preg_match('#^https?://#i', $img)) return $img;
-                  if ($img[0] === '/') return $base_url . $img;
-                  if (preg_match('#^uploads/#', $img)) return $base_url . '/' . $img;
-                  return $base_url . '/uploads/' . $img;
-              };
-
-              $fmt_date = function ($val) {
-                  if (!$val || substr($val,0,10)=='0000-00-00') return '';
-                  return date('d-m-Y', strtotime($val));
-              };
-
-              // 5. Payload Hazırla
-              $payload_order = [
-                  'order_code'          => (string)$mail_ord['order_code'],
-                  'revizyon_no'         => (string)$mail_ord['revizyon_no'],
-                  'customer_name'       => $customer_name,
-                  'customer_id'         => (string)$mail_ord['customer_id'],
-                  'email'               => $customer_email,
-                  'phone'               => $customer_phone,
-                  'billing_address'     => $billing_address,
-                  'shipping_address'    => $shipping_address,
-                  'siparis_veren'       => (string)$mail_ord['siparis_veren'],
-                  'siparisi_alan'       => (string)$mail_ord['siparisi_alan'],
-                  'siparisi_giren'      => (string)$mail_ord['siparisi_giren'],
-                  'siparis_tarihi'      => $fmt_date($mail_ord['siparis_tarihi']),
-                  'fatura_para_birimi'  => (string)($mail_ord['fatura_para_birimi'] ?: $mail_ord['currency']),
-                  'odeme_para_birimi'   => (string)$mail_ord['odeme_para_birimi'],
-                  'odeme_kosulu'        => (string)$mail_ord['odeme_kosulu'],
-                  'proje_adi'           => (string)$mail_ord['proje_adi'],
-                  'nakliye_turu'        => (string)$mail_ord['nakliye_turu'],
-                  'termin_tarihi'       => $fmt_date($mail_ord['termin_tarihi']),
-                  'baslangic_tarihi'    => $fmt_date($mail_ord['baslangic_tarihi']),
-                  'bitis_tarihi'        => $fmt_date($mail_ord['bitis_tarihi']),
-                  'teslim_tarihi'       => $fmt_date($mail_ord['teslim_tarihi']),
-                  'notes'               => (string)$mail_ord['notes'],
-                  'items'               => []
-              ];
-
-              foreach ($items_mail as $r) {
-                  $payload_order['items'][] = [
-                      'gorsel'          => $fix_image_url($r['image']),
-                      'urun_kod'        => (string)($r['sku'] ?? ''),
-                      'urun_adi'        => (string)($r['name'] ?? ''),
-                      'urun_aciklama'   => (string)($r['urun_ozeti'] ?? ''),
-                      'kullanim_alani'  => (string)($r['kullanim_alani'] ?? ''),
-                      'miktar'          => (float)($r['qty'] ?? 0),
-                      'birim'           => (string)($r['unit'] ?? ''),
-                      'termin_tarihi'   => $fmt_date($r['termin_tarihi'] ?? $mail_ord['termin_tarihi'] ?? ''),
-                      'fiyat'           => (float)($r['price'] ?? 0),
-                  ];
-              }
-
-              // 6. Gönderim
-              $___ok = false;
-              if (function_exists('rp_notify_order_created')) {
-                  // notify.php içindeki fonksiyonu kullan
-                  list($___ok, ) = rp_notify_order_created($order_id, $payload_order);
-              }
-              
-              // Eğer fonksiyon başarısız olduysa veya yoksa manuel gönder
-              if (!$___ok) {
-                  $toList = [];
-                  // Alıcıları belirle
-                  if (function_exists('rp_get_recipients')) {
-                      list($toList,,) = rp_get_recipients();
-                  } else {
-                      $cfg = function_exists('rp_cfg') ? rp_cfg() : [];
-                      $toRaw = (string)($cfg['notify']['recipients'] ?? '');
-                      foreach (explode(',', $toRaw) as $em) if($em=trim($em)) $toList[]=$em;
-                  }
-                  
-                  $bccList = [];
-                  if ($___reply_to) $bccList[] = $___reply_to;
-
-                  $viewUrl = ($base_url . '/order_view.php?id=' . $order_id);
-                  if (function_exists('rp_build_view_url')) $viewUrl = rp_build_view_url('order', $order_id);
-
-                  $subject2 = rp_subject('order', $payload_order);
-                  $html2    = rp_email_html('order', $payload_order, $viewUrl);
-                  $text2    = rp_email_text('order', $payload_order, $viewUrl);
-                  
-                  rp_send_mail($subject2, $html2, $text2, $toList, [], $bccList, $___reply_to);
-              }
+        // 2. Müşteri Bilgilerini Çek
+        $customer_name = '';
+        $customer_email = '';
+        $customer_phone = '';
+        $billing_address = '';
+        $shipping_address = '';
+        if (!empty($mail_ord['customer_id'])) {
+          $cst = $db->prepare("SELECT name, email, phone, billing_address, shipping_address FROM customers WHERE id=? LIMIT 1");
+          $cst->execute([$mail_ord['customer_id']]);
+          if ($c = $cst->fetch(PDO::FETCH_ASSOC)) {
+            $customer_name = $c['name'] ?? '';
+            $customer_email = $c['email'] ?? '';
+            $customer_phone = $c['phone'] ?? '';
+            $billing_address = $c['billing_address'] ?? '';
+            $shipping_address = $c['shipping_address'] ?? '';
           }
-      } catch (Throwable $e) { 
-          // Hata olsa bile süreci durdurma, logla geç
-          error_log('Yayinla mail hatasi: '.$e->getMessage());
+        }
+
+        // 3. Kalemleri Çek
+        $items_mail = [];
+        $it = $db->prepare("SELECT oi.*, p.sku, p.image FROM order_items oi LEFT JOIN products p ON p.id=oi.product_id WHERE oi.order_id=? ORDER BY oi.id ASC");
+        $it->execute([$order_id]);
+        $items_mail = $it->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        // 4. Görsel Linki İçin Base URL
+        $scheme = (!empty($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http'));
+        $base_url = $scheme . '://' . $_SERVER['HTTP_HOST'];
+
+        $fix_image_url = function ($img) use ($base_url) {
+          $img = trim($img ?? '');
+          if (empty($img)) return '';
+          if (preg_match('#^https?://#i', $img)) return $img;
+          if ($img[0] === '/') return $base_url . $img;
+          if (preg_match('#^uploads/#', $img)) return $base_url . '/' . $img;
+          return $base_url . '/uploads/' . $img;
+        };
+
+        $fmt_date = function ($val) {
+          if (!$val || substr($val, 0, 10) == '0000-00-00') return '';
+          return date('d-m-Y', strtotime($val));
+        };
+
+        // 5. Payload Hazırla
+        $payload_order = [
+          'order_code'          => (string)$mail_ord['order_code'],
+          'revizyon_no'         => (string)$mail_ord['revizyon_no'],
+          'customer_name'       => $customer_name,
+          'customer_id'         => (string)$mail_ord['customer_id'],
+          'email'               => $customer_email,
+          'phone'               => $customer_phone,
+          'billing_address'     => $billing_address,
+          'shipping_address'    => $shipping_address,
+          'siparis_veren'       => (string)$mail_ord['siparis_veren'],
+          'siparisi_alan'       => (string)$mail_ord['siparisi_alan'],
+          'siparisi_giren'      => (string)$mail_ord['siparisi_giren'],
+          'siparis_tarihi'      => $fmt_date($mail_ord['siparis_tarihi']),
+          'fatura_para_birimi'  => (string)($mail_ord['fatura_para_birimi'] ?: $mail_ord['currency']),
+          'odeme_para_birimi'   => (string)$mail_ord['odeme_para_birimi'],
+          'odeme_kosulu'        => (string)$mail_ord['odeme_kosulu'],
+          'proje_adi'           => (string)$mail_ord['proje_adi'],
+          'nakliye_turu'        => (string)$mail_ord['nakliye_turu'],
+          'termin_tarihi'       => $fmt_date($mail_ord['termin_tarihi']),
+          'baslangic_tarihi'    => $fmt_date($mail_ord['baslangic_tarihi']),
+          'bitis_tarihi'        => $fmt_date($mail_ord['bitis_tarihi']),
+          'teslim_tarihi'       => $fmt_date($mail_ord['teslim_tarihi']),
+          'notes'               => (string)$mail_ord['notes'],
+          'items'               => []
+        ];
+
+        foreach ($items_mail as $r) {
+          $payload_order['items'][] = [
+            'gorsel'          => $fix_image_url($r['image']),
+            'urun_kod'        => (string)($r['sku'] ?? ''),
+            'urun_adi'        => (string)($r['name'] ?? ''),
+            'urun_aciklama'   => (string)($r['urun_ozeti'] ?? ''),
+            'kullanim_alani'  => (string)($r['kullanim_alani'] ?? ''),
+            'miktar'          => (float)($r['qty'] ?? 0),
+            'birim'           => (string)($r['unit'] ?? ''),
+            'termin_tarihi'   => $fmt_date($r['termin_tarihi'] ?? $mail_ord['termin_tarihi'] ?? ''),
+            'fiyat'           => (float)($r['price'] ?? 0),
+          ];
+        }
+
+        // 6. Gönderim
+        $___ok = false;
+        if (function_exists('rp_notify_order_created')) {
+          // notify.php içindeki fonksiyonu kullan
+          list($___ok,) = rp_notify_order_created($order_id, $payload_order);
+        }
+
+        // Eğer fonksiyon başarısız olduysa veya yoksa manuel gönder
+        if (!$___ok) {
+          $toList = [];
+          // Alıcıları belirle
+          if (function_exists('rp_get_recipients')) {
+            list($toList,,) = rp_get_recipients();
+          } else {
+            $cfg = function_exists('rp_cfg') ? rp_cfg() : [];
+            $toRaw = (string)($cfg['notify']['recipients'] ?? '');
+            foreach (explode(',', $toRaw) as $em) if ($em = trim($em)) $toList[] = $em;
+          }
+
+          $bccList = [];
+          if ($___reply_to) $bccList[] = $___reply_to;
+
+          $viewUrl = ($base_url . '/order_view.php?id=' . $order_id);
+          if (function_exists('rp_build_view_url')) $viewUrl = rp_build_view_url('order', $order_id);
+
+          $subject2 = rp_subject('order', $payload_order);
+          $html2    = rp_email_html('order', $payload_order, $viewUrl);
+          $text2    = rp_email_text('order', $payload_order, $viewUrl);
+
+          rp_send_mail($subject2, $html2, $text2, $toList, [], $bccList, $___reply_to);
+        }
       }
+    } catch (Throwable $e) {
+      // Hata olsa bile süreci durdurma, logla geç
+      error_log('Yayinla mail hatasi: ' . $e->getMessage());
+    }
   }
   // ------------------------------------------------------------------------
 
-  redirect('orders.php');
+  $return_url = $_SESSION['last_orders_url'] ?? 'orders.php';
+  redirect($return_url);
 }
 
 // Dropdown verileri
@@ -608,62 +736,62 @@ $roots = [];
 
 // 1. Herkesi listeye al
 foreach ($raw_prods as $p) {
-    $p['kids'] = [];
-    $productMap[$p['id']] = $p;
+  $p['kids'] = [];
+  $productMap[$p['id']] = $p;
 }
 
 // 1.5. Resim Mirası ve YOL DÜZELTME (Javascript İçin)
 foreach ($productMap as $pid => &$prod) {
-    // A) Miras Alma (Çocuk boşsa Babadan al)
-    if (empty($prod['image']) && !empty($prod['parent_id'])) {
-        $parentId = $prod['parent_id'];
-        if (isset($productMap[$parentId]) && !empty($productMap[$parentId]['image'])) {
-            $prod['image'] = $productMap[$parentId]['image'];
-        }
+  // A) Miras Alma (Çocuk boşsa Babadan al)
+  if (empty($prod['image']) && !empty($prod['parent_id'])) {
+    $parentId = $prod['parent_id'];
+    if (isset($productMap[$parentId]) && !empty($productMap[$parentId]['image'])) {
+      $prod['image'] = $productMap[$parentId]['image'];
     }
+  }
 
-    // B) Yol Düzeltme (Tam Path Yap)
-    // Javascript'in yanlış klasöre bakmasını engellemek için tam yolu PHP'de hesaplıyoruz.
-    $rawImg = $prod['image'] ?? '';
-    // Eğer resim varsa ve zaten tam yol değilse (http veya / ile başlamıyorsa)
-    if ($rawImg && !preg_match('~^https?://~', $rawImg) && strpos($rawImg, '/') !== 0) {
-        if (file_exists(__DIR__ . '/uploads/product_images/' . $rawImg)) {
-            $prod['image'] = '/uploads/product_images/' . $rawImg;
-        } elseif (file_exists(__DIR__ . '/images/' . $rawImg)) {
-            $prod['image'] = '/images/' . $rawImg;
-        } else {
-            // Dosya bulunamazsa varsayılan uploads varsayımı
-            $prod['image'] = '/uploads/' . $rawImg;
-        }
+  // B) Yol Düzeltme (Tam Path Yap)
+  // Javascript'in yanlış klasöre bakmasını engellemek için tam yolu PHP'de hesaplıyoruz.
+  $rawImg = $prod['image'] ?? '';
+  // Eğer resim varsa ve zaten tam yol değilse (http veya / ile başlamıyorsa)
+  if ($rawImg && !preg_match('~^https?://~', $rawImg) && strpos($rawImg, '/') !== 0) {
+    if (file_exists(__DIR__ . '/uploads/product_images/' . $rawImg)) {
+      $prod['image'] = '/uploads/product_images/' . $rawImg;
+    } elseif (file_exists(__DIR__ . '/images/' . $rawImg)) {
+      $prod['image'] = '/images/' . $rawImg;
+    } else {
+      // Dosya bulunamazsa varsayılan uploads varsayımı
+      $prod['image'] = '/uploads/' . $rawImg;
     }
+  }
 }
 unset($prod); // Döngü referansını temizle
 
 // 2. Çocukları Babalarına ata
 foreach ($raw_prods as $p) {
-    if (!empty($p['parent_id']) && isset($productMap[$p['parent_id']])) {
-        $productMap[$p['parent_id']]['kids'][] = $p['id'];
-    } else {
-        $roots[] = $p['id']; // Babası yoksa Ana Üründür
-    }
+  if (!empty($p['parent_id']) && isset($productMap[$p['parent_id']])) {
+    $productMap[$p['parent_id']]['kids'][] = $p['id'];
+  } else {
+    $roots[] = $p['id']; // Babası yoksa Ana Üründür
+  }
 }
 
 // 3. Listeyi senin istediğin sembollerle oluştur
 $products = [];
 foreach ($roots as $rid) {
-    $parent = $productMap[$rid];
-    $hasKids = !empty($parent['kids']);
-    
-    // ⊿ Sembolü ve varsa ▼ oku
-    $parent['display_name'] = '⊿ ' . $parent['name'] . ($hasKids ? ' ▼' : '');
-    $products[] = $parent;
-    
-    // Çocukları ekle (• Sembolü ile)
-    foreach ($parent['kids'] as $kidId) {
-        $kid = $productMap[$kidId];
-        $kid['display_name'] = '• ' . $kid['name'];
-        $products[] = $kid;
-    }
+  $parent = $productMap[$rid];
+  $hasKids = !empty($parent['kids']);
+
+  // ⊿ Sembolü ve varsa ▼ oku
+  $parent['display_name'] = '⊿ ' . $parent['name'] . ($hasKids ? ' ▼' : '');
+  $products[] = $parent;
+
+  // Çocukları ekle (• Sembolü ile)
+  foreach ($parent['kids'] as $kidId) {
+    $kid = $productMap[$kidId];
+    $kid['display_name'] = '• ' . $kid['name'];
+    $products[] = $kid;
+  }
 }
 // ----------------------------------------------------
 // --- AKILLI GÖRSEL SORGUSU (Çocukta resim yoksa Babadan al) ---
@@ -687,113 +815,114 @@ include __DIR__ . '/includes/header.php'; ?>
 include __DIR__ . '/includes/order_form.php'; ?>
 
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-  // Sunucudan gelen kalemler
-  var _itemsFromPHP = <?php
-    $___json_items = [];
-    if (!empty($items)) {
-      foreach ($items as $___it) {
-        $___json_items[] = [
-          'id'            => $___it['id']          ?? null,
-          'product_id'    => $___it['product_id']  ?? null,
-          'name'          => $___it['name']        ?? '',
-          'urun_ozeti'    => $___it['urun_ozeti']  ?? '',
-          'kullanim_alani'=> $___it['kullanim_alani'] ?? '',
-          'price'         => isset($___it['price']) ? $___it['price'] : (isset($___it['birim_fiyat']) ? $___it['birim_fiyat'] : 0),
-        ];
-      }
+  document.addEventListener('DOMContentLoaded', function() {
+    // Sunucudan gelen kalemler
+    var _itemsFromPHP = <?php
+                        $___json_items = [];
+                        if (!empty($items)) {
+                          foreach ($items as $___it) {
+                            $___json_items[] = [
+                              'id'            => $___it['id']          ?? null,
+                              'product_id'    => $___it['product_id']  ?? null,
+                              'name'          => $___it['name']        ?? '',
+                              'urun_ozeti'    => $___it['urun_ozeti']  ?? '',
+                              'kullanim_alani' => $___it['kullanim_alani'] ?? '',
+                              'price'         => isset($___it['price']) ? $___it['price'] : (isset($___it['birim_fiyat']) ? $___it['birim_fiyat'] : 0),
+                            ];
+                          }
+                        }
+                        echo json_encode($___json_items, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE);
+                        ?>;
+
+    // --- YENİ SADE SİSTEM: BİNLİK AYRACI YOK ---
+
+    var selPrice = [
+      'input[name="qty[]"]', 'input[name^="qty["]',
+      'input[name="price[]"]', 'input[name^="price["]', 'input[name="price"]',
+      'input[name="birim_fiyat[]"]', 'input[name^="birim_fiyat["]'
+    ];
+
+    function qAll(list) {
+      var out = [];
+      list.forEach(function(sel) {
+        document.querySelectorAll(sel).forEach(function(el) {
+          if (out.indexOf(el) < 0) out.push(el);
+        });
+      });
+      return out;
     }
-    echo json_encode($___json_items, JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_UNESCAPED_UNICODE);
-  ?>;
 
-  // --- YENİ SADE SİSTEM: BİNLİK AYRACI YOK ---
-  
-  var selPrice = [
-    'input[name="qty[]"]','input[name^="qty["]',
-    'input[name="price[]"]','input[name^="price["]','input[name="price"]',
-    'input[name="birim_fiyat[]"]','input[name^="birim_fiyat["]'
-  ];
-
-  function qAll(list){
-    var out=[]; 
-    list.forEach(function(sel){ 
-        document.querySelectorAll(sel).forEach(function(el){ 
-            if(out.indexOf(el)<0) out.push(el); 
-        }); 
-    });
-    return out;
-  }
-
-  // 1. NOKTA GİRİŞİNİ ENGELLE & VİRGÜL ZORLA
-  document.body.addEventListener('keydown', function(e){
-    if (e.target.matches(selPrice.join(','))) {
+    // 1. NOKTA GİRİŞİNİ ENGELLE & VİRGÜL ZORLA
+    document.body.addEventListener('keydown', function(e) {
+      if (e.target.matches(selPrice.join(','))) {
         // Noktaya basarsa engelle veya virgüle çevir
         if (e.key === '.') {
-            e.preventDefault();
-            // İstersen otomatik virgül koydurabilirsin:
-            var start = e.target.selectionStart;
-            var end = e.target.selectionEnd;
-            var val = e.target.value;
-            e.target.value = val.substring(0, start) + ',' + val.substring(end);
-            e.target.selectionStart = e.target.selectionEnd = start + 1;
+          e.preventDefault();
+          // İstersen otomatik virgül koydurabilirsin:
+          var start = e.target.selectionStart;
+          var end = e.target.selectionEnd;
+          var val = e.target.value;
+          e.target.value = val.substring(0, start) + ',' + val.substring(end);
+          e.target.selectionStart = e.target.selectionEnd = start + 1;
         }
-    }
-  });
-
-  // 2. KOPYALA YAPIŞTIRDA NOKTAYI VİRGÜL YAP
-  document.body.addEventListener('input', function(e){
-      if (e.target.matches(selPrice.join(','))) {
-          if (e.target.value.includes('.')) {
-              var pos = e.target.selectionStart;
-              e.target.value = e.target.value.replace(/\./g, ','); // Noktaları virgüle çevir
-              e.target.setSelectionRange(pos, pos);
-          }
       }
-  });
+    });
 
-  // 3. KAYDEDERKEN (SUBMIT) VİRGÜLÜ NOKTAYA ÇEVİR (DATABASE İÇİN)
-  // Bu işlem "1234,56"yı "1234.56" yapar ve gizli inputla gönderir.
-  document.querySelectorAll('form').forEach(function(form){
-    form.addEventListener('submit', function(e){
-      qAll(selPrice).forEach(function(inp){
-        var val = inp.value.trim();
-        if(!val) return;
+    // 2. KOPYALA YAPIŞTIRDA NOKTAYI VİRGÜL YAP
+    document.body.addEventListener('input', function(e) {
+      if (e.target.matches(selPrice.join(','))) {
+        if (e.target.value.includes('.')) {
+          var pos = e.target.selectionStart;
+          e.target.value = e.target.value.replace(/\./g, ','); // Noktaları virgüle çevir
+          e.target.setSelectionRange(pos, pos);
+        }
+      }
+    });
 
-        // Virgülü noktaya çevir (1234,56 -> 1234.56)
-        // Binlik ayracı olmadığı için sadece virgülü değiştirmek yeterli.
-        var cleanVal = val.replace(',', '.');
-        
-        // Eğer sayı geçerliyse
-        if (!isNaN(Number(cleanVal))) {
+    // 3. KAYDEDERKEN (SUBMIT) VİRGÜLÜ NOKTAYA ÇEVİR (DATABASE İÇİN)
+    // Bu işlem "1234,56"yı "1234.56" yapar ve gizli inputla gönderir.
+    document.querySelectorAll('form').forEach(function(form) {
+      form.addEventListener('submit', function(e) {
+        qAll(selPrice).forEach(function(inp) {
+          var val = inp.value.trim();
+          if (!val) return;
+
+          // Virgülü noktaya çevir (1234,56 -> 1234.56)
+          // Binlik ayracı olmadığı için sadece virgülü değiştirmek yeterli.
+          var cleanVal = val.replace(',', '.');
+
+          // Eğer sayı geçerliyse
+          if (!isNaN(Number(cleanVal))) {
             // Gizli input oluştur ve gönder
             var hid = document.createElement('input');
             hid.type = 'hidden';
             hid.name = inp.name;
             hid.value = cleanVal;
-            
+
             // Orijinal inputu devre dışı bırak (sunucuya gitmesin)
             inp.name = inp.name + '_display';
             form.appendChild(hid);
-        }
-      });
-    }, true);
+          }
+        });
+      }, true);
+    });
   });
-});
 </script>
 
 
 
 <!-- PRICE STICKY v3 -->
 <style>
-/* Konuşma Balonu Stili */
-.dot-warning-popup {
+  /* Konuşma Balonu Stili */
+  .dot-warning-popup {
     position: absolute;
     background: #fff;
     border: 2px solid #ef4444;
     color: #b91c1c;
     padding: 8px 15px 8px 10px;
     border-radius: 12px;
-    border-top-left-radius: 0; /* Sol üst köşe sivri (Kutuyu işaret etsin) */
+    border-top-left-radius: 0;
+    /* Sol üst köşe sivri (Kutuyu işaret etsin) */
     font-size: 14px;
     font-weight: bold;
     box-shadow: 0 5px 20px rgba(239, 68, 68, 0.25);
@@ -804,89 +933,116 @@ document.addEventListener('DOMContentLoaded', function(){
     pointer-events: none;
     animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     white-space: nowrap;
-}
+  }
 
-/* Balonun Kuyruğu (OK ARTIK ÜSTTE) */
-.dot-warning-popup::after {
+  /* Balonun Kuyruğu (OK ARTIK ÜSTTE) */
+  .dot-warning-popup::after {
     content: '';
     position: absolute;
-    top: -8px; /* Balonun tepesine çık */
-    left: -2px; /* Sol kenara yasla (Sivri köşe hizası) */
+    top: -8px;
+    /* Balonun tepesine çık */
+    left: -2px;
+    /* Sol kenara yasla (Sivri köşe hizası) */
     width: 0;
     height: 0;
     /* Yukarı bakan kırmızı üçgen */
     border-left: 0 solid transparent;
     border-right: 12px solid transparent;
-    border-bottom: 8px solid #ef4444; 
-}
+    border-bottom: 8px solid #ef4444;
+  }
 
-/* Kırmızı yanıp sönme efekti */
-.dot-error-shake {
+  /* Kırmızı yanıp sönme efekti */
+  .dot-error-shake {
     border: 2px solid #ef4444 !important;
     background-color: #fef2f2 !important;
     animation: shake 0.4s ease-in-out;
-}
+  }
 
-@keyframes popIn { from { opacity: 0; transform: translateY(-10px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+  @keyframes popIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.9);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes shake {
+
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+
+    25% {
+      transform: translateX(-4px);
+    }
+
+    75% {
+      transform: translateX(4px);
+    }
+  }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function(){
+  document.addEventListener('DOMContentLoaded', function() {
     // 1. Uyarı Balonunu Oluştur
     var bubble = document.createElement('div');
     bubble.className = 'dot-warning-popup';
-    
+
     // GÖRSEL:
     bubble.innerHTML = '<img src="assets/icons8-emoji-exploding-head-100.png" width="36" height="36" alt="Thinking"> <span>Lütfen <b>virgül (,)</b> kullanın!</span>';
-    
+
     document.body.appendChild(bubble);
 
     var hideTimer = null;
 
     function showBubble(input) {
-        var rect = input.getBoundingClientRect();
-        var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        var scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+      var rect = input.getBoundingClientRect();
+      var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      var scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
 
-        // DÜZELTME BURADA: Balonu kutunun ALTINA konumlandır
-        // rect.bottom = Kutunun alt kenarı
-        // + 10px boşluk
-        bubble.style.top = (rect.bottom + scrollTop + 10) + 'px';
-        
-        // Sol hizalama
-        bubble.style.left = (rect.left + scrollLeft) + 'px';
-        bubble.style.display = 'flex';
+      // DÜZELTME BURADA: Balonu kutunun ALTINA konumlandır
+      // rect.bottom = Kutunun alt kenarı
+      // + 10px boşluk
+      bubble.style.top = (rect.bottom + scrollTop + 10) + 'px';
 
-        input.classList.add('dot-error-shake');
+      // Sol hizalama
+      bubble.style.left = (rect.left + scrollLeft) + 'px';
+      bubble.style.display = 'flex';
 
-        clearTimeout(hideTimer);
-        hideTimer = setTimeout(function(){
-            bubble.style.display = 'none';
-            input.classList.remove('dot-error-shake');
-        }, 2500);
+      input.classList.add('dot-error-shake');
+
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(function() {
+        bubble.style.display = 'none';
+        input.classList.remove('dot-error-shake');
+      }, 2500);
     }
 
     // 2. Olay Dinleyicileri
-    document.body.addEventListener('keydown', function(e){
-        if(e.target.matches('input[name="qty[]"], input[name="price[]"], input[name="birim_fiyat[]"]')){
-            // Tuş NOKTA (.) karakteri üretiyorsa engelle
-            // Numpad virgül (,) üretiyorsa izin ver
-            if (e.key === '.') {
-                e.preventDefault();
-                showBubble(e.target);
-            }
+    document.body.addEventListener('keydown', function(e) {
+      if (e.target.matches('input[name="qty[]"], input[name="price[]"], input[name="birim_fiyat[]"]')) {
+        // Tuş NOKTA (.) karakteri üretiyorsa engelle
+        // Numpad virgül (,) üretiyorsa izin ver
+        if (e.key === '.') {
+          e.preventDefault();
+          showBubble(e.target);
         }
+      }
     });
 
-    document.body.addEventListener('input', function(e){
-        if(e.target.matches('input[name="qty[]"], input[name="price[]"], input[name="birim_fiyat[]"]')){
-            if(e.target.value.includes('.')){
-                e.target.value = e.target.value.replace(/\./g, '');
-                showBubble(e.target);
-            }
+    document.body.addEventListener('input', function(e) {
+      if (e.target.matches('input[name="qty[]"], input[name="price[]"], input[name="birim_fiyat[]"]')) {
+        if (e.target.value.includes('.')) {
+          e.target.value = e.target.value.replace(/\./g, '');
+          showBubble(e.target);
         }
+      }
     });
-});
+  });
 </script>
 <?php include __DIR__ . '/includes/footer.php';

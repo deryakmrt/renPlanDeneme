@@ -35,7 +35,6 @@ if ($action === 'bulk_update' && method('POST')) {
   $new_status = trim($_POST['bulk_status'] ?? '');
   $ids = $_POST['order_ids'] ?? [];
 
-  // Güvenlik: id'leri integer'a çevir, 0'ları temizle
   if (is_array($ids)) {
     $ids = array_values(array_filter(array_map('intval', $ids)));
   } else {
@@ -43,14 +42,14 @@ if ($action === 'bulk_update' && method('POST')) {
   }
 
   if ($new_status && in_array($new_status, $allowed_statuses, true) && !empty($ids)) {
-    // Tek sorgu ile toplu güncelle (IN)
     $in = implode(',', array_fill(0, count($ids), '?'));
     $params = array_merge([$new_status], $ids);
     $st = $db->prepare("UPDATE orders SET status=? WHERE id IN ($in)");
     $st->execute($params);
   }
-  // Listeye dön
-  redirect('orders.php');
+  
+  $return_url = $_SESSION['last_orders_url'] ?? 'orders.php';
+  redirect($return_url);
 }
 
 // --------- SİL (POST) ---------
@@ -59,9 +58,11 @@ if ($action === 'delete' && method('POST')) {
   $id = (int)($_POST['id'] ?? 0);
   if ($id) {
     $stmt = $db->prepare("DELETE FROM orders WHERE id=?");
-    $stmt->execute([$id]); // ON DELETE CASCADE ile order_items da silinir
+    $stmt->execute([$id]); 
   }
-  redirect('orders.php');
+  
+  $return_url = $_SESSION['last_orders_url'] ?? 'orders.php';
+  redirect($return_url);
 }
 
 // --------- KAYDET (POST) ---------
@@ -77,7 +78,6 @@ if (($action === 'new' || $action === 'edit') && method('POST')) {
   $allowed_currencies = ['TL', 'EUR', 'USD'];
   if (!in_array($fatura_para_birimi, $allowed_currencies, true)) $fatura_para_birimi = '';
   if (!in_array($odeme_para_birimi,  $allowed_currencies, true)) $odeme_para_birimi  = '';
-  // Geriye dönük uyumluluk için orders.currency = ödeme para birimi
   $currency = ($odeme_para_birimi === 'TL' ? 'TRY' : ($odeme_para_birimi ?: 'TRY'));
 
   $termin_tarihi    = $_POST['termin_tarihi']    ?: null;
@@ -86,7 +86,6 @@ if (($action === 'new' || $action === 'edit') && method('POST')) {
   $teslim_tarihi    = $_POST['teslim_tarihi']    ?: null;
   $notes = trim($_POST['notes'] ?? '');
 
-  // Kalemler
   $p_ids  = $_POST['product_id'] ?? [];
   $names  = $_POST['name'] ?? [];
   $units  = $_POST['unit'] ?? [];
@@ -100,14 +99,12 @@ if (($action === 'new' || $action === 'edit') && method('POST')) {
   }
 
   if ($id > 0) {
-    // Güncelle
     $stmt = $db->prepare("UPDATE orders SET order_code=?, customer_id=?, status=?, currency=?, termin_tarihi=?, baslangic_tarihi=?, bitis_tarihi=?, teslim_tarihi=?, notes=? WHERE id=?");
     $stmt->execute([$order_code, $customer_id, $status, $currency, $termin_tarihi, $baslangic_tarihi, $bitis_tarihi, $teslim_tarihi, $notes, $id]);
 
-    // Eski kalemleri sil ve yeniden ekle
     $db->prepare("DELETE FROM order_items WHERE order_id=?")->execute([$id]);
     $order_id = $id;
-    // Yeni para birimi alanlarını (varsa) güncelle
+    
     try {
       $colCheck = $db->prepare("SHOW COLUMNS FROM orders LIKE ?");
       $colCheck->execute(['fatura_para_birimi']);
@@ -125,14 +122,12 @@ if (($action === 'new' || $action === 'edit') && method('POST')) {
         $q->bindValue(":id", $order_id, PDO::PARAM_INT);
         $q->execute();
       }
-    } catch (Throwable $e) { /* sessiz geç */
-    }
+    } catch (Throwable $e) {}
   } else {
-    // Yeni
     $stmt = $db->prepare("INSERT INTO orders (order_code, customer_id, status, currency, termin_tarihi, baslangic_tarihi, bitis_tarihi, teslim_tarihi, notes) VALUES (?,?,?,?,?,?,?,?,?)");
     $stmt->execute([$order_code, $customer_id, $status, $currency, $termin_tarihi, $baslangic_tarihi, $bitis_tarihi, $teslim_tarihi, $notes]);
     $order_id = (int)$db->lastInsertId();
-    // Yeni para birimi alanlarını (varsa) güncelle
+    
     try {
       $colCheck = $db->prepare("SHOW COLUMNS FROM orders LIKE ?");
       $colCheck->execute(['fatura_para_birimi']);
@@ -150,12 +145,12 @@ if (($action === 'new' || $action === 'edit') && method('POST')) {
         $q->bindValue(":id", $order_id, PDO::PARAM_INT);
         $q->execute();
       }
-    } catch (Throwable $e) { /* sessiz geç */
-    }
-  } // Kalemleri ekle
+    } catch (Throwable $e) {}
+  } 
+  
   for ($i = 0; $i < count($names); $i++) {
     $n  = trim($names[$i] ?? '');
-    if ($n === '') continue; // boş satırı atla
+    if ($n === '') continue; 
 
     $pid = (int)($p_ids[$i] ?? 0);
     $u   = trim($units[$i] ?? 'adet');
@@ -168,7 +163,8 @@ if (($action === 'new' || $action === 'edit') && method('POST')) {
     $ins->execute([$order_id, $pid, $n, $u, $q, $pr, $oz, $ka]);
   }
 
-  redirect('orders.php');
+  $return_url = $_SESSION['last_orders_url'] ?? 'orders.php';
+  redirect($return_url);
 }
 
 // --------- FORM (YENİ / DÜZENLE) GET ---------
@@ -443,6 +439,7 @@ if ($action === 'new' || $action === 'edit') {
 }
 
 // --------- LİSTE / FİLTRE ---------
+$_SESSION['last_orders_url'] = $_SERVER['REQUEST_URI']; // Hangi filtrede olduğunu hafızaya kazı
 $q = trim($_GET['q'] ?? '');
 $status = $_GET['status'] ?? '';
 $per_page = 20;
@@ -1391,16 +1388,16 @@ $__isAll = ($status === '' || $status === null);
                 </div>
 
                 <?php if (in_array($___role, ['admin', 'sistem_yoneticisi'], true)): ?>
-                <div style="grid-column: 2; width:100%;">
-                  <?php if (!empty($o['customer_email'])): ?>
-                    <a class="btn" href="order_send_mail.php?id=<?= (int)$o['id'] ?>" title="Mail Gönder"
-                      style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background:#fff; border:1px solid #e1e5eaff; color:#d97706;">
-                      <span style="font-size:15px;">📧</span>
-                    </a>
-                  <?php else: ?>
-                    <span class="btn disabled" style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; border:1px solid #f3f4f6; color: #e5e7eb; background:#fff;">📧</span>
-                  <?php endif; ?>
-                </div>
+                  <div style="grid-column: 2; width:100%;">
+                    <?php if (!empty($o['customer_email'])): ?>
+                      <a class="btn" href="order_send_mail.php?id=<?= (int)$o['id'] ?>" title="Mail Gönder"
+                        style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; background:#fff; border:1px solid #e1e5eaff; color:#d97706;">
+                        <span style="font-size:15px;">📧</span>
+                      </a>
+                    <?php else: ?>
+                      <span class="btn disabled" style="width:100%; height:30px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:15px; border:1px solid #f3f4f6; color: #e5e7eb; background:#fff;">📧</span>
+                    <?php endif; ?>
+                  </div>
                 <?php endif; ?>
               <?php endif; ?>
 
