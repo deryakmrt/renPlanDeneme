@@ -240,6 +240,7 @@ class ReportModel {
             "$custNameCol AS customer_name",
             "$orderCodeCol AS order_code",
             ($projectCol ? "$projectCol AS project_name" : "NULL AS project_name"),
+            "pr.name AS linked_project_name", // YENİ: Ana proje adını çekiyoruz
             "$prodNameCol AS product_name",
             ($prodSkuCol ? "$prodSkuCol AS sku" : "NULL AS sku"),
             "pc.name AS category_name",
@@ -256,7 +257,8 @@ class ReportModel {
             "JOIN orders   ON orders.id = `$itemsTable`.order_id",
             "JOIN products ON products.id = `$itemsTable`.`$productIdCol`",
             "JOIN customers ON customers.id = orders.customer_id",
-            "LEFT JOIN product_categories pc ON pc.id = products.category_id"
+            "LEFT JOIN product_categories pc ON pc.id = products.category_id",
+            "LEFT JOIN projects pr ON pr.id = orders.project_id" // YENİ: Projects tablosunu bağlıyoruz
         ];
 
         $sql = "SELECT " . implode(", ", $selCols) . " FROM `" . $itemsTable . "` " . implode(" ", $joins) . " " . $whereSql . " ORDER BY " . $dateCol . " DESC, orders.id DESC, `" . $itemsTable . "`.id ASC";

@@ -361,8 +361,15 @@ foreach ($rows as $r) {
 
   $c = trim((string)($r['customer_name'] ?? 'Diğer'));
   if ($c === '') $c = 'Diğer';
-  $p = trim((string)($r['project_name'] ?? 'Diğer'));
-  if ($p === '') $p = 'Diğer';
+  
+  // YENİ: Önce ana projeye (linked_project_name) bak, o yoksa eski proje adına bak
+  $linked_project = trim((string)($r['linked_project_name'] ?? ''));
+  if ($linked_project !== '') {
+      $p = $linked_project;
+  } else {
+      $p = trim((string)($r['project_name'] ?? 'Diğer'));
+      if ($p === '') $p = 'Diğer';
+  }
 
   $cat_name = trim((string)($r['category_name'] ?? ''));
   if ($cat_name !== '') {

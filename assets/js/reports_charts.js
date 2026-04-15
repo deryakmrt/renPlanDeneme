@@ -3,7 +3,7 @@
  * RENPLAN ERP - SATIŞ VE FİNANS GRAFİKLERİ (CHART.JS) - V3 (TAMAMEN USD)
  * ==============================================================================
  */
-(function() {
+(function () {
   const payload = window.CHART_PAYLOAD;
   if (!payload) return;
 
@@ -57,12 +57,12 @@
               backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#1e293b',
               borderColor: '#e2e8f0', borderWidth: 1, padding: 12,
               callbacks: {
-                label: function(context) {
+                label: function (context) {
                   let label = context.label || '';
                   if (label.length > 30) label = label.substring(0, 30) + '...';
                   let value = context.parsed;
-                  let entry = entries[context.dataIndex]; 
-                  
+                  let entry = entries[context.dataIndex];
+
                   if (isCount) return ' ' + label + ': ' + value + ' Sipariş';
                   // ⭐ YENİ: Tooltip'te Dolar sembolü göster
                   return ' ' + label + ': ' + symbol(entry.cur) + ' ' + value.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -105,7 +105,7 @@
         displayValue = value;
         suffix = ' Sipariş';
       } else if (sortBy === 'total_price') {
-        value = data.total_price_usd || data.total_price_try || 0; 
+        value = data.total_price_usd || data.total_price_try || 0;
         displayValue = value;
         suffix = '';
       }
@@ -134,7 +134,7 @@
               backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#1e293b',
               borderColor: '#e2e8f0', borderWidth: 1, padding: 12,
               callbacks: {
-                label: function(context) {
+                label: function (context) {
                   let label = context.label || '';
                   let value = context.parsed;
                   let entry = entries[context.dataIndex];
@@ -168,9 +168,21 @@
     }
   }
 
-  renderSalespersonChart('order_count');
-  document.querySelectorAll('input[name="salesperson_sort"]').forEach(function(radio) {
-    radio.addEventListener('change', function() {
+  // Sayfa yüklendiğinde HTML'de hangi buton "checked" ise onun değerini al
+  const initialSortRadio = document.querySelector('input[name="salesperson_sort"]:checked');
+  const initialSort = initialSortRadio ? initialSortRadio.value : 'total_price';
+
+  // Grafiği o değere göre çiz
+  renderSalespersonChart(initialSort);
+
+  // Altındaki bilgi notunun görünürlüğünü de seçili duruma göre ayarla
+  const infoText = document.getElementById('spPriceInfo');
+  if (infoText) {
+    infoText.style.display = initialSort === 'total_price' ? 'block' : 'none';
+  }
+
+  document.querySelectorAll('input[name="salesperson_sort"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
       if (this.checked) {
         const infoText = document.getElementById('spPriceInfo');
         if (infoText) infoText.style.display = this.value === 'total_price' ? 'block' : 'none';
@@ -251,7 +263,7 @@
               backgroundColor: 'rgba(255, 255, 255, 0.95)', titleColor: '#1e293b', bodyColor: '#1e293b',
               borderColor: '#e2e8f0', borderWidth: 1, padding: 12,
               callbacks: {
-                label: function(context) {
+                label: function (context) {
                   let lbl = context.label || '';
                   if (lbl.length > 30) lbl = lbl.substring(0, 30) + '...';
                   let entry = entries[context.dataIndex];
