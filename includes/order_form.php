@@ -346,7 +346,7 @@ $__is_uretim = ($__role === 'uretim');
           <select name="siparisi_alan" required>
             <option value="">— Seçiniz —</option>
             <?php
-            $temsilciler = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞAHİN', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
+            $temsilciler = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞİMŞEK', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
             $current_alan = $order['siparisi_alan'] ?? '';
             foreach ($temsilciler as $t): ?>
               <option value="<?= h($t) ?>" <?= $current_alan === $t ? 'selected' : '' ?>><?= h($t) ?></option>

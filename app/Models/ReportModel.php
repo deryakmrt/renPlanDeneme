@@ -199,7 +199,9 @@ class ReportModel {
         }
 
         if ($projectCol && $filters['project_query']) {
-            $where[] = "$projectCol LIKE ?";
+            // Collation (dil seti) çakışmasını önlemek için veritabanı kolonlarını anlık olarak UTF-8'e çeviriyoruz
+            $where[] = "(CONVERT($projectCol USING utf8mb4) LIKE ? OR CONVERT(pr.name USING utf8mb4) LIKE ?)";
+            $args[] = '%' . $filters['project_query'] . '%';
             $args[] = '%' . $filters['project_query'] . '%';
         }
 

@@ -33,7 +33,7 @@ require_login();
 
 // --- 🔒 ADMİN VE MUHASEBE YETKİ KONTROLÜ ---
 $__role = current_user()['role'] ?? '';
-if (!in_array($__role, ['admin', 'muhasebe'])) {
+if (!in_array($__role, ['admin', 'muhasebe', 'sistem_yoneticisi'])) {
   die('<div style="margin:50px auto; max-width:500px; padding:30px; background:#fff1f2; border:2px solid #fda4af; border-radius:12px; color:#e11d48; font-family:sans-serif; text-align:center; box-shadow:0 10px 25px rgba(225,29,72,0.1);">
         <h2 style="margin-top:0; font-size:24px;">⛔ YETKİSİZ ERİŞİM</h2>
         <p style="font-size:15px; line-height:1.5;">Bu finansal raporları ve grafikleri yalnızca <b>Yönetici (Admin) veya Muhasebe</b> yetkisine sahip kullanıcılar görüntüleyebilir.</p>
@@ -248,7 +248,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
   echo "\xEF\xBB\xBF";
   $out = fopen('php://output', 'w');
   fputcsv($out, ['Siparişi Alan', 'Müşteri', 'Proje', 'Sipariş Kodu', 'Ürün', 'SKU', 'Miktar', 'Birim', 'Birim Fiyat', 'Para Birimi', 'Satır Toplam', 'Sipariş Tarihi']);
-  $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞAHİN', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
+  $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞİMŞEK', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
   foreach ($rows as $r) {
     $raw_exp_sp = trim((string)($r['siparisi_alan'] ?? ''));
 
@@ -396,7 +396,7 @@ foreach ($rows as $r) {
   $g = $best_group;
 
   $raw_sp = trim((string)($r['siparisi_alan'] ?? ''));
-  $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞAHİN', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
+  $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞİMŞEK', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
 
   if ($raw_sp === '') {
     $sp = 'Belirtilmemiş';
@@ -494,7 +494,7 @@ $salesperson_enhanced = [];
 
 foreach ($rows as $row) {
   $raw_sp = trim($row['siparisi_alan'] ?? '');
-  $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞAHİN', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
+  $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞİMŞEK', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
 
   if ($raw_sp === '') {
     $sp = 'Belirtilmemiş';

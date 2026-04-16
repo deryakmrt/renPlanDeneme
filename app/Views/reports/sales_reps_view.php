@@ -1,4 +1,5 @@
 <?php
+
 /**
  * RENPLAN ERP - SATIŞ VE FİNANS İSTATİSTİKLERİ GÖRÜNÜMÜ (VIEW)
  * Dışarıdan (Controller'dan) Gelen Değişken Tanımlamaları
@@ -86,23 +87,38 @@ include __DIR__ . '/../../../includes/header.php';
     <select name="project_query" class="input">
       <option value="">— Tüm Projeler —</option>
       <?php
+      $final_projects = [];
+
+      // 1. ADIM: Eski usül projeleri topla
       try {
-        // Sadece ismi dolu olan ve birbirinden farklı projeleri çekiyoruz
-        $proje_adi_col = $projectCol ?? 'proje_adi';
-        // Eğer $projectCol null veya yoksa diye ekstra güvenlik
-        if ($proje_adi_col) {
-          $projects = $db->query("SELECT DISTINCT $proje_adi_col as p_name FROM orders WHERE $proje_adi_col IS NOT NULL AND TRIM($proje_adi_col) != '' ORDER BY $proje_adi_col ASC")->fetchAll(PDO::FETCH_ASSOC);
-          foreach ($projects as $p):
-            $p_name = trim($p['p_name']);
-            $sel = ($filters['project_query'] == $p_name) ? 'selected' : '';
+          $q1 = $db->query("SELECT DISTINCT proje_adi FROM orders WHERE proje_adi IS NOT NULL AND TRIM(proje_adi) != ''");
+          while ($row = $q1->fetch(PDO::FETCH_ASSOC)) {
+              $val = trim($row['proje_adi']);
+              if ($val !== '') {
+                  $final_projects[$val] = $val; // Normal listele
+              }
+          }
+      } catch (Throwable $e) {}
+
+      // 2. ADIM: Yeni "Ana Projeleri" topla (Doğrudan projects tablosundan)
+      try {
+          $q2 = $db->query("SELECT id, name FROM projects WHERE name IS NOT NULL AND TRIM(name) != ''");
+          while ($row = $q2->fetch(PDO::FETCH_ASSOC)) {
+              $val = trim($row['name']);
+              if ($val !== '') {
+                  $final_projects[$val] = '🖇️ ' . $val; // Emojili listele (Aynı isim varsa eskisini ezer, temiz olur)
+              }
+          }
+      } catch (Throwable $e) {}
+
+      // 3. ADIM: PHP ile alfabetik sırala ve ekrana bas
+      asort($final_projects);
+
+      foreach ($final_projects as $p_val => $p_label):
+          $sel = (isset($filters['project_query']) && $filters['project_query'] == $p_val) ? 'selected' : '';
       ?>
-            <option value="<?= h($p_name) ?>" <?= $sel ?>><?= h($p_name) ?></option>
-      <?php
-          endforeach;
-        }
-      } catch (Throwable $e) {
-      }
-      ?>
+          <option value="<?= h($p_val) ?>" <?= $sel ?>><?= h($p_label) ?></option>
+      <?php endforeach; ?>
     </select>
   </div>
   <div class="filter-group">
@@ -241,7 +257,7 @@ include __DIR__ . '/../../../includes/header.php';
 
         // Satici ismini formatla
         $raw_sp2 = trim((string)($r['siparisi_alan'] ?? ''));
-        $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞAHİN', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
+        $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞİMŞEK', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
 
         if ($raw_sp2 === '') {
           $formatted_sp = 'Belirtilmemiş';
