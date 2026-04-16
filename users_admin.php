@@ -24,7 +24,7 @@ require_once __DIR__ . '/includes/helpers.php';
 
 // Ensure helper shims only if not defined there
 if (!function_exists('go')) {
-  function go($url)
+  function go(string $url)
   {
     if (function_exists('redirect')) redirect($url);
     else {
@@ -147,13 +147,15 @@ if ($action === 'new') {
               <?php endforeach; ?>
             </select>
           </div>
-          <div class="col-md-6">
-            <label class="custom-form-label">Geçici Şifre</label>
-            <input type="password" name="password" class="custom-input" required placeholder="******">
-          </div>
-          <div class="col-md-6">
-            <label class="custom-form-label">Şifre Tekrar</label>
-            <input type="password" name="password2" class="custom-input" required placeholder="******">
+          <div class="col-md-12">
+            <label class="custom-form-label" style="display:block;">Geçici Şifre <small style="color:#ef4444; font-weight:normal;">(En az 12 karakter; 1 Büyük, 1 Küçük, Rakam ve Özel Karakter)</small></label>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <input type="password" name="password" id="admin_pwd_new1" class="custom-input" style="flex:1;" required placeholder="Şifre">
+              <input type="password" name="password2" id="admin_pwd_new2" class="custom-input" style="flex:1;" required placeholder="Şifre Tekrar">
+              <button type="button" onclick="generateStrongPassword('admin_pwd_new1', 'admin_pwd_new2', 'display_new')" style="background: #8ba7e9; color:#fff; padding:8px 12px; border:none; border-radius:6px; cursor:pointer;">🛂 Öner</button>
+              <button type="button" onclick="togglePwd('admin_pwd_new1', 'admin_pwd_new2', this)" style="background:#e2e8f0; color:#0f172a; padding:8px 12px; border:none; border-radius:6px; cursor:pointer;">👁️</button>
+            </div>
+            <div id="display_new" style="display:none; margin-top:10px; padding:10px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; border-radius:6px; font-family:monospace; font-size:15px;"></div>
           </div>
         </div>
 
@@ -183,6 +185,40 @@ if ($action === 'new') {
       roleSelect.addEventListener('change', toggleCustomerField);
       toggleCustomerField();
     });
+
+    // Şifre Üretici Fonksiyonları (Yeni Ekranı İçin)
+    function generateStrongPassword(id1, id2, displayId) {
+        const chars = "abcdefghijklmnopqrstuvwxyz";
+        const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const numbers = "0123456789";
+        const symbols = "@$!%*?&.";
+        let pwd = chars[Math.floor(Math.random() * chars.length)] + 
+                  upper[Math.floor(Math.random() * upper.length)] + 
+                  numbers[Math.floor(Math.random() * numbers.length)] + 
+                  symbols[Math.floor(Math.random() * symbols.length)];
+        const all = chars + upper + numbers + symbols;
+        for (let i = 0; i < 10; i++) pwd += all[Math.floor(Math.random() * all.length)];
+        pwd = pwd.split('').sort(() => 0.5 - Math.random()).join('');
+        
+        document.getElementById(id1).value = pwd;
+        document.getElementById(id2).value = pwd;
+        document.getElementById(id1).type = "text"; 
+        document.getElementById(id2).type = "text"; 
+        
+        const box = document.getElementById(displayId);
+        box.style.display = "block";
+        box.innerHTML = "<strong>Üretilen Şifre:</strong> <span style='font-size:18px; user-select:all; font-weight:bold; letter-spacing:1px;'>" + pwd + "</span><br><small style='color:#15803d;'>(Çift tıklayıp kopyalayabilirsiniz)</small>";
+    }
+
+    function togglePwd(id1, id2, btn) {
+        const p1 = document.getElementById(id1);
+        const p2 = document.getElementById(id2);
+        if (p1.type === "password") {
+            p1.type = "text"; p2.type = "text"; btn.innerHTML = "🙈";
+        } else {
+            p1.type = "password"; p2.type = "password"; btn.innerHTML = "👁️";
+        }
+    }
   </script>
 <?php
   ob_end_flush();
@@ -203,6 +239,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'create') {
     if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) throw new Exception('Geçerli bir e-posta girin.');
     if ($pass1 === '' || $pass2 === '') throw new Exception('Şifre giriniz.');
     if ($pass1 !== $pass2) throw new Exception('Şifreler uyuşmuyor.');
+
+    $pattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{12,}$/';
+    if (!preg_match($pattern, $pass1)) throw new Exception('Şifre en az 12 karakter olmalı; büyük harf, küçük harf, rakam ve özel karakter içermelidir.');
 
     $hash = password_hash($pass1, PASSWORD_BCRYPT);
     // Sorguya linked_customer eklendi:
@@ -254,6 +293,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'edit' && $id > 0) {
 
     if ($pass1 !== '' || $pass2 !== '') {
       if ($pass1 !== $pass2) throw new Exception('Şifreler uyuşmuyor.');
+
+      $pattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.])[A-Za-z\d@$!%*?&.]{12,}$/';
+      if (!preg_match($pattern, $pass1)) throw new Exception('Şifre en az 12 karakter olmalı; büyük harf, küçük harf, rakam ve özel karakter içermelidir.');
+
       $hash = password_hash($pass1, PASSWORD_BCRYPT);
       $st = $db->prepare("UPDATE users SET username=?, email=?, role=?, linked_customer=?, password_hash=? WHERE id=?");
       $st->execute([$username, ($email !== '' ? $email : null), $role, ($linked_customer !== '' ? $linked_customer : null), $hash, $id]);
@@ -342,17 +385,55 @@ if ($action === 'edit' && $id > 0) {
             </select>
           </div>
 
-          <div class="col-md-6">
-            <label class="custom-form-label">Yeni Şifre (Değişiklik Yoksa Boş Bırakın)</label>
-            <input type="password" name="password" class="custom-input" placeholder="Gizli">
-          </div>
-          <div class="col-md-6">
-            <label class="custom-form-label">Şifre (Tekrar)</label>
-            <input type="password" name="password2" class="custom-input" placeholder="Gizli">
+          <div class="col-md-12">
+            <label class="custom-form-label" style="display:block;">Yeni Şifre (Değişiklik Yoksa Boş Bırakın) <small style="color:#ef4444; font-weight:normal;">(En az 12 karakter; 1 Büyük, 1 Küçük, Rakam ve Özel Karakter)</small></label>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <input type="password" name="password" id="admin_pwd_edit1" class="custom-input" style="flex:1;" placeholder="Gizli">
+              <input type="password" name="password2" id="admin_pwd_edit2" class="custom-input" style="flex:1;" placeholder="Şifre Tekrar">
+              <button type="button" onclick="generateStrongPassword('admin_pwd_edit1', 'admin_pwd_edit2', 'display_edit')" style="background: #8ba7e9; color:#fff; padding:8px 12px; border:none; border-radius:6px; cursor:pointer;">🛂 Öner</button>
+              <button type="button" onclick="togglePwd('admin_pwd_edit1', 'admin_pwd_edit2', this)" style="background:#e2e8f0; color:#0f172a; padding:8px 12px; border:none; border-radius:6px; cursor:pointer;">👁️</button>
+            </div>
+            <div id="display_edit" style="display:none; margin-top:10px; padding:10px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; border-radius:6px; font-family:monospace; font-size:15px;"></div>
           </div>
         </div>
 
         <div class="form-actions">
+
+          <script>
+            function generateStrongPassword(id1, id2, displayId) {
+              const chars = "abcdefghijklmnopqrstuvwxyz";
+              const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+              const numbers = "0123456789";
+              const symbols = "@$!%*?&.";
+              let pwd = chars[Math.floor(Math.random() * chars.length)] + upper[Math.floor(Math.random() * upper.length)] + numbers[Math.floor(Math.random() * numbers.length)] + symbols[Math.floor(Math.random() * symbols.length)];
+              const all = chars + upper + numbers + symbols;
+              for (let i = 0; i < 10; i++) pwd += all[Math.floor(Math.random() * all.length)];
+              pwd = pwd.split('').sort(() => 0.5 - Math.random()).join('');
+
+              document.getElementById(id1).value = pwd;
+              document.getElementById(id2).value = pwd;
+              document.getElementById(id1).type = "text";
+              document.getElementById(id2).type = "text";
+
+              const box = document.getElementById(displayId);
+              box.style.display = "block";
+              box.innerHTML = "<strong>Üretilen Şifre:</strong> <span style='font-size:18px; user-select:all; font-weight:bold; letter-spacing:1px;'>" + pwd + "</span><br><small style='color:#15803d;'>(Çift tıklayıp kopyalayabilirsiniz)</small>";
+            }
+
+            function togglePwd(id1, id2, btn) {
+              const p1 = document.getElementById(id1);
+              const p2 = document.getElementById(id2);
+              if (p1.type === "password") {
+                p1.type = "text";
+                p2.type = "text";
+                btn.innerHTML = "🙈";
+              } else {
+                p1.type = "password";
+                p2.type = "password";
+                btn.innerHTML = "👁️";
+              }
+            }
+          </script>
           <button class="btn-save" type="submit">💾 Değişiklikleri Kaydet</button>
         </div>
       </form>
