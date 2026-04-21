@@ -103,7 +103,7 @@ function current_user(){
 }
 function current_role(){ return $_SESSION['urole'] ?? 'musteri'; }
 function has_role(string $role){ return current_role() === $role; }
-function require_login(){ if(!current_user()) redirect('gir.php'); }
+function require_login(){ if(!current_user()) redirect('/gir.php'); }
 function require_role(mixed $roles){
     if (!is_array($roles)) { $roles = [$roles]; }
     if (!in_array(current_role(), $roles, true)) { http_response_code(403); die('Yetkisiz erişim'); }

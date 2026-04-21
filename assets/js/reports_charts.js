@@ -79,7 +79,7 @@
       if (!entries.length) {
         ul.innerHTML = '<li><span class="name">Veri yok</span><span class="val">—</span></li>';
       } else {
-        ul.innerHTML = entries.slice(0, 5).map(it => {
+        ul.innerHTML = entries.slice(0, 10).map(it => {
           if (isCount) return `<li><span class="name">${it.name}</span><span class="val" style="color:#10b981;">${it.disp_val} Adet</span></li>`;
           // ⭐ YENİ: Listedeki elemanlara Dolar sembolü göster
           return `<li><span class="name">${it.name}</span><span class="val">${symbol(it.cur)} ${it.disp_val.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></li>`;
@@ -280,7 +280,7 @@
       if (!entries.length) {
         ul.innerHTML = '<li style="font-size:12px; color:#94a3b8;">Bu kriterde kayıt bulunamadı</li>';
       } else {
-        ul.innerHTML = entries.slice(0, 5).map(it => {
+        ul.innerHTML = entries.slice(0, 10).map(it => {
           let txt = symbol(it.cur) + ' ' + it.disp_val.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
           return `<li style="display:flex; justify-content:space-between; font-size:12px; padding:8px 10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px;">
                     <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%; font-weight:600; color:#334155;">${it.name}</span>

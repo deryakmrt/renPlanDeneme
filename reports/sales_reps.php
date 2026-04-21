@@ -474,6 +474,7 @@ $sp_cur_proj             = [];
 $sp_agg_grp              = [];
 $sp_cur_grp              = []; 
 $sp_raw_rows             = []; // Tarih bazlı ham satırlar (JS filtresi için)
+$monthly_chart           = []; // Aylık grafik: [YYYY-MM][temsilci] = {usd, orders}
 
 foreach ($rows as $r) {
   $oid = $r['order_id'];
@@ -518,8 +519,16 @@ foreach ($rows as $r) {
 
   $cur = normalize_currency($raw_cur);
 
+  // KDV hariç net tutar (grafik hesapları için)
+  $net_amt = $raw_amt; // line_total zaten KDV hariç
+  // Fatura edilmişse fatura tutarından KDV'siz payı al
+  if ($is_invoiced && $fatura_toplam_muhur > 0) {
+    $fatura_kdv_dahil_pay = $fatura_toplam_muhur * ($raw_amt_kdvli / ($order_kalem_totals[$oid] ?: 1));
+    $net_amt = $fatura_kdv_dahil_pay / (1 + ($kdv_orani / 100));
+  }
+
   $usd_multiplier = resolve_usd_rate($r, $cur, $is_invoiced, $rates);
-  $amt_usd = $amt * $usd_multiplier; 
+  $amt_usd = $net_amt * $usd_multiplier; // KDV hariç USD
 
   $c = trim((string)($r['customer_name'] ?? 'Diğer'));
   if ($c === '') $c = 'Diğer';
@@ -598,10 +607,19 @@ foreach ($rows as $r) {
     'd' => $row_date_key,
     'p' => $p,
     'g' => $family,
-    'u' => $amt_usd,
+    'u' => $amt_usd, // KDV hariç USD
     'c' => $cur,
-    'v' => $amt,
+    'v' => $net_amt,
   ];
+
+  // Aylık grafik verisi: yıl-ay bazında temsilci → {usd_net, order_ids}
+  if ($row_date_key !== '') {
+    $ym = substr($row_date_key, 0, 7); // YYYY-MM
+    if (!isset($monthly_chart[$ym])) $monthly_chart[$ym] = [];
+    if (!isset($monthly_chart[$ym][$sp])) $monthly_chart[$ym][$sp] = ['usd' => 0.0, 'orders' => []];
+    $monthly_chart[$ym][$sp]['usd'] += $amt_usd;
+    $monthly_chart[$ym][$sp]['orders'][$oid] = true;
+  }
 
   if (!isset($cur_customer[$c])) $cur_customer[$c] = [];
   if (!isset($cur_customer[$c][$cur])) $cur_customer[$c][$cur] = 0.0;
@@ -671,13 +689,27 @@ foreach ($salesperson_orders as $name => $count) {
   ];
 }
 
+// monthly_chart'taki order sayılarını array uzunluğuna çevir
+$monthly_chart_clean = [];
+foreach ($monthly_chart as $ym => $sp_data) {
+  $monthly_chart_clean[$ym] = [];
+  foreach ($sp_data as $sp_name => $data) {
+    $monthly_chart_clean[$ym][$sp_name] = [
+      'usd'    => round($data['usd'], 2),
+      'orders' => count($data['orders']),
+    ];
+  }
+}
+ksort($monthly_chart_clean); // tarihe göre sırala
+
 $chart_payload = [
   'customer'            => get_dominant_info($agg_customer_usd, $cur_customer),
   'project'             => get_dominant_info($agg_project_usd,  $cur_project),
   'category'            => get_dominant_info($agg_category_usd, $cur_category),
   'salesperson'         => $sp_formatted,
   'salesperson_details' => $salesperson_details,
-  'sp_raw_rows'         => $sp_raw_rows, // Tarih bazlı ham veri (JS filtresi için)
+  'sp_raw_rows'         => $sp_raw_rows,
+  'monthly_chart'       => $monthly_chart_clean, // Aylık stacked bar grafik verisi
 ];
 
 $salesperson_enhanced = [];
@@ -735,7 +767,11 @@ foreach ($rows as $row) {
     $salesperson_enhanced[$sp]['order_count']++;
   }
 
-  $raw_amt_kdvli = (float)($row['line_total'] ?? 0) * (1 + ((isset($row['kdv_orani']) ? (float)$row['kdv_orani'] : 20) / 100));
+  // KDV hariç net tutar hesabı (salesperson_enhanced için)
+  $net_line2  = (float)($row['line_total'] ?? 0); // KDV hariç
+  $kdv_oran2  = isset($row['kdv_orani']) ? (float)$row['kdv_orani'] : 20.0;
+  $kdv_multi2 = 1 + ($kdv_oran2 / 100);
+  $raw_amt_kdvli2 = $net_line2 * $kdv_multi2; // payda için hâlâ lazım
 
   $status_str2 = mb_strtolower(trim((string)($row['order_status'] ?? '')), 'UTF-8');
   $fatura_toplam_muhur2 = (float)($row['fatura_toplam'] ?? 0);
@@ -744,12 +780,13 @@ foreach ($rows as $row) {
   if ($is_invoiced2 && $fatura_toplam_muhur2 > 0) {
     $order_curr2 = !empty($row['order_currency']) ? $row['order_currency'] : (!empty($row['currency']) ? $row['currency'] : 'TL');
     $raw_cur2 = !empty($row['fatura_para_birimi']) ? $row['fatura_para_birimi'] : $order_curr2;
-    
+
+    // Fatura KDV dahil → bu kalemin KDV dahil payını al, sonra KDV'yi çıkar
     $order_kalem_total2 = $order_kalem_totals[$oid] ?? 1;
     if ($order_kalem_total2 <= 0) $order_kalem_total2 = 1;
-
-    $oran2 = $raw_amt_kdvli / $order_kalem_total2;
-    $subtotal = $fatura_toplam_muhur2 * $oran2;
+    $oran2 = $raw_amt_kdvli2 / $order_kalem_total2;
+    $subtotal_kdvli = $fatura_toplam_muhur2 * $oran2;
+    $subtotal = $subtotal_kdvli / $kdv_multi2; // KDV hariç
   } else {
     $order_curr2 = !empty($row['order_currency']) ? $row['order_currency'] : (!empty($row['currency']) ? $row['currency'] : 'TL');
     $kalem_curr2 = trim((string)($row['kalem_para_birimi'] ?? ''));
@@ -758,17 +795,18 @@ foreach ($rows as $row) {
     } else {
         $raw_cur2 = $kalem_curr2;
     }
-    
+
     $order_genel_toplam2 = (float)($row['order_genel_toplam'] ?? 0);
     if ($order_genel_toplam2 <= 0) $order_genel_toplam2 = (float)($row['fatura_toplam'] ?? 0);
 
     if ($order_genel_toplam2 > 0) {
       $order_kalem_total2 = $order_kalem_totals[$oid] ?? 1;
       if ($order_kalem_total2 <= 0) $order_kalem_total2 = 1;
-      $oran2 = $raw_amt_kdvli / $order_kalem_total2;
-      $subtotal = $order_genel_toplam2 * $oran2;
+      $oran2 = $raw_amt_kdvli2 / $order_kalem_total2;
+      $subtotal_kdvli = $order_genel_toplam2 * $oran2;
+      $subtotal = $subtotal_kdvli / $kdv_multi2; // KDV hariç
     } else {
-      $subtotal = $raw_amt_kdvli;
+      $subtotal = $net_line2; // Direkt KDV hariç
     }
   }
 
@@ -780,7 +818,7 @@ foreach ($rows as $row) {
   }
 
   $usd_multiplier2 = resolve_usd_rate($row, $cur, $is_invoiced2, $rates);
-  $salesperson_enhanced[$sp]['total_price_usd'] += ($subtotal * $usd_multiplier2);
+  $salesperson_enhanced[$sp]['total_price_usd'] += ($subtotal * $usd_multiplier2); // KDV hariç USD
 
   $cat_name2 = trim((string)($row['category_name'] ?? ''));
   if ($cat_name2 !== '') {

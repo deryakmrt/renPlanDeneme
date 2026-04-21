@@ -192,7 +192,15 @@ include __DIR__ . '/../../../includes/header.php';
   <div class="quad-grid">
     <div class="pie-card">
       <h4 style="margin-bottom: 5px;">Satış Temsilcisi Dağılımı</h4>
-      <div class="chart-sort-controls" style="margin-bottom: 6px; padding: 4px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 6px; border: 1px solid #e2e8f0;">
+
+      <div class="chart-box" style="transition: opacity 0.3s ease;">
+        <div class="pie-canvas-wrap"><canvas id="pieSalesperson"></canvas></div>
+      </div>
+      <div class="top5">
+        <ul id="top5Salesperson"></ul>
+      </div>
+
+      <div class="chart-sort-controls" style="margin-top: 10px; padding: 4px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 6px; border: 1px solid #e2e8f0;">
         <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
           <label class="sort-option">
             <input type="radio" name="salesperson_sort" value="order_count">
@@ -204,16 +212,8 @@ include __DIR__ . '/../../../includes/header.php';
           </label>
         </div>
       </div>
-
-      <div id="spPriceInfo" style="display: block; text-align: center; font-size: 10px; color: #94a3b8; font-style: italic; margin-bottom: 8px; padding: 0 10px; line-height: 1.3;">
-        *Buradaki ciro, farklı döviz cinslerinden kesilen siparişlerin güncel TCMB kuru ile TL'ye çevrilip toplanmış halidir.
-      </div>
-
-      <div class="chart-box" style="transition: opacity 0.3s ease;">
-        <div class="pie-canvas-wrap"><canvas id="pieSalesperson"></canvas></div>
-      </div>
-      <div class="top5">
-        <ul id="top5Salesperson"></ul>
+      <div id="spPriceInfo" style="display: block; text-align: center; font-size: 10px; color: #94a3b8; font-style: italic; margin-top: 6px; padding: 0 10px; line-height: 1.3;">
+        *Buradaki ciro KDV hariç USD cinsindendir. Fatura edilmişlerde fatura kuru, diğerlerinde günlük TCMB kuru kullanılır.
       </div>
     </div>
     <div class="pie-card">
@@ -239,38 +239,24 @@ include __DIR__ . '/../../../includes/header.php';
     </div>
   </div>
 
+  <!-- YILLIK SATIŞ GRAFİĞİ -->
   <div style="margin-top: 20px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: linear-gradient(to right, #f8fafc, #ffffff);">
-    <h3 style="margin-top: 0; color: #0f172a; font-size: 16px; margin-bottom: 15px; border-bottom: 2px dashed #cbd5e1; padding-bottom: 10px;">
-      🔍 Satış Temsilcisi Performans Analizi
-    </h3>
-    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-      <div style="flex: 1; min-width: 250px; background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;">
-        <label style="font-size: 13px; font-weight: 700; color: #475569; display:block; margin-bottom: 6px;">1. Temsilci Seçin:</label>
-        <select id="spDetailSelect" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 20px; font-weight: 600; color: #0f172a; outline: none;"></select>
-
-        <label style="font-size: 13px; font-weight: 700; color: #475569; display:block; margin-bottom: 8px;">2. Analiz Türü:</label>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; transition: 0.2s;">
-            <input type="radio" name="sp_detail_type" value="projects" checked style="width: 16px; height: 16px; accent-color: #8b5cf6;">
-            <span style="font-size: 13px; font-weight: 600; color: #334155;">📁 Projelere Göre Dağılım (Ciro)</span>
-          </label>
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; transition: 0.2s;">
-            <input type="radio" name="sp_detail_type" value="groups" style="width: 16px; height: 16px; accent-color: #ec4899;">
-            <span style="font-size: 13px; font-weight: 600; color: #334155;">🏷️ Ürün Grubuna Göre (Ciro)</span>
-          </label>
-        </div>
-
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:15px; border-bottom: 2px dashed #cbd5e1; padding-bottom:12px;">
+      <h3 style="margin:0; color:#0f172a; font-size:16px;">
+        📊 Aylık Ciro Grafiği — Temsilci Bazlı
+      </h3>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <label style="font-size:12px; font-weight:700; color:#64748b;">📅 Yıl:</label>
+        <select id="yearSelect" style="padding:6px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; font-weight:700; color:#334155; outline:none; background:#fff; cursor:pointer;">
+        </select>
       </div>
-
-      <div style="flex: 2; min-width: 300px; display: flex; gap: 20px; align-items: center; background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;">
-        <div style="flex: 1; height: 250px; position: relative;">
-          <canvas id="pieSpDetail"></canvas>
-        </div>
-        <div style="flex: 1; max-height: 250px; overflow-y: auto;">
-          <h4 style="margin-top: 0; font-size: 13px; color: #64748b; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">🏆 En Yüksek İlk 5</h4>
-          <ul id="top5SpDetail" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;"></ul>
-        </div>
-      </div>
+    </div>
+    <div style="position:relative; height:420px;">
+      <canvas id="monthlyBarChart"></canvas>
+    </div>
+    <div id="monthlyLegend" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; justify-content:center;"></div>
+    <div style="margin-top:8px; text-align:center; font-size:10px; color:#94a3b8; font-style:italic;">
+      * Ciro KDV hariç, USD cinsinden. Fatura edilmiş siparişlerde fatura kuru, diğerlerinde günlük TCMB kuru kullanılır.
     </div>
   </div>
 
@@ -301,6 +287,215 @@ include __DIR__ . '/../../../includes/header.php';
       });
     });
   });
+</script>
+
+<script>
+/**
+ * AYLIK CİRO GRAFİĞİ — Stacked Bar (temsilci bazlı USD KDV hariç) + Çizgi (sipariş adedi)
+ */
+(function () {
+  var SP_COLORS = {
+  'Ali Altunay'       : '#154ca4',
+  'Fatih Serhat Çaçık': '#e89b26',
+  'Murat Sezer'       : '#2dbc17',
+  'Hasan Büyükoba'    : '#9d429a',
+  'Hikmet Şimşek'     : '#F43F5E',
+  'Muhammet Yazgan'   : '#48c9c2',
+  'Belirtilmemiş'     : '#CBD5E1'  
+};
+  var DEFAULT_COLOR = '#f461f2';
+
+  var MONTHS_TR = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+
+  var monthlyData = (window.CHART_PAYLOAD && window.CHART_PAYLOAD.monthly_chart) ? window.CHART_PAYLOAD.monthly_chart : {};
+  var chartInstance = null;
+
+  // Mevcut yılları bul
+  var yearsSet = {};
+  Object.keys(monthlyData).forEach(function(ym) {
+    yearsSet[ym.substring(0, 4)] = true;
+  });
+  var years = Object.keys(yearsSet).sort().reverse();
+  if (years.length === 0) years = [String(new Date().getFullYear())];
+
+  // Yıl seçiciyi doldur
+  var yearSel = document.getElementById('yearSelect');
+  if (yearSel) {
+    years.forEach(function(y) {
+      var opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      if (y === '2026') opt.selected = true;
+      yearSel.appendChild(opt);
+    });
+    // Eğer 2026 yoksa ilk yılı seç
+    if (!yearsSet['2026'] && years.length > 0) yearSel.value = years[0];
+  }
+
+  // Tüm temsilcileri bul
+  var allSps = {};
+  Object.values(monthlyData).forEach(function(spMap) {
+    Object.keys(spMap).forEach(function(sp) { allSps[sp] = true; });
+  });
+  // Sabit sıra: önce bilinen 6, sonra diğerleri
+  var knownOrder = ['Ali Altunay','Fatih Serhat Çaçık', 'Murat Sezer','Hasan Büyükoba','Hikmet Şimşek','Muhammet Yazgan'];
+  var allSpList = knownOrder.filter(function(s){ return allSps[s]; });
+  Object.keys(allSps).forEach(function(s) {
+    if (allSpList.indexOf(s) === -1) allSpList.push(s);
+  });
+
+  function buildChart(year) {
+    // 12 ay etiketi
+    var labels = MONTHS_TR.map(function(m, i) {
+      return m;
+    });
+
+    // Her ay için veri topla
+    var monthKeys = [];
+    for (var m = 1; m <= 12; m++) {
+      monthKeys.push(year + '-' + (m < 10 ? '0' + m : m));
+    }
+
+    // Stacked bar datasets (her temsilci bir dataset)
+    var barDatasets = allSpList.map(function(sp) {
+      var color = SP_COLORS[sp] || DEFAULT_COLOR;
+      return {
+        type: 'bar',
+        label: sp,
+        data: monthKeys.map(function(ym) {
+          return (monthlyData[ym] && monthlyData[ym][sp]) ? monthlyData[ym][sp].usd : 0;
+        }),
+        backgroundColor: color + 'cc',
+        borderColor: color,
+        borderWidth: 1,
+        borderRadius: 3,
+        stack: 'ciro',
+        yAxisID: 'yUsd',
+      };
+    });
+
+    // Çizgi dataset: toplam sipariş adedi
+    var orderData = monthKeys.map(function(ym) {
+      if (!monthlyData[ym]) return 0;
+      var orderIds = {};
+      Object.values(monthlyData[ym]).forEach(function(d) {
+        // d.orders artık count, unique order sayısı
+      });
+      // Ay toplamı: tüm temsilcilerin sipariş adetini topla (mükerrer sipariş sayılmaz çünkü PHP'de unique yapıldı)
+      var total = 0;
+      Object.values(monthlyData[ym]).forEach(function(d) { total += (d.orders || 0); });
+      return total;
+    });
+
+    var lineDataset = {
+      type: 'line',
+      label: 'Sipariş Adedi',
+      data: orderData,
+      borderColor: '#0f172a',
+      backgroundColor: 'rgba(15,23,42,0.08)',
+      borderWidth: 2.5,
+      pointRadius: 5,
+      pointBackgroundColor: '#0f172a',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      fill: false,
+      tension: 0.3,
+      yAxisID: 'yOrders',
+      stack: undefined,
+    };
+
+    var ctx = document.getElementById('monthlyBarChart');
+    if (!ctx) return;
+
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx.getContext('2d'), {
+      data: {
+        labels: labels,
+        datasets: barDatasets.concat([lineDataset]),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(ctx) {
+                if (ctx.dataset.yAxisID === 'yOrders') {
+                  return ' ' + ctx.dataset.label + ': ' + ctx.parsed.y + ' adet';
+                }
+                var val = ctx.parsed.y;
+                return ' ' + ctx.dataset.label + ': $' + val.toLocaleString('tr-TR', {minimumFractionDigits:0, maximumFractionDigits:0});
+              },
+              footer: function(items) {
+                var total = 0;
+                items.forEach(function(i) {
+                  if (i.dataset.yAxisID === 'yUsd') total += i.parsed.y;
+                });
+                return total > 0 ? 'Toplam: $' + total.toLocaleString('tr-TR', {minimumFractionDigits:0, maximumFractionDigits:0}) : '';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            grid: { display: false },
+            ticks: { font: { size: 12, weight: '600' }, color: '#475569' }
+          },
+          yUsd: {
+            type: 'linear',
+            position: 'left',
+            stacked: true,
+            grid: { color: '#f1f5f9' },
+            ticks: {
+              font: { size: 11 },
+              color: '#64748b',
+              callback: function(v) {
+                if (v >= 1000000) return '$' + (v/1000000).toFixed(1) + 'M';
+                if (v >= 1000) return '$' + (v/1000).toFixed(0) + 'K';
+                return '$' + v;
+              }
+            },
+            title: { display: true, text: 'Ciro (USD, KDV Hariç)', font: { size: 11 }, color: '#64748b' }
+          },
+          yOrders: {
+            type: 'linear',
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: { font: { size: 11 }, color: '#0f172a',
+              callback: function(v) { return Number.isInteger(v) ? v + ' adet' : ''; }
+            },
+            title: { display: true, text: 'Sipariş Adedi', font: { size: 11 }, color: '#0f172a' }
+          }
+        }
+      }
+    });
+
+    // Legend güncelle
+    var legendEl = document.getElementById('monthlyLegend');
+    if (legendEl) {
+      legendEl.innerHTML = allSpList.map(function(sp) {
+        var color = SP_COLORS[sp] || DEFAULT_COLOR;
+        return '<div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#334155;">'
+          + '<span style="width:14px;height:14px;border-radius:3px;background:' + color + ';display:inline-block;flex-shrink:0;"></span>'
+          + '<span>' + sp + '</span></div>';
+      }).join('') + '<div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#0f172a;">'
+        + '<span style="width:24px;height:3px;background:#0f172a;border-radius:2px;display:inline-block;"></span>'
+        + '<span>Sipariş Adedi</span></div>';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var sel = document.getElementById('yearSelect');
+    if (sel) {
+      buildChart(sel.value || years[0]);
+      sel.addEventListener('change', function() { buildChart(this.value); });
+    }
+  });
+})();
 </script>
 
 <script>
