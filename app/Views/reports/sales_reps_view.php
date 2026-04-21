@@ -12,6 +12,12 @@
  * @var float $eur_rate
  * @var string|null $queryError
  * @var array $chart_payload
+ * @var float $stat_usd_net
+ * @var float $stat_usd_kdv
+ * @var float $stat_usd_total
+ * @var float $stat_try_net
+ * @var float $stat_try_kdv
+ * @var float $stat_try_total
  */
 
 include __DIR__ . '/../../../includes/header.php';
@@ -28,13 +34,34 @@ include __DIR__ . '/../../../includes/header.php';
 <?php endif; ?>
 
 <div class="stat-row">
-  <?php foreach (['TRY', 'USD', 'EUR'] as $cur): if (isset($totalsByCurrency[$cur])): ?>
-      <div class="stat-card" style="box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border-radius: 12px;">
-        <h4 style="color:#64748b; font-size:12px; font-weight:700; text-transform:uppercase; margin-bottom:8px;">Toplam (<?= h($cur) ?>)</h4>
-        <div class="val" style="color:#0f172a; font-size:22px;"><?= fmt_tr_money($totalsByCurrency[$cur]) ?> <span style="font-size:13px; color:#94a3b8; font-weight:600;"><?= h($cur) ?></span></div>
-      </div>
-  <?php endif;
-  endforeach; ?>
+
+  <!-- TOPLAM USD -->
+  <div class="stat-card" style="box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07); border-radius: 12px; min-width: 180px;">
+    <h4 style="color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; margin-bottom:10px; letter-spacing:.5px;">💵 Toplam (USD)</h4>
+    <div class="val" style="color:#0f172a; font-size:20px; font-weight:800; line-height:1.2;">
+      <?= fmt_tr_money($stat_usd_net) ?> <span style="font-size:12px; color:#94a3b8; font-weight:600;">USD</span>
+    </div>
+    <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #e2e8f0; font-size:11px; color:#94a3b8;">
+      KDV: <span style="color:#f59e0b; font-weight:700;"><?= fmt_tr_money($stat_usd_kdv) ?> USD</span>
+    </div>
+    <div style="margin-top:4px; padding-top:4px; border-top:2px solid #e2e8f0; font-size:13px; font-weight:800; color:#3b82f6;">
+      <?= fmt_tr_money($stat_usd_total) ?> <span style="font-size:11px; font-weight:600; color:#94a3b8;">USD</span>
+    </div>
+  </div>
+
+  <!-- TOPLAM TRY -->
+  <div class="stat-card" style="box-shadow: 0 4px 6px -1px rgba(0,0,0,0.07); border-radius: 12px; min-width: 180px;">
+    <h4 style="color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; margin-bottom:10px; letter-spacing:.5px;">₺ Toplam (TRY)</h4>
+    <div class="val" style="color:#0f172a; font-size:20px; font-weight:800; line-height:1.2;">
+      <?= fmt_tr_money($stat_try_net) ?> <span style="font-size:12px; color:#94a3b8; font-weight:600;">TRY</span>
+    </div>
+    <div style="margin-top:6px; padding-top:6px; border-top:1px dashed #e2e8f0; font-size:11px; color:#94a3b8;">
+      KDV: <span style="color:#f59e0b; font-weight:700;"><?= fmt_tr_money($stat_try_kdv) ?> TRY</span>
+    </div>
+    <div style="margin-top:4px; padding-top:4px; border-top:2px solid #e2e8f0; font-size:13px; font-weight:800; color:#3b82f6;">
+      <?= fmt_tr_money($stat_try_total) ?> <span style="font-size:11px; font-weight:600; color:#94a3b8;">TRY</span>
+    </div>
+  </div>
 
   <div class="stat-card" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-color:#bbf7d0; border-radius: 12px; display:flex; flex-direction:column; justify-content:center; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.1);">
     <h4 style="color:#166534; font-size:12px; font-weight:700; text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; gap:5px;">
@@ -120,6 +147,19 @@ include __DIR__ . '/../../../includes/header.php';
         $sel = (isset($filters['project_query']) && $filters['project_query'] == $p_val) ? 'selected' : '';
       ?>
         <option value="<?= h($p_val) ?>" <?= $sel ?>><?= h($p_label) ?></option>
+      <?php endforeach; ?>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label class="label">💼 Satış Temsilcisi</label>
+    <select name="salesperson" class="input">
+      <option value="">— Tüm Temsilciler —</option>
+      <?php
+      $temsilciler_dropdown = ['Ali Altunay', 'Fatih Serhat Çaçık', 'Hasan Büyükoba', 'Hikmet Şimşek', 'Muhammet Yazgan', 'Murat Sezer', 'Belirtilmemiş'];
+      foreach ($temsilciler_dropdown as $_td_isim):
+        $_td_sel = (isset($filters['salesperson']) && $filters['salesperson'] === $_td_isim) ? 'selected' : '';
+      ?>
+        <option value="<?= h($_td_isim) ?>" <?= $_td_sel ?>><?= h($_td_isim) ?></option>
       <?php endforeach; ?>
     </select>
   </div>
@@ -219,6 +259,7 @@ include __DIR__ . '/../../../includes/header.php';
             <span style="font-size: 13px; font-weight: 600; color: #334155;">🏷️ Ürün Grubuna Göre (Ciro)</span>
           </label>
         </div>
+
       </div>
 
       <div style="flex: 2; min-width: 300px; display: flex; gap: 20px; align-items: center; background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;">
@@ -362,6 +403,17 @@ include __DIR__ . '/../../../includes/header.php';
       language: {
         noResults: function() {
           return "Proje bulunamadı";
+        }
+      }
+    });
+
+    $('select[name="salesperson"]').select2({
+      placeholder: "Temsilci Seçin...",
+      allowClear: true,
+      width: '100%',
+      language: {
+        noResults: function() {
+          return "Kayıt bulunamadı";
         }
       }
     });

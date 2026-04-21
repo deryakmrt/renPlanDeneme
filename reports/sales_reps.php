@@ -233,15 +233,40 @@ $filters = [
   'min_unit'      => inparam('min_unit'),
   'max_unit'      => inparam('max_unit'),
   'prod_status'   => inparam_arr('prod_status'),
+  'salesperson'   => inparam('salesperson'), // Satış temsilcisi filtresi
 ];
+
+// Performans Analizi paneli tarih filtresi JS tarafında çalışır, PHP'de kullanılmaz
+$sp_date_from = null;
+$sp_date_to   = null;
 
 require_once __DIR__ . '/../app/Models/ReportModel.php';
 $reportModel = new ReportModel($db);
 $dbResult = $reportModel->getSalesData($filters);
 
-// YENİ: Askıya alınan siparişleri süzgeçten geçirip tüm raporlardan ve grafiklerden atıyoruz
-$rows = array_filter($dbResult['rows'], function($r) {
-    return mb_strtolower(trim((string)($r['order_status'] ?? '')), 'UTF-8') !== 'askiya_alindi';
+// Askıya alınan siparişleri ve seçili temsilci dışındakileri filtrele
+$_filter_sp = $filters['salesperson'] ?? '';
+$_temsilciler_sabit_upper = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞİMŞEK', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
+
+$rows = array_filter($dbResult['rows'], function($r) use ($_filter_sp, $_temsilciler_sabit_upper) {
+    // Askıya alınanları at
+    if (mb_strtolower(trim((string)($r['order_status'] ?? '')), 'UTF-8') === 'askiya_alindi') return false;
+
+    // Satış temsilcisi filtresi
+    if (!empty($_filter_sp)) {
+        $raw_sp = trim((string)($r['siparisi_alan'] ?? ''));
+        if ($_filter_sp === 'Belirtilmemiş') {
+            if ($raw_sp !== '') return false;
+        } else {
+            $upper_sp = mb_strtoupper(str_replace(['i', 'ı'], ['İ', 'I'], $raw_sp), 'UTF-8');
+            $lower_sp = mb_strtolower(str_replace(['I', 'İ'], ['ı', 'i'], $raw_sp), 'UTF-8');
+            $title_sp = mb_convert_case($lower_sp, MB_CASE_TITLE, 'UTF-8');
+            $resolved = in_array($upper_sp, $_temsilciler_sabit_upper) ? $title_sp : ($title_sp . ' (Diğer)');
+            if ($resolved !== $_filter_sp) return false;
+        }
+    }
+
+    return true;
 });
 
 $queryError = $dbResult['error'];
@@ -276,25 +301,156 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
   exit;
 }
 
-$totalsByCurrency = [];
-foreach ($rows as $r) {
-  $cur = normalize_currency(
-    !empty($r['kalem_para_birimi']) ? $r['kalem_para_birimi'] :
-    (!empty($r['order_currency']) ? $r['order_currency'] : ($r['currency'] ?? '—'))
-  );
+/**
+ * -----------------------------------------------------------------------------------------
+ * STAT KARTLARI: Toplam USD ve Toplam TRY (KDV'siz net + KDV ayrı)
+ *
+ * Her kalem için:
+ *   net = line_total (qty * price, KDV hariç)
+ *   kdv = net * kdv_orani / 100
+ *
+ * Fatura edilmiş sipariş:
+ *   Para birimi: fatura_para_birimi (yoksa order_currency)
+ *   Tutar baz: fatura_toplam'dan kalem oranıyla pay alınır
+ *   Kur: kur_usd/kur_eur (manuel) → yoksa fatura tarihindeki TCMB
+ *
+ * Fatura edilmemiş sipariş:
+ *   Tutar baz: line_total (net)
+ *   Kur: bugünkü TCMB
+ *
+ * USD hesabı:
+ *   - Fatura USD → direkt
+ *   - Fatura TRY → fatura_tutarı / kur_usd
+ *   - Fatura EUR → fatura_tutarı * kur_eur / kur_usd
+ *   - Faturasız  → net / gunluk_usd
+ *
+ * TRY hesabı:
+ *   - Fatura TRY → direkt
+ *   - Fatura USD → fatura_tutarı * kur_usd
+ *   - Fatura EUR → fatura_tutarı * kur_eur
+ *   - Faturasız TRY → direkt, diğer → net * gunluk_kur
+ * -----------------------------------------------------------------------------------------
+ */
 
-  if (!isset($totalsByCurrency[$cur])) $totalsByCurrency[$cur] = 0.0;
-
-  $kdv = isset($r['kdv_orani']) ? (float)$r['kdv_orani'] : 20;
-  $totalsByCurrency[$cur] += (float)($r['line_total'] ?? 0) * (1 + $kdv / 100);
-}
-
+// Önce FinanceService'i yükle (rates lazım)
 require_once __DIR__ . '/../app/Services/FinanceService.php';
 $financeService = new FinanceService();
 $rates   = $financeService->getCurrentExchangeRates();
 $usd_rate = $rates['USD'];
 $eur_rate = $rates['EUR'];
 
+// Sipariş bazında kalem KDV'siz toplamlarını hesapla (fatura oranı için payda)
+$order_kalem_net_totals = [];
+foreach ($rows as $r) {
+  $oid = $r['order_id'];
+  $net = (float)($r['line_total'] ?? 0); // KDV hariç
+  $order_kalem_net_totals[$oid] = ($order_kalem_net_totals[$oid] ?? 0) + $net;
+}
+
+$stat_usd_net = 0.0; // KDV'siz USD toplamı
+$stat_usd_kdv = 0.0; // KDV tutarı (USD)
+$stat_try_net = 0.0; // KDV'siz TRY toplamı
+$stat_try_kdv = 0.0; // KDV tutarı (TRY)
+
+// Sipariş başına mükerrer fatura tutarı uygulamasını önlemek için
+$processed_stat_orders = [];
+
+foreach ($rows as $r) {
+  $oid      = $r['order_id'];
+  $net_line = (float)($r['line_total'] ?? 0); // Bu kalemin KDV'siz tutarı
+  $kdv_rate = isset($r['kdv_orani']) ? (float)$r['kdv_orani'] : 20.0;
+  $kdv_line = $net_line * $kdv_rate / 100.0;
+
+  // Fatura kontrolü
+  $status_str        = mb_strtolower(trim((string)($r['order_status'] ?? '')), 'UTF-8');
+  $fatura_toplam_val = (float)($r['fatura_toplam'] ?? 0);
+  $is_invoiced       = ($fatura_toplam_val > 0 || str_contains($status_str, 'fatura'));
+
+  if ($is_invoiced && $fatura_toplam_val > 0) {
+    // --- FATURA EDİLMİŞ ---
+    $raw_cur = !empty($r['fatura_para_birimi']) ? $r['fatura_para_birimi'] : (!empty($r['order_currency']) ? $r['order_currency'] : 'TRY');
+    $cur = normalize_currency($raw_cur);
+
+    // Bu kalemin fatura toplamındaki payı (net oranına göre)
+    $payda = $order_kalem_net_totals[$oid] ?? 1;
+    if ($payda <= 0) $payda = 1;
+    $oran = $net_line / $payda; // Bu kalemin ağırlığı
+
+    // Fatura tutarı KDV dahil → KDV'siz ve KDV'si ayrıştır
+    $fatura_kdv_dahil = $fatura_toplam_val * $oran;
+    $fatura_net       = $fatura_kdv_dahil / (1 + $kdv_rate / 100);
+    $fatura_kdv       = $fatura_kdv_dahil - $fatura_net;
+
+    // Kur belirle
+    $kur_usd_f = resolve_usd_try_kuru($r, true, $rates);
+    $kur_eur_f = resolve_eur_try_kuru($r, true, $rates);
+
+    // USD hesabı
+    if ($cur === 'USD') {
+      $stat_usd_net += $fatura_net;
+      $stat_usd_kdv += $fatura_kdv;
+    } elseif ($cur === 'TRY') {
+      $stat_usd_net += ($kur_usd_f > 0) ? ($fatura_net / $kur_usd_f) : ($fatura_net / $rates['USD']);
+      $stat_usd_kdv += ($kur_usd_f > 0) ? ($fatura_kdv / $kur_usd_f) : ($fatura_kdv / $rates['USD']);
+    } elseif ($cur === 'EUR') {
+      $usd_try = ($kur_usd_f > 0) ? $kur_usd_f : $rates['USD'];
+      $eur_try = ($kur_eur_f > 0) ? $kur_eur_f : $rates['EUR'];
+      $stat_usd_net += $fatura_net * ($eur_try / $usd_try);
+      $stat_usd_kdv += $fatura_kdv * ($eur_try / $usd_try);
+    }
+
+    // TRY hesabı
+    if ($cur === 'TRY') {
+      $stat_try_net += $fatura_net;
+      $stat_try_kdv += $fatura_kdv;
+    } elseif ($cur === 'USD') {
+      $stat_try_net += $fatura_net * (($kur_usd_f > 0) ? $kur_usd_f : $rates['USD']);
+      $stat_try_kdv += $fatura_kdv * (($kur_usd_f > 0) ? $kur_usd_f : $rates['USD']);
+    } elseif ($cur === 'EUR') {
+      $kur_eur_f2 = ($kur_eur_f > 0) ? $kur_eur_f : $rates['EUR'];
+      $stat_try_net += $fatura_net * $kur_eur_f2;
+      $stat_try_kdv += $fatura_kdv * $kur_eur_f2;
+    }
+
+  } else {
+    // --- FATURA EDİLMEMİŞ ---
+    $raw_cur = !empty($r['kalem_para_birimi']) ? $r['kalem_para_birimi'] : (!empty($r['order_currency']) ? $r['order_currency'] : ($r['currency'] ?? 'TRY'));
+    $cur = normalize_currency($raw_cur);
+
+    // USD hesabı (günlük kur)
+    if ($cur === 'USD') {
+      $stat_usd_net += $net_line;
+      $stat_usd_kdv += $kdv_line;
+    } elseif ($cur === 'TRY') {
+      $stat_usd_net += ($rates['USD'] > 0) ? ($net_line / $rates['USD']) : 0;
+      $stat_usd_kdv += ($rates['USD'] > 0) ? ($kdv_line / $rates['USD']) : 0;
+    } elseif ($cur === 'EUR') {
+      $stat_usd_net += ($rates['USD'] > 0) ? ($net_line * $rates['EUR'] / $rates['USD']) : 0;
+      $stat_usd_kdv += ($rates['USD'] > 0) ? ($kdv_line * $rates['EUR'] / $rates['USD']) : 0;
+    }
+
+    // TRY hesabı (günlük kur)
+    if ($cur === 'TRY') {
+      $stat_try_net += $net_line;
+      $stat_try_kdv += $kdv_line;
+    } elseif ($cur === 'USD') {
+      $stat_try_net += $net_line * $rates['USD'];
+      $stat_try_kdv += $kdv_line * $rates['USD'];
+    } elseif ($cur === 'EUR') {
+      $stat_try_net += $net_line * $rates['EUR'];
+      $stat_try_kdv += $kdv_line * $rates['EUR'];
+    }
+  }
+}
+
+$stat_usd_total = $stat_usd_net + $stat_usd_kdv;
+$stat_try_total = $stat_try_net + $stat_try_kdv;
+
+// Eski $totalsByCurrency artık kullanılmıyor, view uyumluluğu için boş bırak
+$totalsByCurrency = [];
+
+// rates, usd_rate, eur_rate ve order_kalem_net_totals yukarıda tanımlandı.
+// Grafik hesapları için KDV'li kalem toplamları (fatura oranı için payda):
 $order_kalem_totals = [];
 foreach ($rows as $r) {
   $oid = $r['order_id'];
@@ -317,6 +473,7 @@ $sp_agg_proj             = [];
 $sp_cur_proj             = []; 
 $sp_agg_grp              = [];
 $sp_cur_grp              = []; 
+$sp_raw_rows             = []; // Tarih bazlı ham satırlar (JS filtresi için)
 
 foreach ($rows as $r) {
   $oid = $r['order_id'];
@@ -435,6 +592,17 @@ foreach ($rows as $r) {
   if (!isset($sp_cur_grp[$sp][$family][$cur])) $sp_cur_grp[$sp][$family][$cur] = 0;
   $sp_cur_grp[$sp][$family][$cur] += $amt;
 
+  // Tarih bazlı ham veri (JS tarafında anlık filtreleme için)
+  $row_date_key = substr(trim((string)($r['order_date'] ?? '')), 0, 10); // YYYY-MM-DD
+  $sp_raw_rows[$sp][] = [
+    'd' => $row_date_key,
+    'p' => $p,
+    'g' => $family,
+    'u' => $amt_usd,
+    'c' => $cur,
+    'v' => $amt,
+  ];
+
   if (!isset($cur_customer[$c])) $cur_customer[$c] = [];
   if (!isset($cur_customer[$c][$cur])) $cur_customer[$c][$cur] = 0.0;
   $cur_customer[$c][$cur] += $amt;
@@ -473,7 +641,23 @@ function get_dominant_info(array $usdTotals, array $bucketMap): array
   return $out;
 }
 
+// 6 sabit temsilcinin hepsini başlangıçta sıfır değeriyle ekle (satışı olmayanlar da görünsün)
+$temsilciler_sabit_liste = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞİMŞEK', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
 $sp_formatted = [];
+foreach ($temsilciler_sabit_liste as $sabit_isim) {
+  $lower_s = mb_strtolower(str_replace(['I', 'İ'], ['ı', 'i'], $sabit_isim), 'UTF-8');
+  $title_s = mb_convert_case($lower_s, MB_CASE_TITLE, 'UTF-8');
+  $sp_formatted[$title_s] = [
+    'cur'     => 'Adet',
+    'val'     => 0,
+    'usd_val' => 0
+  ];
+  $salesperson_details[$title_s] = [
+    'projects' => [],
+    'groups'   => []
+  ];
+}
+
 foreach ($salesperson_orders as $name => $count) {
   $sp_formatted[$name] = [
     'cur'     => 'Adet',
@@ -493,9 +677,26 @@ $chart_payload = [
   'category'            => get_dominant_info($agg_category_usd, $cur_category),
   'salesperson'         => $sp_formatted,
   'salesperson_details' => $salesperson_details,
+  'sp_raw_rows'         => $sp_raw_rows, // Tarih bazlı ham veri (JS filtresi için)
 ];
 
 $salesperson_enhanced = [];
+
+// 6 sabit temsilciyi sifir degerle baslatiyoruz (tarih filtresinde de boş gorunsunler)
+$temsilciler_sabit_te = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞİMŞEK', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
+foreach ($temsilciler_sabit_te as $_te_isim) {
+  $_te_lower = mb_strtolower(str_replace(['I', 'İ'], ['ı', 'i'], $_te_isim), 'UTF-8');
+  $_te_title = mb_convert_case($_te_lower, MB_CASE_TITLE, 'UTF-8');
+  $salesperson_enhanced[$_te_title] = [
+    'order_count'       => 0,
+    'total_price_usd'   => 0,
+    'product_groups'    => [],
+    'currency'          => 'USD',
+    'original_price'    => 0,
+    'original_currency' => 'TRY',
+    'processed_orders'  => []
+  ];
+}
 
 foreach ($rows as $row) {
   $raw_sp = trim($row['siparisi_alan'] ?? '');
