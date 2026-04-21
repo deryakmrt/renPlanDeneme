@@ -91,33 +91,35 @@ include __DIR__ . '/../../../includes/header.php';
 
       // 1. ADIM: Eski usül projeleri topla
       try {
-          $q1 = $db->query("SELECT DISTINCT proje_adi FROM orders WHERE proje_adi IS NOT NULL AND TRIM(proje_adi) != ''");
-          while ($row = $q1->fetch(PDO::FETCH_ASSOC)) {
-              $val = trim($row['proje_adi']);
-              if ($val !== '') {
-                  $final_projects[$val] = $val; // Normal listele
-              }
+        $q1 = $db->query("SELECT DISTINCT proje_adi FROM orders WHERE proje_adi IS NOT NULL AND TRIM(proje_adi) != ''");
+        while ($row = $q1->fetch(PDO::FETCH_ASSOC)) {
+          $val = trim($row['proje_adi']);
+          if ($val !== '') {
+            $final_projects[$val] = $val; // Normal listele
           }
-      } catch (Throwable $e) {}
+        }
+      } catch (Throwable $e) {
+      }
 
       // 2. ADIM: Yeni "Ana Projeleri" topla (Doğrudan projects tablosundan)
       try {
-          $q2 = $db->query("SELECT id, name FROM projects WHERE name IS NOT NULL AND TRIM(name) != ''");
-          while ($row = $q2->fetch(PDO::FETCH_ASSOC)) {
-              $val = trim($row['name']);
-              if ($val !== '') {
-                  $final_projects[$val] = '🖇️ ' . $val; // Emojili listele (Aynı isim varsa eskisini ezer, temiz olur)
-              }
+        $q2 = $db->query("SELECT id, name FROM projects WHERE name IS NOT NULL AND TRIM(name) != ''");
+        while ($row = $q2->fetch(PDO::FETCH_ASSOC)) {
+          $val = trim($row['name']);
+          if ($val !== '') {
+            $final_projects[$val] = '🖇️ ' . $val; // Emojili listele (Aynı isim varsa eskisini ezer, temiz olur)
           }
-      } catch (Throwable $e) {}
+        }
+      } catch (Throwable $e) {
+      }
 
       // 3. ADIM: PHP ile alfabetik sırala ve ekrana bas
       asort($final_projects);
 
       foreach ($final_projects as $p_val => $p_label):
-          $sel = (isset($filters['project_query']) && $filters['project_query'] == $p_val) ? 'selected' : '';
+        $sel = (isset($filters['project_query']) && $filters['project_query'] == $p_val) ? 'selected' : '';
       ?>
-          <option value="<?= h($p_val) ?>" <?= $sel ?>><?= h($p_label) ?></option>
+        <option value="<?= h($p_val) ?>" <?= $sel ?>><?= h($p_label) ?></option>
       <?php endforeach; ?>
     </select>
   </div>
@@ -231,124 +233,6 @@ include __DIR__ . '/../../../includes/header.php';
     </div>
   </div>
 
-</div>
-
-<div class="table-wrap">
-  <table class="table" id="reportTable">
-    <thead>
-      <tr>
-        <th>Sipariş Tarihi</th>
-        <th>Siparişi Alan</th>
-        <th>Müşteri</th>
-        <th>Proje Adı</th>
-        <th class="ta-center" style="text-align:center;">Sipariş Kodu</th>
-        <th class="ta-center" style="text-align:center;">Toplam Tutar</th>
-        <th class="ta-center" style="text-align:center;">KDV</th>
-        <th class="ta-center" style="text-align:center;">Genel Toplam</th>
-      </tr>
-    <tbody>
-      <?php
-      // Tek satır/sipariş: tablo içinde, sadece görünümde grupluyoruz (SQL'e dokunmadan)
-      $__vatRate = 0.20; // KDV %20 sabit
-      $__orders = [];
-      foreach (($rows ?? []) as $r) {
-        $__code = (string)($r['order_code'] ?? '');
-        if ($__code === '') continue;
-
-        // Satici ismini formatla
-        $raw_sp2 = trim((string)($r['siparisi_alan'] ?? ''));
-        $temsilciler_sabit = ['ALİ ALTUNAY', 'FATİH SERHAT ÇAÇIK', 'HASAN BÜYÜKOBA', 'HİKMET ŞİMŞEK', 'MUHAMMET YAZGAN', 'MURAT SEZER'];
-
-        if ($raw_sp2 === '') {
-          $formatted_sp = 'Belirtilmemiş';
-        } else {
-          $upper_sp2 = mb_strtoupper(str_replace(['i', 'ı'], ['İ', 'I'], $raw_sp2), 'UTF-8');
-          $lower_sp2 = mb_strtolower(str_replace(['I', 'İ'], ['ı', 'i'], $raw_sp2), 'UTF-8');
-          $title_sp2 = mb_convert_case($lower_sp2, MB_CASE_TITLE, 'UTF-8');
-
-          if (in_array($upper_sp2, $temsilciler_sabit)) {
-            $formatted_sp = $title_sp2;
-          } else {
-            $formatted_sp = $title_sp2 . ' (Diğer)';
-          }
-        }
-
-        if (!isset($__orders[$__code])) {
-          $is_inv = (mb_strtolower(trim((string)($r['order_status'] ?? '')), 'UTF-8') === 'fatura_edildi' || mb_strtolower(trim((string)($r['order_status'] ?? '')), 'UTF-8') === 'fatura edildi');
-          $f_toplam = (float)($r['fatura_toplam'] ?? 0);
-          $kdv_rate = isset($r['kdv_orani']) ? (float)$r['kdv_orani'] : 20;
-
-          if ($is_inv && $f_toplam > 0) {
-            $row_cur = !empty($r['fatura_para_birimi']) ? $r['fatura_para_birimi'] : ($r['currency'] ?? '');
-            $subtotal_val = 0.0;
-            $genel_toplam_val = $f_toplam; // Mühürlü Genel Toplam
-            $is_sealed = true;
-          } else {
-            $row_cur = !empty($r['order_currency']) ? $r['order_currency'] : ($r['currency'] ?? '');
-            $subtotal_val = 0.0;
-            $genel_toplam_val = 0.0;
-            $is_sealed = false;
-          }
-
-          $__orders[$__code] = [
-            'order_id'      => $r['order_id'] ?? null,
-            'order_date'    => $r['order_date'] ?? '',
-            'siparisi_alan' => $formatted_sp,
-            'customer_name' => $r['customer_name'] ?? '',
-            'project_name'  => $r['project_name'] ?? '',
-            'order_code'    => $__code,
-            'currency'      => $row_cur,
-            'subtotal'      => $subtotal_val,
-            'genel_toplam'  => $genel_toplam_val,
-            'kdv_rate'      => $kdv_rate,
-            'is_sealed'     => $is_sealed
-          ];
-        }
-
-        // Eğer mühürlü değilse alt kalemleri toplayarak git (Sadece KDV'siz kısmı topla, yazdırırken kdv eklenecek)
-        if (!$__orders[$__code]['is_sealed']) {
-          $__orders[$__code]['subtotal'] += (float)($r['line_total'] ?? 0);
-        }
-      }
-      // Yazdır
-      if (empty($__orders)):
-      ?>
-        <tr>
-          <td style="text-align:center;" colspan="8" class="ta-center muted">Kayıt bulunamadı.</td>
-        </tr>
-        <?php else: foreach ($__orders as $__o):
-          $kdv_carpan = $__o['kdv_rate'] / 100;
-
-          if ($__o['is_sealed']) {
-            // Mühürlü sistemde KDV'yi TERSTEN hesapla
-            $__genel = $__o['genel_toplam'];
-            $__kdv = $__genel - ($__genel / (1 + $kdv_carpan));
-            $__ara = $__genel - $__kdv;
-          } else {
-            // Mühürsüz sistemde (Normal akış)
-            $__ara = $__o['subtotal'];
-            $__kdv = $__ara * $kdv_carpan;
-            $__genel = $__ara + $__kdv;
-          }
-
-          // Satici ismine gore renk ver (Bos ise kirmizi olsun)
-          $sp_color = $__o['siparisi_alan'] === 'Belirtilmemiş' ? 'color:#ef4444; font-style:italic;' : 'color:#0f172a; font-weight:600;';
-        ?>
-          <tr data-order-id="<?= (int)($__o['order_id'] ?? 0) ?>" class="order-row">
-            <td><?= fmt_tr_date($__o['order_date'] ?? '') ?></td>
-            <td style="<?= $sp_color ?>"><?= h($__o['siparisi_alan']) ?></td>
-            <td><?= h($__o['customer_name']) ?></td>
-            <td><?= h($__o['project_name']) ?></td>
-            <td style="text-align:center;" class="ta-center"><a href="order_view.php?id=<?= (int)($__o['order_id'] ?? 0) ?>" class="badge"><?= h($__o['order_code']) ?></a></td>
-            <td class="ta-center"><?= fmt_tr_money($__ara) ?> <?= h($__o['currency']) ?></td>
-            <td class="ta-center"><?= fmt_tr_money($__kdv) ?> <?= h($__o['currency']) ?></td>
-            <td class="ta-center" style="font-weight:bold; color:#166534;"><?= fmt_tr_money($__genel) ?> <?= h($__o['currency']) ?></td>
-          </tr>
-      <?php endforeach;
-      endif; ?>
-    </tbody>
-    </tbody>
-  </table>
 </div>
 </div>
 
