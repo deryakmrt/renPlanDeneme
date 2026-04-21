@@ -312,7 +312,7 @@ include __DIR__ . '/includes/header.php';
     </div>
     <?php if ($role !== 'muhasebe'): ?>
       <div class="tile t-green">
-        <a href="#" class="stretch" aria-label="Faturalar"></a>
+        <a href="/faturalar.php" class="stretch" aria-label="Faturalar"></a>
         <div class="icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <path d="M8 3h8a2 2 0 0 1 2 2v13l-3-2-3 2-3-2-3 2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" />
@@ -320,7 +320,7 @@ include __DIR__ . '/includes/header.php';
           </svg>
         </div>
         <div class="title">Faturalar</div>
-        <div class="value">—</div>
+        <div class="value">💵</div>
       </div>
       <div class="tile t-orange">
         <a href="#" class="stretch" aria-label="Stok"></a>

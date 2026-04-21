@@ -238,7 +238,12 @@ $filters = [
 require_once __DIR__ . '/../app/Models/ReportModel.php';
 $reportModel = new ReportModel($db);
 $dbResult = $reportModel->getSalesData($filters);
-$rows = $dbResult['rows'];
+
+// YENİ: Askıya alınan siparişleri süzgeçten geçirip tüm raporlardan ve grafiklerden atıyoruz
+$rows = array_filter($dbResult['rows'], function($r) {
+    return mb_strtolower(trim((string)($r['order_status'] ?? '')), 'UTF-8') !== 'askiya_alindi';
+});
+
 $queryError = $dbResult['error'];
 
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {

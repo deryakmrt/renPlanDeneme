@@ -493,7 +493,13 @@ if ($status === 'revize') {
   $sql .= " AND o.status = ?";
   $params[] = $status;
 }
-$sql .= " ORDER BY CASE WHEN LOWER(o.status) = 'taslak_gizli' THEN 0 WHEN LOWER(o.status) = 'tedarik' THEN 1 WHEN LOWER(o.status) = 'sac lazer' THEN 2 WHEN LOWER(o.status) = 'boru lazer' THEN 3 WHEN LOWER(o.status) = 'kaynak' THEN 4 WHEN LOWER(o.status) = 'boya' THEN 5 WHEN LOWER(o.status) = 'elektrik montaj' THEN 6 WHEN LOWER(o.status) = 'test' THEN 7 WHEN LOWER(o.status) = 'paketleme' THEN 8 WHEN LOWER(o.status) = 'sevkiyat' THEN 9 WHEN LOWER(o.status) = 'teslim edildi' THEN 10 WHEN LOWER(o.status) = 'fatura_edildi' THEN 11 WHEN LOWER(o.status) = 'askiya_alindi' THEN 12 ELSE 999 END ASC, CASE WHEN o.order_code REGEXP '-[0-9]+$' THEN CAST(SUBSTRING_INDEX(o.order_code, '-', -1) AS UNSIGNED) ELSE 0 END DESC, o.order_code DESC";
+if ($status === 'fatura_edildi') {
+    // Sadece 'Fatura Edildi' seçiliyse en güncel faturayı en üste al
+    $sql .= " ORDER BY o.fatura_tarihi DESC, o.order_code DESC";
+} else {
+    // Diğer tüm durumlarda eski akıllı sıralama çalışsın
+    $sql .= " ORDER BY CASE WHEN LOWER(o.status) = 'taslak_gizli' THEN 0 WHEN LOWER(o.status) = 'tedarik' THEN 1 WHEN LOWER(o.status) = 'sac lazer' THEN 2 WHEN LOWER(o.status) = 'boru lazer' THEN 3 WHEN LOWER(o.status) = 'kaynak' THEN 4 WHEN LOWER(o.status) = 'boya' THEN 5 WHEN LOWER(o.status) = 'elektrik montaj' THEN 6 WHEN LOWER(o.status) = 'test' THEN 7 WHEN LOWER(o.status) = 'paketleme' THEN 8 WHEN LOWER(o.status) = 'sevkiyat' THEN 9 WHEN LOWER(o.status) = 'teslim edildi' THEN 10 WHEN LOWER(o.status) = 'fatura_edildi' THEN 11 WHEN LOWER(o.status) = 'askiya_alindi' THEN 12 ELSE 999 END ASC, CASE WHEN o.order_code REGEXP '-[0-9]+$' THEN CAST(SUBSTRING_INDEX(o.order_code, '-', -1) AS UNSIGNED) ELSE 0 END DESC, o.order_code DESC";
+}
 // Toplam sayfa sayısı için COUNT(*)
 $count_stmt = $db->prepare("SELECT COUNT(*) FROM (" . $sql . ") t");
 $count_stmt->execute($params);
