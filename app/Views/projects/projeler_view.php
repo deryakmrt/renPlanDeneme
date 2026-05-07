@@ -1,10 +1,4 @@
 <?php
-/**
- * @var array $projects
- * @var bool  $can_edit
- */
-?>
-<?php
 // app/Views/projects/projeler_view.php
 // Değişkenler: $projects (array), $can_edit (bool)
 ?>

@@ -1,14 +1,4 @@
 <?php
-/**
- * @var array $proje
- * @var array $bound_orders
- * @var array $unbound_orders
- * @var array $rates
- * @var bool  $can_edit
- * @var string $sq
- */
-?>
-<?php
 // app/Views/projects/proje_detay_view.php
 // Değişkenler: $proje, $bound_orders, $unbound_orders,
 //              $grand_total_try, $grand_total_usd, $grand_total (uyumluluk),

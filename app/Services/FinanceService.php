@@ -1,10 +1,8 @@
 <?php
 // app/Services/FinanceService.php
 
-class FinanceService
-{
-    public function getCurrentExchangeRates()
-    {
+class FinanceService {
+    public function getCurrentExchangeRates() {
         $usd_rate = 1.0;
         $eur_rate = 1.0;
         try {
